@@ -2,7 +2,7 @@
 data/
 docs/
 memory/
-testdata
+testdata/
 
 # Ignoriere alle -Dateien
 *.log
