@@ -7,6 +7,8 @@ testdata/
 # Ignoriere alle -Dateien
 *.log
 *.md
+*.csv
+*.xml
 
 # Ignoriere lokale Konfigurationsdateien
 .env

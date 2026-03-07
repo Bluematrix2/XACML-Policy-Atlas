@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://florian-puschmann.de/wp-content/uploads/2026/02/cropped-Favicon_Logo_FP.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://florian-puschmann.de/wp-content/uploads/2026/02/cropped-Favicon_Logo_FP.png">
+  <link rel="manifest" href="/manifest.json">   
+  <title>XACML Policy Visualizer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: #edf1f4;
+      color: #212121;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #061E29;
+      color: #fff;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 52px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,.35);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    header h1 { font-size: 15px; font-weight: 600; letter-spacing: .3px; flex: 1; }
+    .hbtn {
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.28);
+      color: #fff;
+      padding: 5px 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .hbtn:hover { background: rgba(255,255,255,.22); }
+
+    /* ── Layout ── */
+    .layout { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px;
+      min-width: 160px;
+      background: #edf1f4;
+      border-right: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .sidebar-head {
+      padding: 9px 12px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: #212121;
+      border-bottom: 1px solid #eeeeee;
+    }
+    .sidebar-list { flex: 1; overflow-y: auto; }
+    .sb-item {
+      padding: 8px 12px 7px;
+      cursor: pointer;
+      border-bottom: 1px solid #f5f5f5;
+      border-left: 3px solid transparent;
+      transition: background .1s, border-color .1s;
+    }
+    .sb-item:hover { background: #f5f7ff; }
+    .sb-item.active { background: #e8eaf6; border-left-color: #3949ab; }
+    .sb-name {
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #212121;
+    }
+    .sb-meta { font-size: 11px; color: #9e9e9e; margin-top: 2px; }
+    .sb-bar {
+      height: 3px;
+      border-radius: 2px;
+      margin-top: 5px;
+      background: #e0e0e0;
+      display: flex;
+      overflow: hidden;
+    }
+    .sb-permit { background: #4CAF50; }
+    .sb-deny   { background: #F44336; }
+    .sb-empty  { padding: 16px 12px; font-size: 12px; color: #212121; }
+
+    /* ── Content ── */
+    .content { flex: 1; overflow-y: auto; padding: 16px; }
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 70vh;
+      color: #212121;
+      gap: 10px;
+      user-select: none;
+    }
+    .empty-state .icon { font-size: 52px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── Policy header ── */
+    .policy-hdr {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+    .policy-hdr-title { font-size: 17px; font-weight: 700; color: #1a237e; word-break: break-all; }
+    .policy-hdr-desc  { font-size: 13px; color: #555; margin-top: 5px; line-height: 1.5; }
+    .policy-hdr-meta  { margin-top: 8px; font-size: 12px; color: #757575; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .policy-hdr-ctrl  { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .ctrl-btn {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #555;
+      transition: background .1s;
+    }
+    .ctrl-btn:hover { background: #f5f5f5; }
+
+    /* ── Algorithm chip ── */
+    .algo-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #eceff1;
+      border: 1px solid #cfd8dc;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #546e7a;
+      cursor: default;
+      position: relative;
+    }
+    .algo-chip:hover .tooltip { display: block; }
+
+    /* ── Policy target section ── */
+    .policy-target {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+    }
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: #9e9e9e;
+      margin-bottom: 7px;
+    }
+
+    /* ── Rule card ── */
+    .rule-card {
+      border-radius: 7px;
+      border: 1px solid;
+      margin-bottom: 7px;
+      overflow: hidden;
+    }
+    .rule-card.permit { border-color: #a5d6a7; }
+    .rule-card.deny   { border-color: #ef9a9a; }
+
+    .rule-hdr {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      user-select: none;
+      transition: filter .1s;
+    }
+    .rule-hdr:hover { filter: brightness(.97); }
+    .rule-card.permit .rule-hdr { background: #e8f5e9; }
+    .rule-card.deny   .rule-hdr { background: #ffebee; }
+
+    .effect-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 3px;
+      letter-spacing: .3px;
+      flex-shrink: 0;
+    }
+    .permit .effect-badge { background: #4CAF50; color: #fff; }
+    .deny   .effect-badge { background: #F44336; color: #fff; }
+
+    .rule-title { font-size: 13px; font-weight: 500; flex: 1; color: #212121; }
+    .rule-no-desc { font-style: italic; color: #9e9e9e; }
+    .rule-toggle { font-size: 11px; color: #9e9e9e; transition: transform .18s; flex-shrink: 0; }
+    .rule-toggle.open { transform: rotate(90deg); }
+
+    .rule-body { padding: 10px 14px; display: none; }
+    .rule-card.permit .rule-body { border-top: 1px solid #c8e6c9; }
+    .rule-card.deny   .rule-body { border-top: 1px solid #ffcdd2; }
+    .rule-body.open { display: block; }
+
+    /* ── Match groups ── */
+    .match-group { margin-bottom: 10px; }
+    .match-group:last-child { margin-bottom: 0; }
+    .mg-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #9e9e9e; margin-bottom: 5px; }
+    .mg-items { display: flex; flex-wrap: wrap; gap: 5px; align-items: flex-start; }
+
+    /* OR-separating "subject groups" */
+    .or-group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .or-sep {
+      font-size: 10px;
+      font-weight: 700;
+      color: #9e9e9e;
+      padding: 0 4px;
+      align-self: center;
+    }
+    /* AND-separator inside a single Subject/Resource/Action */
+    .and-sep {
+      font-size: 10px;
+      font-weight: 700;
+      color: #9e9e9e;
+      padding: 0 2px;
+      align-self: center;
+    }
+
+    /* ── Chips ── */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 8px 2px 7px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: default;
+      border: 1px solid transparent;
+      position: relative;
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .chip.fallback {
+      background: #f5f5f5 !important;
+      border-color: #e0e0e0 !important;
+      color: #757575 !important;
+      font-family: 'Consolas', 'SF Mono', monospace;
+      font-size: 12px;
+      max-width: 320px;
+    }
+    .chip .star { color: #f9a825; }
+    .chip:hover .tooltip { display: block; }
+
+    /* ── Tooltip ── */
+    .tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 7px);
+      left: 0;
+      background: #263238;
+      color: #eceff1;
+      padding: 6px 10px;
+      border-radius: 5px;
+      font-size: 11px;
+      z-index: 200;
+      pointer-events: none;
+      min-width: 180px;
+      max-width: 360px;
+      white-space: normal;
+      line-height: 1.45;
+      box-shadow: 0 3px 10px rgba(0,0,0,.3);
+      word-break: break-all;
+    }
+    .tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 14px;
+      border: 5px solid transparent;
+      border-top-color: #263238;
+    }
+    .tooltip-uri {
+      font-family: 'Consolas', 'SF Mono', monospace;
+      font-size: 10px;
+      color: #80cbc4;
+      display: block;
+      margin-top: 3px;
+      word-break: break-all;
+    }
+
+    /* ── Condition block ── */
+    .condition-block {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 5px;
+      padding: 7px 10px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .cond-not  { color: #c62828; font-weight: 700; }
+    .cond-fn   { color: #1565c0; font-weight: 600; }
+    .cond-subj { color: #2e7d32; }
+    .cond-res  { color: #6a1b9a; }
+    .cond-act  { color: #e65100; }
+    .cond-val  { color: #37474f; font-family: monospace; }
+
+    /* ── Error ── */
+    .error-box {
+      background: #ffebee;
+      border: 1px solid #ef9a9a;
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: #b71c1c;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: #212121;
+      color: #9e9e9e;
+      text-align: center;
+      padding: 10px 16px;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    footer a { color: #17b3d9; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>&#x1F510; XACML Policy Visualizer</h1>
+  <button class="hbtn" id="csv-btn" onclick="App.triggerCSV()">&#x1F4C4; Mapping-CSV laden</button>
+  <button class="hbtn" onclick="App.triggerXML()">&#x1F4C2; Policy-XML(s) laden</button>
+  <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="App.loadCSV(this)">
+  <input type="file" id="xml-input" accept=".xml" multiple style="display:none" onchange="App.loadXMLs(this)">
+  <input type="file" id="dir-input" accept=".xml" webkitdirectory multiple style="display:none" onchange="App.loadXMLs(this)">
+</header>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-head">Policies</div>
+    <div class="sidebar-list" id="sidebar-list">
+      <div class="sb-empty">Noch keine Dateien geladen</div>
+    </div>
+  </nav>
+  <div class="content" id="content">
+    <div class="empty-state">
+      <div class="icon">&#x1F510;</div>
+      <p>Lade eine XACML Policy-XML-Datei, um zu beginnen</p>
+      <p style="font-size:12px;color:#212121">Mehrere Dateien oder einen Ordner per Knopf oben rechts</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  &copy; <script>document.write(new Date().getFullYear())</script> <a href="https://florian-puschmann.de?utm_source=policy_visualizer&utm_medium=footer" target="_blank" rel="noopener noreferrer">Crafted by Florian Puschmann</a>
+</footer>
+
+<script>
+'use strict';
+
+// ================================================================
+//  UTILS
+// ================================================================
+
+function esc(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function isLightColor(hex) {
+  try {
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 > 155;
+  } catch (e) {
+    return false;
+  }
+}
+
+function lastSegment(uri) {
+  // Returns the last colon- or slash-separated segment
+  return (uri || '').split(/[:/]/).filter(Boolean).pop() || uri;
+}
+
+// Get direct children of an element by localName (namespace-safe)
+function childrenByName(el, localName) {
+  const result = [];
+  if (!el) return result;
+  for (const child of el.children) {
+    if (child.localName === localName) result.push(child);
+  }
+  return result;
+}
+
+function childByName(el, localName) {
+  if (!el) return null;
+  for (const child of el.children) {
+    if (child.localName === localName) return child;
+  }
+  return null;
+}
+
+// Find first descendant (any depth) by localName
+function descendantByName(el, localName) {
+  if (!el) return null;
+  for (const child of el.children) {
+    if (child.localName === localName) return child;
+    const found = descendantByName(child, localName);
+    if (found) return found;
+  }
+  return null;
+}
+
+// ================================================================
+//  XACML PARSER
+// ================================================================
+const XACMLParser = (() => {
+
+  function parseAttributeValue(avEl) {
+    if (!avEl) return { dataType: 'string', value: '' };
+    const dataType = avEl.getAttribute('DataType') || '';
+
+    // HL7v3 CodedValue (CV)
+    if (dataType.includes('CV')) {
+      const cv = descendantByName(avEl, 'CodedValue');
+      if (cv) {
+        return {
+          dataType: 'CV',
+          code: cv.getAttribute('code') || '',
+          codeSystem: cv.getAttribute('codeSystem') || ''
+        };
+      }
+    }
+
+    // HL7v3 InstanceIdentifier (II)
+    if (dataType.includes('II')) {
+      const ii = descendantByName(avEl, 'InstanceIdentifier');
+      if (ii) {
+        const root = ii.getAttribute('root') || '';
+        return { dataType: 'II', root, isWildcard: root === '*' };
+      }
+    }
+
+    // Plain string / anyURI
+    return {
+      dataType: dataType.includes('anyURI') ? 'anyURI' : 'string',
+      value: (avEl.textContent || '').trim()
+    };
+  }
+
+  function parseDesignator(el) {
+    if (!el) return { attributeId: '', dataType: '' };
+    return {
+      attributeId: el.getAttribute('AttributeId') || '',
+      dataType:    el.getAttribute('DataType') || ''
+    };
+  }
+
+  function parseMatch(matchEl) {
+    const matchId = matchEl.getAttribute('MatchId') || '';
+    const avEl    = childByName(matchEl, 'AttributeValue');
+    const value   = parseAttributeValue(avEl);
+
+    // Find designator (any flavour)
+    let designator = { attributeId: '', dataType: '' };
+    for (const child of matchEl.children) {
+      const ln = child.localName;
+      if (ln === 'SubjectAttributeDesignator' ||
+          ln === 'ResourceAttributeDesignator' ||
+          ln === 'ActionAttributeDesignator') {
+        designator = parseDesignator(child);
+        break;
+      }
+    }
+
+    return { matchId, value, designator };
+  }
+
+  // Parse a Subject/Resource/Action element → array of matches (AND-linked)
+  function parseMatchGroup(containerEl, matchLocalName) {
+    return childrenByName(containerEl, matchLocalName).map(parseMatch);
+  }
+
+  function parseTarget(targetEl) {
+    if (!targetEl) return null;
+    const result = { subjects: [], resources: [], actions: [] };
+
+    // XACML 2.0
+    const subjectsEl  = childByName(targetEl, 'Subjects');
+    const resourcesEl = childByName(targetEl, 'Resources');
+    const actionsEl   = childByName(targetEl, 'Actions');
+
+    if (subjectsEl) {
+      result.subjects = childrenByName(subjectsEl, 'Subject')
+        .map(s => parseMatchGroup(s, 'SubjectMatch'));
+    }
+    if (resourcesEl) {
+      result.resources = childrenByName(resourcesEl, 'Resource')
+        .map(r => parseMatchGroup(r, 'ResourceMatch'));
+    }
+    if (actionsEl) {
+      result.actions = childrenByName(actionsEl, 'Action')
+        .map(a => parseMatchGroup(a, 'ActionMatch'));
+    }
+
+    // XACML 3.0 fallback (AnyOf/AllOf/Match)
+    if (!subjectsEl && !resourcesEl && !actionsEl) {
+      for (const anyOf of childrenByName(targetEl, 'AnyOf')) {
+        for (const allOf of childrenByName(anyOf, 'AllOf')) {
+          for (const matchEl of childrenByName(allOf, 'Match')) {
+            const m = parseMatch(matchEl);
+            // Detect target category from designator element name
+            let designatorLocalName = '';
+            for (const child of matchEl.children) {
+              if (child.localName.includes('Designator')) {
+                designatorLocalName = child.localName;
+                break;
+              }
+            }
+            if (designatorLocalName.includes('Subject'))  result.subjects.push([m]);
+            else if (designatorLocalName.includes('Resource')) result.resources.push([m]);
+            else if (designatorLocalName.includes('Action'))   result.actions.push([m]);
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+  function parseApply(applyEl) {
+    const functionId = applyEl.getAttribute('FunctionId') || '';
+    const args = [];
+    for (const child of applyEl.children) {
+      const ln = child.localName;
+      if (ln === 'Apply') {
+        args.push({ nodeType: 'Apply', ...parseApply(child) });
+      } else if (ln === 'Function') {
+        args.push({ nodeType: 'Function', functionId: child.getAttribute('FunctionId') || '' });
+      } else if (ln === 'SubjectAttributeDesignator') {
+        args.push({ nodeType: 'SubjectAttr', ...parseDesignator(child) });
+      } else if (ln === 'ResourceAttributeDesignator') {
+        args.push({ nodeType: 'ResourceAttr', ...parseDesignator(child) });
+      } else if (ln === 'ActionAttributeDesignator') {
+        args.push({ nodeType: 'ActionAttr', ...parseDesignator(child) });
+      } else if (ln === 'AttributeValue') {
+        args.push({ nodeType: 'Value', ...parseAttributeValue(child) });
+      }
+    }
+    return { functionId, args };
+  }
+
+  function parseCondition(condEl) {
+    if (!condEl) return null;
+    const applyEl = childByName(condEl, 'Apply');
+    if (!applyEl) return null;
+    return parseApply(applyEl);
+  }
+
+  function parseRule(ruleEl) {
+    const ruleId      = ruleEl.getAttribute('RuleId') || '';
+    const effect      = ruleEl.getAttribute('Effect') || 'Permit';
+    const descEl      = childByName(ruleEl, 'Description');
+    const description = descEl ? (descEl.textContent || '').trim() : '';
+    const target      = parseTarget(childByName(ruleEl, 'Target'));
+    const condition   = parseCondition(childByName(ruleEl, 'Condition'));
+    return { ruleId, effect, description, target, condition };
+  }
+
+  function parse(xmlText, filename) {
+    let doc;
+    try {
+      doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+      const err = doc.querySelector('parsererror');
+      if (err) throw new Error(err.textContent.split('\n')[0]);
+    } catch (e) {
+      throw new Error('XML Parse-Fehler: ' + e.message);
+    }
+
+    const root = doc.documentElement;
+    if (root.localName !== 'Policy') {
+      throw new Error('Kein <Policy>-Element gefunden');
+    }
+
+    const policyId   = root.getAttribute('PolicyId') || filename;
+    const algorithm  = root.getAttribute('RuleCombiningAlgId') || '';
+    const ns         = root.namespaceURI || '';
+    const version    = ns.includes('2.0') ? '2.0' : '3.0';
+    const descEl     = childByName(root, 'Description');
+    const description = descEl ? (descEl.textContent || '').trim() : '';
+    const target     = parseTarget(childByName(root, 'Target'));
+    const rules      = childrenByName(root, 'Rule').map(parseRule);
+
+    return { policyId, filename, version, algorithm, description, target, rules };
+  }
+
+  return { parse };
+})();
+
+// ================================================================
+//  CSV PARSER
+// ================================================================
+const CSVParser = (() => {
+
+  function parse(csvText) {
+    const lines = csvText.split(/\r?\n/);
+    if (lines.length < 2) throw new Error('CSV ist leer');
+
+    const headers = lines[0].split(';').map(h => h.trim());
+    const idIdx    = headers.indexOf('id');
+    const labelIdx = headers.indexOf('label');
+    if (idIdx < 0 || labelIdx < 0) throw new Error('CSV muss "id" und "label" Spalten enthalten');
+
+    const entries = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const cols = line.split(';');
+      const entry = {};
+      headers.forEach((h, j) => { entry[h] = (cols[j] || '').trim(); });
+      entries.push(entry);
+    }
+    return entries;
+  }
+
+  return { parse };
+})();
+
+// ================================================================
+//  LABEL MAPPER
+// ================================================================
+const LabelMapper = (() => {
+  let _byId = {};
+  let _loaded = false;
+
+  function load(entries) {
+    _byId = {};
+    for (const e of entries) {
+      if (e.id) _byId[e.id] = e;
+    }
+    _loaded = true;
+  }
+
+  // Direct URI/ID lookup
+  function lookup(id) {
+    if (!id) return null;
+    return _byId[id.trim()] || null;
+  }
+
+  // CodedValue lookup: code@codeSystem
+  function lookupCV(code, codeSystem) {
+    return _byId[`${code}@${codeSystem}`] || null;
+  }
+
+  function isLoaded() { return _loaded; }
+  function clear() { _byId = {}; _loaded = false; }
+
+  return { load, lookup, lookupCV, isLoaded, clear };
+})();
+
+// ================================================================
+//  TREE RENDERER
+// ================================================================
+const TreeRenderer = (() => {
+  const FALLBACK_COLOR = '#607D8B';
+
+  function chipHtml(label, description, uri, color, prefix) {
+    const bg = color || FALLBACK_COLOR;
+    const fg = isLightColor(bg) ? '#212121' : '#ffffff';
+    const tooltipParts = [];
+    if (description) tooltipParts.push(esc(description));
+    if (uri)         tooltipParts.push(`<span class="tooltip-uri">${esc(uri)}</span>`);
+    const tooltip = tooltipParts.length
+      ? `<span class="tooltip">${tooltipParts.join('<br>')}</span>` : '';
+    return `<span class="chip" style="background:${bg};color:${fg};border-color:${bg}">`
+         + (prefix || '')
+         + esc(label)
+         + tooltip
+         + `</span>`;
+  }
+
+  function fallbackChip(uri) {
+    const tip = LabelMapper.isLoaded()
+      ? `Kein Label im Mapping gefunden<span class="tooltip-uri">${esc(uri)}</span>`
+      : `<span class="tooltip-uri">${esc(uri)}</span>`;
+    return `<span class="chip fallback">${esc(uri)}<span class="tooltip">${tip}</span></span>`;
+  }
+
+  function valueChip(matchValue) {
+    const { dataType, value, code, codeSystem, root, isWildcard } = matchValue;
+
+    if (dataType === 'CV') {
+      const e = LabelMapper.lookupCV(code, codeSystem);
+      if (e) return chipHtml(e.label, e.description, `${code}@${codeSystem}`, e.color);
+      return chipHtml(code, `CodeSystem: ${codeSystem}`, `${code}@${codeSystem}`, FALLBACK_COLOR);
+    }
+
+    if (dataType === 'II') {
+      if (isWildcard) {
+        return `<span class="chip" style="background:#fff8e1;color:#f57f17;border-color:#ffe082">`
+             + `<span class="star">&#x2B50;</span>Alle Patienten (Wildcard)`
+             + `<span class="tooltip">Star-Policy: Gilt automatisch f&uuml;r alle Patientenakten`
+             + `<span class="tooltip-uri">root=&apos;*&apos;</span></span></span>`;
+      }
+      return chipHtml(root || 'II', '', root, '#795548');
+    }
+
+    // string / anyURI
+    const v = (value || '').trim();
+    const e = LabelMapper.lookup(v);
+    if (e) return chipHtml(e.label, e.description, v, e.color);
+    return fallbackChip(v);
+  }
+
+  // Small attribute-type label (shown in front of value chip)
+  function attrLabel(attributeId) {
+    const e = LabelMapper.lookup(attributeId);
+    const label = e ? e.label : lastSegment(attributeId);
+    const desc  = e ? e.description : '';
+    const tip   = `${desc ? esc(desc) + '<br>' : ''}<span class="tooltip-uri">${esc(attributeId)}</span>`;
+    return `<span style="font-size:10px;color:#9e9e9e;white-space:nowrap;cursor:default;position:relative;">`
+         + esc(label)
+         + `<span class="tooltip">${tip}</span></span>`;
+  }
+
+  // One match = (optionally) attribute label + value chip
+  function renderMatch(match) {
+    const attrId = match.designator ? match.designator.attributeId : '';
+    const chips  = valueChip(match.value);
+    // Show attribute hint only when there are complex multi-match groups (detected by caller)
+    return { attr: attrId, html: chips };
+  }
+
+  // Render groups (outer = OR, inner = AND)
+  function renderMatchGroups(groups, groupLabel) {
+    if (!groups || groups.length === 0) return '';
+
+    const groupsHtml = groups.map((group, gi) => {
+      if (!group || group.length === 0) return '';
+
+      // Each match in the group renders as: optionally attr-label + value chip
+      // For single-match groups, skip attr label for cleanliness
+      // For multi-match groups, show attr label to disambiguate
+      const showAttr = group.length > 1;
+      const parts = group.map(match => {
+        const { attr, html } = renderMatch(match);
+        if (showAttr && attr) {
+          return `<span style="display:inline-flex;align-items:center;gap:3px;">`
+               + attrLabel(attr) + ':&nbsp;' + html
+               + `</span>`;
+        }
+        return html;
+      });
+
+      // Join with AND separator
+      return parts.join(`<span class="and-sep"> &amp; </span>`);
+    });
+
+    // Join groups with OR separator
+    const combined = groupsHtml
+      .filter(g => g)
+      .map((g, i) => `<span class="or-group">${g}</span>`)
+      .join(`<span class="or-sep">ODER</span>`);
+
+    return `<div class="match-group">`
+         + `<div class="mg-label">${esc(groupLabel)}</div>`
+         + `<div class="mg-items">${combined}</div>`
+         + `</div>`;
+  }
+
+  // ── Condition rendering ──
+
+  function condNode(node) {
+    if (!node) return '';
+    switch (node.nodeType) {
+      case 'Apply':   return condApply(node);
+      case 'Function': {
+        const e = LabelMapper.lookup(node.functionId);
+        const label = e ? e.label : lastSegment(node.functionId);
+        return `<em>${esc(label)}</em>`;
+      }
+      case 'SubjectAttr': {
+        const e = LabelMapper.lookup(node.attributeId);
+        return `<span class="cond-subj">${esc(e ? e.label : lastSegment(node.attributeId))}</span>`;
+      }
+      case 'ResourceAttr': {
+        const e = LabelMapper.lookup(node.attributeId);
+        return `<span class="cond-res">${esc(e ? e.label : lastSegment(node.attributeId))}</span>`;
+      }
+      case 'ActionAttr': {
+        const e = LabelMapper.lookup(node.attributeId);
+        return `<span class="cond-act">${esc(e ? e.label : lastSegment(node.attributeId))}</span>`;
+      }
+      case 'Value': {
+        if (node.dataType === 'CV')  return `<span class="cond-val">${esc(node.code)}@${esc(node.codeSystem)}</span>`;
+        if (node.dataType === 'II')  return `<span class="cond-val">${node.isWildcard ? '*' : esc(node.root)}</span>`;
+        return `<span class="cond-val">${esc((node.value || '').trim())}</span>`;
+      }
+      default: return '';
+    }
+  }
+
+  function condApply(apply) {
+    const fn = apply.functionId || '';
+    const e  = LabelMapper.lookup(fn);
+    const fnLabel = e ? e.label : lastSegment(fn);
+
+    if (fn.includes(':not')) {
+      const inner = apply.args[0] ? condNode(apply.args[0]) : '';
+      return `<span class="cond-not">NICHT</span>(${inner})`;
+    }
+
+    if (fn.includes('any-of-any')) {
+      const argStrs = apply.args.map(condNode).filter(Boolean);
+      return `<span class="cond-fn">${esc(fnLabel)}</span>(${argStrs.join(', ')})`;
+    }
+
+    const argStrs = apply.args.map(condNode).filter(Boolean);
+    return `<span class="cond-fn">${esc(fnLabel)}</span>(${argStrs.join(', ')})`;
+  }
+
+  function renderCondition(cond) {
+    if (!cond) return '';
+    const html = condApply(cond);
+    return `<div class="match-group">`
+         + `<div class="mg-label">&#x1F50D; Bedingung</div>`
+         + `<div class="condition-block">${html}</div>`
+         + `</div>`;
+  }
+
+  // ── Target (subjects / resources / actions) ──
+
+  function renderTarget(target) {
+    if (!target) return '';
+    const { subjects = [], resources = [], actions = [] } = target;
+    let html = '';
+    if (subjects.length)  html += renderMatchGroups(subjects,  '&#x1F464; Subjekte');
+    if (resources.length) html += renderMatchGroups(resources, '&#x1F4E6; Ressourcen');
+    if (actions.length)   html += renderMatchGroups(actions,   '&#x26A1; Aktionen');
+    return html;
+  }
+
+  // ── Algorithm chip ──
+
+  function renderAlgo(algoUri) {
+    const e = LabelMapper.lookup(algoUri);
+    const label = e ? e.label : lastSegment(algoUri);
+    const desc  = e ? e.description : '';
+    const tip   = `${desc ? esc(desc) + '<br>' : ''}<span class="tooltip-uri">${esc(algoUri)}</span>`;
+    return `<span class="algo-chip">&#x2699;&#xFE0F; ${esc(label)}`
+         + `<span class="tooltip">${tip}</span></span>`;
+  }
+
+  // ── Rule ──
+
+  function renderRule(rule, index) {
+    const isDeny    = rule.effect === 'Deny';
+    const cls       = isDeny ? 'deny' : 'permit';
+    const badge     = isDeny ? 'DENY' : 'PERMIT';
+    const titleText = rule.description
+      ? esc(rule.description)
+      : `<span class="rule-no-desc">Regel ${index + 1} (keine Beschreibung)</span>`;
+
+    let body = '';
+    if (rule.target)    body += renderTarget(rule.target);
+    if (rule.condition) body += renderCondition(rule.condition);
+
+    const bodyId = `rb_${index}_${Math.random().toString(36).slice(2,7)}`;
+
+    return `<div class="rule-card ${cls}">`
+         + `<div class="rule-hdr" onclick="TreeRenderer.toggleRule('${bodyId}',this)">`
+         + `<span class="effect-badge">${badge}</span>`
+         + `<span class="rule-title">${titleText}</span>`
+         + (body ? `<span class="rule-toggle">&#x25B6;</span>` : '')
+         + `</div>`
+         + (body
+              ? `<div class="rule-body" id="${bodyId}">${body}</div>`
+              : '')
+         + `</div>`;
+  }
+
+  // ── Full policy ──
+
+  function render(policy) {
+    const permitCount = policy.rules.filter(r => r.effect !== 'Deny').length;
+    const denyCount   = policy.rules.filter(r => r.effect === 'Deny').length;
+    const shortId     = policy.policyId.split(':').pop();
+
+    let html = `<div class="policy-hdr">`
+             + `<div class="policy-hdr-title">&#x1F4CB; ${esc(shortId)}</div>`
+             + `<div class="policy-hdr-desc">${esc(policy.description || '(keine Beschreibung)')}</div>`
+             + `<div class="policy-hdr-meta">`
+             + renderAlgo(policy.algorithm)
+             + `&nbsp;&middot;&nbsp;<strong>${policy.rules.length}</strong> Regeln`
+             + ` (<span style="color:#4CAF50">${permitCount}&nbsp;Permit</span>`
+             + `, <span style="color:#F44336">${denyCount}&nbsp;Deny</span>)`
+             + `&nbsp;&middot;&nbsp;XACML&nbsp;${policy.version}`
+             + `</div>`
+             + `<div class="policy-hdr-ctrl">`
+             + `<button class="ctrl-btn" onclick="TreeRenderer.expandAll()">&#x25BC; Alle aufklappen</button>`
+             + `<button class="ctrl-btn" onclick="TreeRenderer.collapseAll()">&#x25B6; Alle zuklappen</button>`
+             + `</div>`
+             + `</div>`;
+
+    // Policy-level target
+    if (policy.target) {
+      const t = policy.target;
+      const hasContent = (t.subjects || []).length + (t.resources || []).length + (t.actions || []).length > 0;
+      if (hasContent) {
+        html += `<div class="policy-target">`
+              + `<div class="section-label">&#x1F3AF; Policy-Target &mdash; gilt f&uuml;r alle Regeln</div>`
+              + renderTarget(policy.target)
+              + `</div>`;
+      }
+    }
+
+    // Rules
+    policy.rules.forEach((rule, i) => { html += renderRule(rule, i); });
+
+    return html;
+  }
+
+  // ── Public interaction ──
+
+  function toggleRule(bodyId, headerEl) {
+    const body = document.getElementById(bodyId);
+    if (!body) return;
+    const open = body.classList.toggle('open');
+    const toggle = headerEl.querySelector('.rule-toggle');
+    if (toggle) toggle.classList.toggle('open', open);
+  }
+
+  function expandAll() {
+    document.querySelectorAll('.rule-body').forEach(b => b.classList.add('open'));
+    document.querySelectorAll('.rule-toggle').forEach(t => t.classList.add('open'));
+  }
+
+  function collapseAll() {
+    document.querySelectorAll('.rule-body').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.rule-toggle').forEach(t => t.classList.remove('open'));
+  }
+
+  return { render, toggleRule, expandAll, collapseAll };
+})();
+
+// ================================================================
+//  UI STATE
+// ================================================================
+const UIState = (() => {
+  let policies   = [];
+  let activeIdx  = -1;
+
+  function addOrReplace(policy) {
+    const existing = policies.findIndex(p => p.filename === policy.filename);
+    if (existing >= 0) { policies[existing] = policy; return existing; }
+    policies.push(policy);
+    return policies.length - 1;
+  }
+
+  function setActive(idx) { activeIdx = idx; }
+  function getActive()    { return activeIdx >= 0 ? policies[activeIdx] : null; }
+  function getAll()       { return policies; }
+  function activeIs(p)    { return getActive() === p; }
+
+  return { addOrReplace, setActive, getActive, getAll, activeIs };
+})();
+
+// ================================================================
+//  APP
+// ================================================================
+const App = (() => {
+
+  function triggerCSV() { document.getElementById('csv-input').click(); }
+  function triggerXML() { document.getElementById('xml-input').click(); }
+
+  async function loadCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const entries = CSVParser.parse(text);
+      LabelMapper.load(entries);
+      // Re-render active policy with new labels
+      const active = UIState.getActive();
+      if (active) showPolicy(active);
+      refreshSidebar();
+      // Briefly update button text
+      const btn = document.getElementById('csv-btn');
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = '\u2713 ' + entries.length + ' Labels geladen';
+        setTimeout(() => { btn.textContent = orig; }, 2500);
+      }
+    } catch (e) {
+      alert('CSV-Fehler: ' + e.message);
+    }
+    input.value = '';
+  }
+
+  async function loadXMLs(input) {
+    const files = Array.from(input.files).filter(f => f.name.toLowerCase().endsWith('.xml'));
+    if (!files.length) return;
+
+    let firstIdx = -1;
+    const errors = [];
+
+    for (const file of files) {
+      try {
+        const text   = await file.text();
+        const policy = XACMLParser.parse(text, file.name);
+        const idx    = UIState.addOrReplace(policy);
+        if (firstIdx < 0) firstIdx = idx;
+      } catch (e) {
+        errors.push(file.name + ': ' + e.message);
+      }
+    }
+
+    refreshSidebar();
+
+    if (firstIdx >= 0) activatePolicy(firstIdx);
+
+    if (errors.length > 0) {
+      alert('Fehler beim Laden:\n' + errors.join('\n'));
+    }
+
+    input.value = '';
+  }
+
+  function activatePolicy(idx) {
+    UIState.setActive(idx);
+    const policy = UIState.getActive();
+    if (policy) showPolicy(policy);
+    refreshSidebar();
+  }
+
+  function showPolicy(policy) {
+    document.getElementById('content').innerHTML = TreeRenderer.render(policy);
+  }
+
+  function refreshSidebar() {
+    const list     = document.getElementById('sidebar-list');
+    const policies = UIState.getAll();
+    const active   = UIState.getActive();
+
+    if (!policies.length) {
+      list.innerHTML = '<div class="sb-empty">Noch keine Dateien geladen</div>';
+      return;
+    }
+
+    list.innerHTML = policies.map((p, i) => {
+      const isActive    = p === active;
+      const permitCount = p.rules.filter(r => r.effect !== 'Deny').length;
+      const denyCount   = p.rules.filter(r => r.effect === 'Deny').length;
+      const total       = p.rules.length;
+      const pPct        = total > 0 ? (permitCount / total * 100).toFixed(1) : 0;
+      const dPct        = total > 0 ? (denyCount   / total * 100).toFixed(1) : 0;
+      const shortName   = p.filename.replace(/\.xml$/i, '');
+
+      return `<div class="sb-item${isActive ? ' active' : ''}" onclick="App.activatePolicy(${i})" title="${esc(p.filename)}">`
+           + `<div class="sb-name">${esc(shortName)}</div>`
+           + `<div class="sb-meta">${total} Regel${total !== 1 ? 'n' : ''} &middot; ${permitCount}P&thinsp;/&thinsp;${denyCount}D</div>`
+           + `<div class="sb-bar">`
+           + `<div class="sb-permit" style="width:${pPct}%"></div>`
+           + `<div class="sb-deny" style="width:${dPct}%"></div>`
+           + `</div></div>`;
+    }).join('');
+  }
+
+  return { triggerCSV, triggerXML, loadCSV, loadXMLs, activatePolicy };
+})();
+</script>
+</body>
+</html>
