@@ -1,0 +1,17 @@
+# Ignoriere node_modules-Verzeichnis
+data/
+docs/
+memory/
+testdata
+
+# Ignoriere alle -Dateien
+*.log
+*.md
+
+# Ignoriere lokale Konfigurationsdateien
+.env
+config.json
+
+# Ignoriere temporäre Systemdateien
+.DS_Store
+Thumbs.db   
