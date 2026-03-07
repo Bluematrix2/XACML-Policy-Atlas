@@ -1,10 +1,10 @@
-# Ignoriere node_modules-Verzeichnis
+# Ignoriere Verzeichnise
 data/
 docs/
 memory/
 testdata/
 
-# Ignoriere alle -Dateien
+# Ignoriere Dateien
 *.log
 *.md
 *.csv
