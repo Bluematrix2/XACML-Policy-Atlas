@@ -6,7 +6,7 @@ testdata/
 
 # Ignoriere Dateien
 *.log
-*.md
+# *.md
 *.csv
 *.xml
 
