@@ -907,7 +907,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
   transition: border-color 0.15s;
 }
 .guide-search:focus { border-color: var(--accent); }
-.guide-search::-webkit-search-cancel-button { cursor: pointer; }
+.guide-search::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
 
 /* ── Guide accordions ── */
 .guide-acc {
