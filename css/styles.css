@@ -697,7 +697,7 @@ mark.hl { background: #FFE082; color: #212121; border-radius: 2px; padding: 0 1p
 .mobile-hint {
   display: none;
 }
-@media (max-width: 800px) {
+@media (max-width: 1150px) {
   .mobile-hint {
     display: flex;
     position: fixed;
