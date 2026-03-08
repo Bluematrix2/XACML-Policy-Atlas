@@ -117,18 +117,40 @@
     .empty-state .icon { font-size: 52px; }
     .empty-state p { font-size: 14px; }
 
-    /* ── Policy header ── */
-    .policy-hdr {
+    /* ── Accordion ── */
+    .acc-panel {
       background: #fff;
       border: 1px solid #e0e0e0;
       border-radius: 8px;
-      padding: 14px 16px;
       margin-bottom: 12px;
     }
-    .policy-hdr-title { font-size: 17px; font-weight: 700; color: #1a237e; word-break: break-all; }
-    .policy-hdr-desc  { font-size: 13px; color: #555; margin-top: 5px; line-height: 1.5; }
-    .policy-hdr-meta  { margin-top: 8px; font-size: 12px; color: #757575; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-    .policy-hdr-ctrl  { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .acc-hdr {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+      background: #f8f9ff;
+      border-radius: 8px;
+      transition: background .15s;
+    }
+    .acc-hdr.is-open { border-radius: 8px 8px 0 0; border-bottom: 1px solid #e0e0e0; }
+    .acc-hdr:hover { background: #eef0ff; }
+    .acc-hdr-icon { font-size: 20px; flex-shrink: 0; }
+    .acc-hdr-info { flex: 1; min-width: 0; }
+    .acc-hdr-title { font-size: 14px; font-weight: 700; color: #1a237e; word-break: break-all; }
+    .acc-hdr-desc { font-size: 12px; color: #666; margin-top: 3px; line-height: 1.4; }
+    .acc-hdr-badges { display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; padding-top: 2px; }
+    .acc-chevron { font-size: 11px; color: #9e9e9e; transition: transform .3s ease; flex-shrink: 0; padding-top: 4px; }
+    .acc-chevron.open { transform: rotate(90deg); }
+    .acc-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease; }
+    .acc-body.open { grid-template-rows: 1fr; }
+    .acc-inner { overflow: hidden; min-height: 0; }
+    .acc-inner-content { padding: 12px 16px 16px; }
+
+    /* ── Control buttons ── */
+    .policy-hdr-ctrl { margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
     .ctrl-btn {
       background: #fff;
       border: 1px solid #e0e0e0;
@@ -159,7 +181,7 @@
 
     /* ── Policy target section ── */
     .policy-target {
-      background: #fff;
+      background: #f5f5f5;
       border: 1px solid #e0e0e0;
       border-radius: 8px;
       padding: 10px 14px;
@@ -179,7 +201,7 @@
       border-radius: 7px;
       border: 1px solid;
       margin-bottom: 7px;
-      overflow: hidden;
+      overflow: visible;
     }
     .rule-card.permit { border-color: #a5d6a7; }
     .rule-card.deny   { border-color: #ef9a9a; }
@@ -192,6 +214,7 @@
       cursor: pointer;
       user-select: none;
       transition: filter .1s;
+      border-radius: 7px;
     }
     .rule-hdr:hover { filter: brightness(.97); }
     .rule-card.permit .rule-hdr { background: #e8f5e9; }
@@ -222,25 +245,39 @@
     .match-group { margin-bottom: 10px; }
     .match-group:last-child { margin-bottom: 0; }
     .mg-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #9e9e9e; margin-bottom: 5px; }
-    .mg-items { display: flex; flex-wrap: wrap; gap: 5px; align-items: flex-start; }
+    .mg-items { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
-    /* OR-separating "subject groups" */
-    .or-group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-    .or-sep {
+    /* ── Logic chips (UND / ODER) ── */
+    .logic-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 10px;
       font-size: 10px;
-      font-weight: 700;
-      color: #9e9e9e;
-      padding: 0 4px;
-      align-self: center;
+      font-weight: 800;
+      letter-spacing: .4px;
+      cursor: default;
+      vertical-align: middle;
+      position: relative;
+      flex-shrink: 0;
     }
-    /* AND-separator inside a single Subject/Resource/Action */
-    .and-sep {
-      font-size: 10px;
-      font-weight: 700;
-      color: #9e9e9e;
-      padding: 0 2px;
-      align-self: center;
+    .logic-chip.oder { background: #FF9800; color: #fff; }
+    .logic-chip.und  { background: #2196F3; color: #fff; }
+    .logic-chip:hover .tooltip { display: block; }
+
+    /* ── Readable match sentence ── */
+    .or-group { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .match-sentence { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .match-attr-label {
+      font-size: 11px;
+      color: #546e7a;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: default;
+      position: relative;
     }
+    .match-attr-label:hover .tooltip { display: block; }
+    .match-connector { font-size: 11px; color: #9e9e9e; white-space: nowrap; }
 
     /* ── Chips ── */
     .chip {
@@ -270,6 +307,17 @@
     }
     .chip .star { color: #f9a825; }
     .chip:hover .tooltip { display: block; }
+
+    /* ── FHIR link ── */
+    .fhir-link {
+      color: #1976d2;
+      text-decoration: none;
+      font-size: 11px;
+      opacity: .75;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .fhir-link:hover { opacity: 1; }
 
     /* ── Tooltip ── */
     .tooltip {
@@ -323,6 +371,97 @@
     .cond-res  { color: #6a1b9a; }
     .cond-act  { color: #e65100; }
     .cond-val  { color: #37474f; font-family: monospace; }
+
+    /* ── Condition impact ── */
+    .cond-impact {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 600;
+      padding-bottom: 5px;
+      margin-bottom: 6px;
+      border-bottom: 1px dashed #ffe082;
+    }
+    .cond-impact.permit { color: #2e7d32; }
+    .cond-impact.deny   { color: #c62828; }
+    .no-cond-hint {
+      font-size: 12px;
+      color: #757575;
+      font-style: italic;
+      padding: 4px 2px;
+      margin-bottom: 4px;
+    }
+
+    /* ── Summary box ── */
+    .summary-box {
+      background: #e8f4fd;
+      border: 1px solid #90caf9;
+      border-radius: 7px;
+      padding: 11px 14px;
+      margin-bottom: 12px;
+    }
+    .summary-box-title { font-size: 12px; font-weight: 700; color: #1565c0; margin-bottom: 8px; }
+    .summary-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; align-items: center; }
+    .summary-row:last-child { margin-bottom: 0; }
+    .summary-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: #546e7a; min-width: 95px; flex-shrink: 0; }
+    .summary-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: 12px;
+      color: #333;
+    }
+    .star-hint {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 5px;
+      padding: 5px 10px;
+      font-size: 12px;
+      color: #f57f17;
+      margin-top: 7px;
+    }
+
+    /* ── Search & Filter bar ── */
+    .search-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .search-input {
+      flex: 1;
+      min-width: 160px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 13px;
+      outline: none;
+      background: #fff;
+      transition: border-color .15s;
+    }
+    .search-input:focus { border-color: #3949ab; box-shadow: 0 0 0 2px rgba(57,73,171,.12); }
+    .filter-btn {
+      padding: 5px 12px;
+      border-radius: 4px;
+      border: 1px solid #e0e0e0;
+      background: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background .1s;
+      color: #555;
+      white-space: nowrap;
+    }
+    .filter-btn:hover { background: #f5f5f5; }
+    .filter-btn.active { background: #3949ab; color: #fff; border-color: #3949ab; }
+
+    /* ── Search highlight ── */
+    mark.hl { background: #FFE082; color: #212121; border-radius: 2px; padding: 0 1px; font-style: normal; }
 
     /* ── Error ── */
     .error-box {
@@ -408,11 +547,9 @@ function isLightColor(hex) {
 }
 
 function lastSegment(uri) {
-  // Returns the last colon- or slash-separated segment
   return (uri || '').split(/[:/]/).filter(Boolean).pop() || uri;
 }
 
-// Get direct children of an element by localName (namespace-safe)
 function childrenByName(el, localName) {
   const result = [];
   if (!el) return result;
@@ -430,7 +567,6 @@ function childByName(el, localName) {
   return null;
 }
 
-// Find first descendant (any depth) by localName
 function descendantByName(el, localName) {
   if (!el) return null;
   for (const child of el.children) {
@@ -450,7 +586,6 @@ const XACMLParser = (() => {
     if (!avEl) return { dataType: 'string', value: '' };
     const dataType = avEl.getAttribute('DataType') || '';
 
-    // HL7v3 CodedValue (CV)
     if (dataType.includes('CV')) {
       const cv = descendantByName(avEl, 'CodedValue');
       if (cv) {
@@ -462,7 +597,6 @@ const XACMLParser = (() => {
       }
     }
 
-    // HL7v3 InstanceIdentifier (II)
     if (dataType.includes('II')) {
       const ii = descendantByName(avEl, 'InstanceIdentifier');
       if (ii) {
@@ -471,7 +605,6 @@ const XACMLParser = (() => {
       }
     }
 
-    // Plain string / anyURI
     return {
       dataType: dataType.includes('anyURI') ? 'anyURI' : 'string',
       value: (avEl.textContent || '').trim()
@@ -491,7 +624,6 @@ const XACMLParser = (() => {
     const avEl    = childByName(matchEl, 'AttributeValue');
     const value   = parseAttributeValue(avEl);
 
-    // Find designator (any flavour)
     let designator = { attributeId: '', dataType: '' };
     for (const child of matchEl.children) {
       const ln = child.localName;
@@ -506,7 +638,6 @@ const XACMLParser = (() => {
     return { matchId, value, designator };
   }
 
-  // Parse a Subject/Resource/Action element → array of matches (AND-linked)
   function parseMatchGroup(containerEl, matchLocalName) {
     return childrenByName(containerEl, matchLocalName).map(parseMatch);
   }
@@ -515,7 +646,6 @@ const XACMLParser = (() => {
     if (!targetEl) return null;
     const result = { subjects: [], resources: [], actions: [] };
 
-    // XACML 2.0
     const subjectsEl  = childByName(targetEl, 'Subjects');
     const resourcesEl = childByName(targetEl, 'Resources');
     const actionsEl   = childByName(targetEl, 'Actions');
@@ -533,13 +663,11 @@ const XACMLParser = (() => {
         .map(a => parseMatchGroup(a, 'ActionMatch'));
     }
 
-    // XACML 3.0 fallback (AnyOf/AllOf/Match)
     if (!subjectsEl && !resourcesEl && !actionsEl) {
       for (const anyOf of childrenByName(targetEl, 'AnyOf')) {
         for (const allOf of childrenByName(anyOf, 'AllOf')) {
           for (const matchEl of childrenByName(allOf, 'Match')) {
             const m = parseMatch(matchEl);
-            // Detect target category from designator element name
             let designatorLocalName = '';
             for (const child of matchEl.children) {
               if (child.localName.includes('Designator')) {
@@ -547,9 +675,9 @@ const XACMLParser = (() => {
                 break;
               }
             }
-            if (designatorLocalName.includes('Subject'))  result.subjects.push([m]);
-            else if (designatorLocalName.includes('Resource')) result.resources.push([m]);
-            else if (designatorLocalName.includes('Action'))   result.actions.push([m]);
+            if (designatorLocalName.includes('Subject'))        result.subjects.push([m]);
+            else if (designatorLocalName.includes('Resource'))  result.resources.push([m]);
+            else if (designatorLocalName.includes('Action'))    result.actions.push([m]);
           }
         }
       }
@@ -612,14 +740,14 @@ const XACMLParser = (() => {
       throw new Error('Kein <Policy>-Element gefunden');
     }
 
-    const policyId   = root.getAttribute('PolicyId') || filename;
-    const algorithm  = root.getAttribute('RuleCombiningAlgId') || '';
-    const ns         = root.namespaceURI || '';
-    const version    = ns.includes('2.0') ? '2.0' : '3.0';
-    const descEl     = childByName(root, 'Description');
+    const policyId    = root.getAttribute('PolicyId') || filename;
+    const algorithm   = root.getAttribute('RuleCombiningAlgId') || '';
+    const ns          = root.namespaceURI || '';
+    const version     = ns.includes('2.0') ? '2.0' : '3.0';
+    const descEl      = childByName(root, 'Description');
     const description = descEl ? (descEl.textContent || '').trim() : '';
-    const target     = parseTarget(childByName(root, 'Target'));
-    const rules      = childrenByName(root, 'Rule').map(parseRule);
+    const target      = parseTarget(childByName(root, 'Target'));
+    const rules       = childrenByName(root, 'Rule').map(parseRule);
 
     return { policyId, filename, version, algorithm, description, target, rules };
   }
@@ -671,13 +799,11 @@ const LabelMapper = (() => {
     _loaded = true;
   }
 
-  // Direct URI/ID lookup
   function lookup(id) {
     if (!id) return null;
     return _byId[id.trim()] || null;
   }
 
-  // CodedValue lookup: code@codeSystem
   function lookupCV(code, codeSystem) {
     return _byId[`${code}@${codeSystem}`] || null;
   }
@@ -693,6 +819,25 @@ const LabelMapper = (() => {
 // ================================================================
 const TreeRenderer = (() => {
   const FALLBACK_COLOR = '#607D8B';
+  const FHIR_VERSION   = 'R4';
+  // FHIR resource-type attributeId
+  const FHIR_ATTR_ID   = 'http://hl7.org/fhir/resource-types';
+
+  // ── Logic chips ──
+
+  function oderChip() {
+    return `<span class="logic-chip oder">ODER`
+         + `<span class="tooltip" style="min-width:210px">Eine dieser Bedingungen muss zutreffen</span>`
+         + `</span>`;
+  }
+
+  function undChip() {
+    return `<span class="logic-chip und">UND`
+         + `<span class="tooltip" style="min-width:210px">Alle Bedingungen m&uuml;ssen gleichzeitig zutreffen</span>`
+         + `</span>`;
+  }
+
+  // ── Chip rendering ──
 
   function chipHtml(label, description, uri, color, prefix) {
     const bg = color || FALLBACK_COLOR;
@@ -716,8 +861,10 @@ const TreeRenderer = (() => {
     return `<span class="chip fallback">${esc(uri)}<span class="tooltip">${tip}</span></span>`;
   }
 
-  function valueChip(matchValue) {
+  // Returns chip HTML + optional FHIR link for a match value
+  function valueChip(matchValue, attributeId) {
     const { dataType, value, code, codeSystem, root, isWildcard } = matchValue;
+    const isFhir = attributeId === FHIR_ATTR_ID;
 
     if (dataType === 'CV') {
       const e = LabelMapper.lookupCV(code, codeSystem);
@@ -729,7 +876,7 @@ const TreeRenderer = (() => {
       if (isWildcard) {
         return `<span class="chip" style="background:#fff8e1;color:#f57f17;border-color:#ffe082">`
              + `<span class="star">&#x2B50;</span>Alle Patienten (Wildcard)`
-             + `<span class="tooltip">Star-Policy: Gilt automatisch f&uuml;r alle Patientenakten`
+             + `<span class="tooltip">Wildcard-Policy: Gilt automatisch f&uuml;r alle Patientenakten`
              + `<span class="tooltip-uri">root=&apos;*&apos;</span></span></span>`;
       }
       return chipHtml(root || 'II', '', root, '#795548');
@@ -738,62 +885,69 @@ const TreeRenderer = (() => {
     // string / anyURI
     const v = (value || '').trim();
     const e = LabelMapper.lookup(v);
+
+    if (isFhir) {
+      // FHIR resource: chip + spec link
+      const chip = e
+        ? chipHtml(e.label, e.description, v, e.color)
+        : chipHtml(v, '', v, '#1565c0');
+      const link = `<a class="fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${v.toLowerCase()}.html"`
+                 + ` target="_blank" rel="noopener" title="FHIR ${FHIR_VERSION} Spezifikation: ${esc(v)}">&#x1F517;</a>`;
+      return chip + link;
+    }
+
     if (e) return chipHtml(e.label, e.description, v, e.color);
     return fallbackChip(v);
   }
 
-  // Small attribute-type label (shown in front of value chip)
-  function attrLabel(attributeId) {
-    const e = LabelMapper.lookup(attributeId);
+  // Returns plain text label for a matchValue (for summary box)
+  function getValueLabel(matchValue) {
+    const { dataType, value, code, codeSystem, root } = matchValue;
+    if (dataType === 'CV') {
+      const e = LabelMapper.lookupCV(code, codeSystem);
+      return e ? e.label : code;
+    }
+    if (dataType === 'II') return root || 'II';
+    const v = (value || '').trim();
+    const e = LabelMapper.lookup(v);
+    return e ? e.label : lastSegment(v);
+  }
+
+  // Attribute label with tooltip (used in readable sentences)
+  function matchAttrLabel(attributeId) {
+    const e     = LabelMapper.lookup(attributeId);
     const label = e ? e.label : lastSegment(attributeId);
     const desc  = e ? e.description : '';
     const tip   = `${desc ? esc(desc) + '<br>' : ''}<span class="tooltip-uri">${esc(attributeId)}</span>`;
-    return `<span style="font-size:10px;color:#9e9e9e;white-space:nowrap;cursor:default;position:relative;">`
-         + esc(label)
-         + `<span class="tooltip">${tip}</span></span>`;
+    return `<span class="match-attr-label">${esc(label)}<span class="tooltip">${tip}</span></span>`;
   }
 
-  // One match = (optionally) attribute label + value chip
-  function renderMatch(match) {
-    const attrId = match.designator ? match.designator.attributeId : '';
-    const chips  = valueChip(match.value);
-    // Show attribute hint only when there are complex multi-match groups (detected by caller)
-    return { attr: attrId, html: chips };
-  }
+  // ── Match group rendering (outer=ODER, inner=UND, readable sentences) ──
 
-  // Render groups (outer = OR, inner = AND)
   function renderMatchGroups(groups, groupLabel) {
     if (!groups || groups.length === 0) return '';
 
-    const groupsHtml = groups.map((group, gi) => {
+    const groupsHtml = groups.map(group => {
       if (!group || group.length === 0) return '';
 
-      // Each match in the group renders as: optionally attr-label + value chip
-      // For single-match groups, skip attr label for cleanliness
-      // For multi-match groups, show attr label to disambiguate
-      const showAttr = group.length > 1;
+      // Each match → readable sentence: [attr label] ist [value chip]
       const parts = group.map(match => {
-        const { attr, html } = renderMatch(match);
-        if (showAttr && attr) {
-          return `<span style="display:inline-flex;align-items:center;gap:3px;">`
-               + attrLabel(attr) + ':&nbsp;' + html
-               + `</span>`;
-        }
-        return html;
+        const attrId  = match.designator ? match.designator.attributeId : '';
+        const valHtml = valueChip(match.value, attrId);
+        const attrHtml = matchAttrLabel(attrId);
+        return `<span class="match-sentence">${attrHtml}<span class="match-connector">ist</span>${valHtml}</span>`;
       });
 
-      // Join with AND separator
-      return parts.join(`<span class="and-sep"> &amp; </span>`);
+      return parts.join(undChip());
     });
 
-    // Join groups with OR separator
     const combined = groupsHtml
-      .filter(g => g)
-      .map((g, i) => `<span class="or-group">${g}</span>`)
-      .join(`<span class="or-sep">ODER</span>`);
+      .filter(Boolean)
+      .map(g => `<span class="or-group">${g}</span>`)
+      .join(oderChip());
 
     return `<div class="match-group">`
-         + `<div class="mg-label">${esc(groupLabel)}</div>`
+         + `<div class="mg-label">${groupLabel}</div>`
          + `<div class="mg-items">${combined}</div>`
          + `</div>`;
   }
@@ -832,41 +986,64 @@ const TreeRenderer = (() => {
 
   function condApply(apply) {
     const fn = apply.functionId || '';
-    const e  = LabelMapper.lookup(fn);
-    const fnLabel = e ? e.label : lastSegment(fn);
 
     if (fn.includes(':not')) {
       const inner = apply.args[0] ? condNode(apply.args[0]) : '';
-      return `<span class="cond-not">NICHT</span>(${inner})`;
+      return `<span class="cond-not">&#x26D4; NICHT</span>(${inner})`;
     }
 
     if (fn.includes('any-of-any')) {
+      // Render as readable: [left attr] entspricht [right attr]
+      const attrArgs = apply.args.filter(a => a.nodeType !== 'Function');
+      if (attrArgs.length === 2) {
+        return `${condNode(attrArgs[0])} <em style="color:#9e9e9e">entspricht</em> ${condNode(attrArgs[1])}`;
+      }
       const argStrs = apply.args.map(condNode).filter(Boolean);
-      return `<span class="cond-fn">${esc(fnLabel)}</span>(${argStrs.join(', ')})`;
+      return `<span class="cond-fn">${esc(lastSegment(fn))}</span>(${argStrs.join(', ')})`;
     }
 
+    const e = LabelMapper.lookup(fn);
+    const fnLabel = e ? e.label : lastSegment(fn);
     const argStrs = apply.args.map(condNode).filter(Boolean);
     return `<span class="cond-fn">${esc(fnLabel)}</span>(${argStrs.join(', ')})`;
   }
 
-  function renderCondition(cond) {
+  function renderCondition(cond, effect) {
     if (!cond) return '';
-    const html = condApply(cond);
+
+    const isDeny    = effect === 'Deny';
+    const impactCls = isDeny ? 'deny' : 'permit';
+    const impactIco = isDeny ? '&#x274C;' : '&#x2705;';
+    const impactLbl = isDeny ? 'Deny' : 'Permit';
+
+    // Detect top-level NOT (negated condition)
+    const isNegated = cond.functionId && cond.functionId.includes(':not');
+    const negHint   = isNegated
+      ? ` <span style="font-size:11px;color:#757575;font-weight:400">&mdash; Bedingung ist negiert (NOT)</span>`
+      : '';
+
+    const impactHtml = `<div class="cond-impact ${impactCls}">`
+                     + `${impactIco} Wenn WAHR &rarr; Regel wird angewendet (${impactLbl})`
+                     + negHint
+                     + `</div>`;
+
+    const condHtml = condApply(cond);
+
     return `<div class="match-group">`
          + `<div class="mg-label">&#x1F50D; Bedingung</div>`
-         + `<div class="condition-block">${html}</div>`
+         + `<div class="condition-block">${impactHtml}${condHtml}</div>`
          + `</div>`;
   }
 
-  // ── Target (subjects / resources / actions) ──
+  // ── Target ──
 
   function renderTarget(target) {
     if (!target) return '';
     const { subjects = [], resources = [], actions = [] } = target;
     let html = '';
-    if (subjects.length)  html += renderMatchGroups(subjects,  '&#x1F464; Subjekte');
+    if (subjects.length)  html += renderMatchGroups(subjects,  '&#x1F464; Wer (Subject)');
     if (resources.length) html += renderMatchGroups(resources, '&#x1F4E6; Ressourcen');
-    if (actions.length)   html += renderMatchGroups(actions,   '&#x26A1; Aktionen');
+    if (actions.length)   html += renderMatchGroups(actions,   '&#x26A1; Action');
     return html;
   }
 
@@ -881,6 +1058,113 @@ const TreeRenderer = (() => {
          + `<span class="tooltip">${tip}</span></span>`;
   }
 
+  // ── Summary box ──
+
+  function renderSummaryBox(policy) {
+    const permitCount = policy.rules.filter(r => r.effect !== 'Deny').length;
+    const denyCount   = policy.rules.filter(r => r.effect === 'Deny').length;
+
+    // Collect subjects/roles from policy target
+    const subjectLabels = [];
+    if (policy.target && policy.target.subjects) {
+      for (const group of policy.target.subjects) {
+        for (const match of group) {
+          const label = getValueLabel(match.value);
+          if (label && !subjectLabels.includes(label)) subjectLabels.push(label);
+        }
+      }
+    }
+
+    // Detect wildcard-policy
+    const isStarPolicy = (policy.target && policy.target.resources || []).some(
+      group => group.some(m => m.value && m.value.isWildcard)
+    );
+
+    // Collect FHIR resources and their access modes from rules
+    const fhirResMap = new Map(); // type → Set<'read'|'write'>
+    for (const rule of policy.rules) {
+      if (!rule.target) continue;
+      const actions = (rule.target.actions || []).flatMap(ag => ag.map(m => (m.value.value || '').toLowerCase()));
+      const hasRead  = actions.some(a => a.includes('view') || a.includes('retrieve') || a.includes('query') || a.includes('response'));
+      const hasWrite = actions.some(a =>
+        a.includes('add-clinical') || a.includes('register') || a.includes('provide') ||
+        a.includes('delete') || a.includes('update') || a.includes('remove')
+      );
+      for (const group of (rule.target.resources || [])) {
+        for (const match of group) {
+          if (match.designator && match.designator.attributeId === FHIR_ATTR_ID) {
+            const type = (match.value.value || '').trim();
+            if (!type) continue;
+            if (!fhirResMap.has(type)) fhirResMap.set(type, new Set());
+            if (hasRead)  fhirResMap.get(type).add('read');
+            if (hasWrite) fhirResMap.get(type).add('write');
+          }
+        }
+      }
+    }
+
+    let html = `<div class="summary-box">`;
+    html += `<div class="summary-box-title">&#x1F4CA; Zusammenfassung</div>`;
+
+    // Rule counts
+    html += `<div class="summary-row">`;
+    html += `<span class="summary-label">Regeln</span>`;
+    html += `<span class="summary-chip" style="color:#2e7d32;border-color:#c8e6c9">&#x2705; ${permitCount}&nbsp;Permit</span>`;
+    html += `<span class="summary-chip" style="color:#c62828;border-color:#ffcdd2">&#x274C; ${denyCount}&nbsp;Deny</span>`;
+    html += `</div>`;
+
+    // Subjects / roles
+    if (subjectLabels.length > 0) {
+      html += `<div class="summary-row">`;
+      html += `<span class="summary-label">Zugang f&uuml;r</span>`;
+      html += subjectLabels.map(l => `<span class="summary-chip">&#x1F464; ${esc(l)}</span>`).join('');
+      html += `</div>`;
+    }
+
+    // FHIR resources
+    if (fhirResMap.size > 0) {
+      const entries = Array.from(fhirResMap.entries());
+      const MAX_SHOW = 5;
+      const visible = entries.slice(0, MAX_SHOW);
+      const hidden  = entries.slice(MAX_SHOW);
+      const togId   = 'smr_' + Math.random().toString(36).slice(2, 7);
+
+      html += `<div class="summary-row">`;
+      html += `<span class="summary-label">FHIR-Ressourcen</span>`;
+
+      const renderResChip = ([type, modes]) => {
+        const readOnly = !modes.has('write');
+        const badge    = readOnly ? 'READ' : 'READ+WRITE';
+        const bColor   = readOnly ? '#1565c0' : '#2e7d32';
+        return `<span class="summary-chip">`
+             + `<a class="fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${type.toLowerCase()}.html" target="_blank" rel="noopener" title="FHIR ${FHIR_VERSION}: ${esc(type)}">&#x1F517;</a>`
+             + ` ${esc(type)}&nbsp;<span style="color:${bColor};font-size:10px;font-weight:700">${badge}</span>`
+             + `</span>`;
+      };
+
+      html += visible.map(renderResChip).join('');
+
+      if (hidden.length > 0) {
+        html += `<span class="summary-chip" id="${togId}" style="cursor:pointer;color:#3949ab;border-color:#9fa8da"`
+              + ` onclick="document.querySelectorAll('.${togId}').forEach(e=>e.style.display='inline-flex');document.getElementById('${togId}').style.display='none'"`
+              + `>+${hidden.length} weitere</span>`;
+        html += hidden.map(e => {
+          const chip = renderResChip(e);
+          return chip.replace('class="summary-chip"', `class="summary-chip ${togId}" style="display:none"`);
+        }).join('');
+      }
+
+      html += `</div>`;
+    }
+
+    if (isStarPolicy) {
+      html += `<div class="star-hint">&#x2B50; Wildcard-Policy: Gilt automatisch f&uuml;r alle Patientenakten &mdash; kein Zustimmungsdokument erforderlich.</div>`;
+    }
+
+    html += `</div>`;
+    return html;
+  }
+
   // ── Rule ──
 
   function renderRule(rule, index) {
@@ -891,66 +1175,103 @@ const TreeRenderer = (() => {
       ? esc(rule.description)
       : `<span class="rule-no-desc">Regel ${index + 1} (keine Beschreibung)</span>`;
 
+    // Plain-text for search
+    const searchText = (rule.description || `Regel ${index + 1}`).toLowerCase();
+
     let body = '';
     if (rule.target)    body += renderTarget(rule.target);
-    if (rule.condition) body += renderCondition(rule.condition);
+    if (rule.condition) {
+      body += renderCondition(rule.condition, rule.effect);
+    } else {
+      body += `<div class="no-cond-hint">&#x2139;&#xFE0F; Keine Zusatzbedingung &mdash; Regel greift immer wenn Subject passt</div>`;
+    }
 
-    const bodyId = `rb_${index}_${Math.random().toString(36).slice(2,7)}`;
+    const bodyId = `rb_${index}_${Math.random().toString(36).slice(2, 7)}`;
 
-    return `<div class="rule-card ${cls}">`
+    return `<div class="rule-card ${cls}" data-effect="${cls}" data-search="${esc(searchText)}">`
          + `<div class="rule-hdr" onclick="TreeRenderer.toggleRule('${bodyId}',this)">`
          + `<span class="effect-badge">${badge}</span>`
          + `<span class="rule-title">${titleText}</span>`
          + (body ? `<span class="rule-toggle">&#x25B6;</span>` : '')
          + `</div>`
-         + (body
-              ? `<div class="rule-body" id="${bodyId}">${body}</div>`
-              : '')
+         + (body ? `<div class="rule-body" id="${bodyId}">${body}</div>` : '')
          + `</div>`;
   }
 
-  // ── Full policy ──
+  // ── Full policy (accordion wrapper) ──
 
   function render(policy) {
     const permitCount = policy.rules.filter(r => r.effect !== 'Deny').length;
     const denyCount   = policy.rules.filter(r => r.effect === 'Deny').length;
     const shortId     = policy.policyId.split(':').pop();
+    const bodyId      = 'accb_' + Math.random().toString(36).slice(2, 7);
 
-    let html = `<div class="policy-hdr">`
-             + `<div class="policy-hdr-title">&#x1F4CB; ${esc(shortId)}</div>`
-             + `<div class="policy-hdr-desc">${esc(policy.description || '(keine Beschreibung)')}</div>`
-             + `<div class="policy-hdr-meta">`
-             + renderAlgo(policy.algorithm)
-             + `&nbsp;&middot;&nbsp;<strong>${policy.rules.length}</strong> Regeln`
-             + ` (<span style="color:#4CAF50">${permitCount}&nbsp;Permit</span>`
-             + `, <span style="color:#F44336">${denyCount}&nbsp;Deny</span>)`
-             + `&nbsp;&middot;&nbsp;XACML&nbsp;${policy.version}`
-             + `</div>`
-             + `<div class="policy-hdr-ctrl">`
-             + `<button class="ctrl-btn" onclick="TreeRenderer.expandAll()">&#x25BC; Alle aufklappen</button>`
-             + `<button class="ctrl-btn" onclick="TreeRenderer.collapseAll()">&#x25B6; Alle zuklappen</button>`
-             + `</div>`
-             + `</div>`;
+    // Accordion header
+    let html = `<div class="acc-panel">`;
+    html += `<div class="acc-hdr is-open" onclick="TreeRenderer.toggleAccordion('${bodyId}',this)">`;
+    html += `<span class="acc-hdr-icon">&#x1F4CB;</span>`;
+    html += `<div class="acc-hdr-info">`;
+    html += `<div class="acc-hdr-title">${esc(shortId)}</div>`;
+    if (policy.description) {
+      const desc = policy.description.length > 130
+        ? policy.description.slice(0, 130) + '…'
+        : policy.description;
+      html += `<div class="acc-hdr-desc">${esc(desc)}</div>`;
+    }
+    html += `</div>`;
+    html += `<div class="acc-hdr-badges">`;
+    html += `<span style="color:#2e7d32;font-size:12px;font-weight:700">&#x2705;&nbsp;${permitCount}P</span>`;
+    html += `<span style="color:#c62828;font-size:12px;font-weight:700">&#x274C;&nbsp;${denyCount}D</span>`;
+    html += renderAlgo(policy.algorithm);
+    html += `<span style="font-size:11px;color:#9e9e9e">XACML&nbsp;${policy.version}</span>`;
+    html += `</div>`;
+    html += `<span class="acc-chevron open">&#x25B6;</span>`;
+    html += `</div>`; // acc-hdr
+
+    // Accordion body
+    html += `<div class="acc-body open" id="${bodyId}">`;
+    html += `<div class="acc-inner"><div class="acc-inner-content">`;
+
+    // Summary box
+    html += renderSummaryBox(policy);
 
     // Policy-level target
     if (policy.target) {
       const t = policy.target;
       const hasContent = (t.subjects || []).length + (t.resources || []).length + (t.actions || []).length > 0;
       if (hasContent) {
-        html += `<div class="policy-target">`
-              + `<div class="section-label">&#x1F3AF; Policy-Target &mdash; gilt f&uuml;r alle Regeln</div>`
-              + renderTarget(policy.target)
-              + `</div>`;
+        html += `<div class="policy-target">`;
+        html += `<div class="section-label">&#x1F3AF; Policy-Target &mdash; gilt f&uuml;r alle Regeln</div>`;
+        html += renderTarget(policy.target);
+        html += `</div>`;
       }
     }
 
+    // Expand/collapse buttons
+    html += `<div class="policy-hdr-ctrl">`;
+    html += `<button class="ctrl-btn" onclick="TreeRenderer.expandAll()">&#x25BC; Alle aufklappen</button>`;
+    html += `<button class="ctrl-btn" onclick="TreeRenderer.collapseAll()">&#x25B6; Alle zuklappen</button>`;
+    html += `</div>`;
+
     // Rules
     policy.rules.forEach((rule, i) => { html += renderRule(rule, i); });
+
+    html += `</div></div></div>`; // acc-inner-content, acc-inner, acc-body
+    html += `</div>`; // acc-panel
 
     return html;
   }
 
   // ── Public interaction ──
+
+  function toggleAccordion(bodyId, hdrEl) {
+    const body = document.getElementById(bodyId);
+    if (!body) return;
+    const open = body.classList.toggle('open');
+    const chevron = hdrEl.querySelector('.acc-chevron');
+    if (chevron) chevron.classList.toggle('open', open);
+    hdrEl.classList.toggle('is-open', open);
+  }
 
   function toggleRule(bodyId, headerEl) {
     const body = document.getElementById(bodyId);
@@ -963,22 +1284,26 @@ const TreeRenderer = (() => {
   function expandAll() {
     document.querySelectorAll('.rule-body').forEach(b => b.classList.add('open'));
     document.querySelectorAll('.rule-toggle').forEach(t => t.classList.add('open'));
+    document.querySelectorAll('.acc-body').forEach(b => b.classList.add('open'));
+    document.querySelectorAll('.acc-chevron').forEach(c => c.classList.add('open'));
+    document.querySelectorAll('.acc-hdr').forEach(h => h.classList.add('is-open'));
   }
 
   function collapseAll() {
     document.querySelectorAll('.rule-body').forEach(b => b.classList.remove('open'));
     document.querySelectorAll('.rule-toggle').forEach(t => t.classList.remove('open'));
+    // Keep accordion panels visible so controls are accessible
   }
 
-  return { render, toggleRule, expandAll, collapseAll };
+  return { render, toggleAccordion, toggleRule, expandAll, collapseAll };
 })();
 
 // ================================================================
 //  UI STATE
 // ================================================================
 const UIState = (() => {
-  let policies   = [];
-  let activeIdx  = -1;
+  let policies  = [];
+  let activeIdx = -1;
 
   function addOrReplace(policy) {
     const existing = policies.findIndex(p => p.filename === policy.filename);
@@ -990,15 +1315,16 @@ const UIState = (() => {
   function setActive(idx) { activeIdx = idx; }
   function getActive()    { return activeIdx >= 0 ? policies[activeIdx] : null; }
   function getAll()       { return policies; }
-  function activeIs(p)    { return getActive() === p; }
 
-  return { addOrReplace, setActive, getActive, getAll, activeIs };
+  return { addOrReplace, setActive, getActive, getAll };
 })();
 
 // ================================================================
 //  APP
 // ================================================================
 const App = (() => {
+  let _currentFilter = 'all';
+  let _currentSearch = '';
 
   function triggerCSV() { document.getElementById('csv-input').click(); }
   function triggerXML() { document.getElementById('xml-input').click(); }
@@ -1007,14 +1333,12 @@ const App = (() => {
     const file = input.files[0];
     if (!file) return;
     try {
-      const text = await file.text();
+      const text    = await file.text();
       const entries = CSVParser.parse(text);
       LabelMapper.load(entries);
-      // Re-render active policy with new labels
       const active = UIState.getActive();
       if (active) showPolicy(active);
       refreshSidebar();
-      // Briefly update button text
       const btn = document.getElementById('csv-btn');
       if (btn) {
         const orig = btn.textContent;
@@ -1046,13 +1370,8 @@ const App = (() => {
     }
 
     refreshSidebar();
-
     if (firstIdx >= 0) activatePolicy(firstIdx);
-
-    if (errors.length > 0) {
-      alert('Fehler beim Laden:\n' + errors.join('\n'));
-    }
-
+    if (errors.length > 0) alert('Fehler beim Laden:\n' + errors.join('\n'));
     input.value = '';
   }
 
@@ -1064,7 +1383,77 @@ const App = (() => {
   }
 
   function showPolicy(policy) {
-    document.getElementById('content').innerHTML = TreeRenderer.render(policy);
+    const sv = esc(_currentSearch);
+    const searchBar = `<div class="search-bar">`
+      + `<input class="search-input" id="s-input" type="text" value="${sv}"`
+      + ` placeholder="&#x1F50D; Suchen (Beschreibung, Label, URI...)" oninput="App.applySearch(this.value)">`
+      + `<button class="filter-btn${_currentFilter==='all'?' active':''}" id="f-all" onclick="App.setFilter('all')">Alle</button>`
+      + `<button class="filter-btn${_currentFilter==='permit'?' active':''}" id="f-permit" onclick="App.setFilter('permit')">&#x2705; Nur Permit</button>`
+      + `<button class="filter-btn${_currentFilter==='deny'?' active':''}" id="f-deny" onclick="App.setFilter('deny')">&#x274C; Nur Deny</button>`
+      + `</div>`;
+
+    document.getElementById('content').innerHTML = searchBar + TreeRenderer.render(policy);
+
+    if (_currentSearch || _currentFilter !== 'all') {
+      _applyFiltersAndSearch();
+    }
+  }
+
+  function applySearch(query) {
+    _currentSearch = query.trim();
+    _applyFiltersAndSearch();
+  }
+
+  function setFilter(type) {
+    _currentFilter = type;
+    ['all', 'permit', 'deny'].forEach(t => {
+      const btn = document.getElementById('f-' + t);
+      if (btn) btn.classList.toggle('active', t === type);
+    });
+    _applyFiltersAndSearch();
+  }
+
+  function _applyFiltersAndSearch() {
+    const query = _currentSearch.toLowerCase();
+
+    document.querySelectorAll('.rule-card').forEach(card => {
+      const effect = card.dataset.effect || '';
+      const text   = (card.dataset.search || '') + ' ' + card.textContent.toLowerCase();
+
+      const passFilter = _currentFilter === 'all'
+        || (_currentFilter === 'permit' && effect === 'permit')
+        || (_currentFilter === 'deny'   && effect === 'deny');
+
+      const passSearch = !query || text.includes(query);
+
+      const visible = passFilter && passSearch;
+      card.style.display = visible ? '' : 'none';
+
+      // Auto-expand rule body if search matches
+      if (visible && query) {
+        const body   = card.querySelector('.rule-body');
+        const toggle = card.querySelector('.rule-toggle');
+        if (body)   body.classList.add('open');
+        if (toggle) toggle.classList.add('open');
+      }
+    });
+
+    // Highlight query in rule titles
+    document.querySelectorAll('.rule-title').forEach(el => {
+      if (!el.dataset.origHtml) el.dataset.origHtml = el.innerHTML;
+      el.innerHTML = el.dataset.origHtml; // restore
+
+      if (query) {
+        const text  = el.textContent;
+        const lower = text.toLowerCase();
+        const idx   = lower.indexOf(query);
+        if (idx >= 0) {
+          el.innerHTML = esc(text.slice(0, idx))
+            + `<mark class="hl">${esc(text.slice(idx, idx + query.length))}</mark>`
+            + esc(text.slice(idx + query.length));
+        }
+      }
+    });
   }
 
   function refreshSidebar() {
@@ -1096,7 +1485,7 @@ const App = (() => {
     }).join('');
   }
 
-  return { triggerCSV, triggerXML, loadCSV, loadXMLs, activatePolicy };
+  return { triggerCSV, triggerXML, loadCSV, loadXMLs, activatePolicy, applySearch, setFilter };
 })();
 </script>
 </body>
