@@ -37,9 +37,9 @@ Die Spalte `type` ist **informell** und wird vom Tool nicht ausgewertet — sie 
 |---|---|---|
 | `algorithm` | Combining-Algorithmen (PolicySet / Policy) | `urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides` |
 | `function` | Match-Funktionen in SubjectMatch / Condition | `urn:hl7-org:v3:function:CV-equal` |
-| `role` | Rollen-Codes (CodedValue-Typ) | `Patient@2.16.840.1.113883.3.37.4.1.9.204` |
+| `role` | Rollen-Codes (CodedValue-Typ) | `Patient@2.99.999` |
 | `attribute` | XACML-Attribut-IDs (Subject, Resource, Action) | `urn:oasis:names:tc:xacml:2.0:subject:role` |
-| `action` | Aktions-URIs | `urn:icw:2013:record:view-all-response` |
+| `action` | Aktions-URIs | `urn:fp:2013:record:view-all-response` |
 
 ---
 
@@ -67,14 +67,14 @@ code@codeSystem
 
 ```xml
 <AttributeValue DataType="urn:hl7-org:v3#CV">
-  <CV code="Patient" codeSystem="2.16.840.1.113883.3.37.4.1.9.204"/>
+  <CV code="Patient" codeSystem="2.99.999"/>
 </AttributeValue>
 ```
 
 Dann lautet der Mapping-Schlüssel:
 
 ```
-Patient@2.16.840.1.113883.3.37.4.1.9.204
+Patient@2.99.999
 ```
 
 ---
@@ -85,10 +85,10 @@ Patient@2.16.840.1.113883.3.37.4.1.9.204
 type;id;label;description;color
 algorithm;urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides;Deny hat Vorrang;Wenn eine Regel verweigert, gilt das immer;#607D8B
 function;urn:hl7-org:v3:function:CV-equal;Code-Vergleich;Prüft ob zwei codierte Werte identisch sind;
-role;Patient@2.16.840.1.113883.3.37.4.1.9.204;Patient;Der Benutzer ist als Patient angemeldet;#2196F3
+role;Patient@2.99.999;Patient;Der Benutzer ist als Patient angemeldet;#2196F3
 attribute;urn:oasis:names:tc:xacml:2.0:subject:role;Benutzerrolle;Die Rolle des angemeldeten Benutzers;#2196F3
 attribute;urn:ihe:iti:ser:2016:patient-id;Patienten-ID (Akte);ID des Patienten, dem die Akte gehört;#4CAF50
-action;urn:icw:2013:record:view-all-response;Lesen (READ);Daten anzeigen und abrufen;#4CAF50
+action;urn:fp:2013:record:view-all-response;Lesen (READ);Daten anzeigen und abrufen;#4CAF50
 ```
 
 ---

@@ -47,7 +47,7 @@ Eine FHIR-Ressource kann **mehrfach** in der CSV erscheinen — eine Zeile pro k
 ```
 Account;policy enforced;patient;Account.subject;urn:ihe:iti:ser:2016:patient-id;
 Account;policy enforced*;subject;Account.subject;urn:ihe:iti:ser:2016:patient-id;* nur wenn Ressourcentyp Patient ist
-Account;policy enforced;owner;Account.owner;urn:xt:2025:fhir:attribute:owner:organization;seit CHR-25.3
+Account;policy enforced;owner;Account.owner;urn:fp:2025:fhir:attribute:owner:organization;seit CHR-25.3
 ```
 
 Das Tool gruppiert alle Zeilen derselben Ressource und zeigt sie zusammen im Enforcement-Panel an. Der `access_control`-Status der **ersten Zeile** gilt als primärer Status — allerdings überschreibt ein `policy enforced` einen `public`-Status wenn beide vorkommen.
@@ -72,9 +72,9 @@ Das Tool überspringt Zeilen mit `search_parameter = --` bei der Detailansicht.
 ```
 fhir_resource;access_control;search_parameter;enforcement_attribute;xacml_attribute;comment
 AllergyIntolerance;policy enforced;patient;AllergyIntolerance.patient;urn:ihe:iti:ser:2016:patient-id;
-AllergyIntolerance;policy enforced;category;AllergyIntolerance.category;urn:xt:2022:fhir:attribute:category;
-AllergyIntolerance;policy enforced;code;AllergyIntolerance.code;urn:xt:2022:fhir:attribute:code;
-AllergyIntolerance;policy enforced;date;AllergyIntolerance.recordedDate;urn:icw:2013:record:clinical-statement:documentation-date;
+AllergyIntolerance;policy enforced;category;AllergyIntolerance.category;urn:fp:2022:fhir:attribute:category;
+AllergyIntolerance;policy enforced;code;AllergyIntolerance.code;urn:fp:2022:fhir:attribute:code;
+AllergyIntolerance;policy enforced;date;AllergyIntolerance.recordedDate;urn:fp:2013:record:clinical-statement:documentation-date;
 ActivityDefinition;public;--;--;--;
 ```
 
