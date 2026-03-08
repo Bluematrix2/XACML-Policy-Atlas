@@ -11,6 +11,25 @@ import { TreeRenderer } from './renderer.js';
 import { UIState } from './ui.js';
 import { XACMLGuide } from './guide.js';
 
+// ── Upload security constants ──
+const MAX_XML_SIZE = 5 * 1024 * 1024;  // 5 MB
+const MAX_CSV_SIZE = 1 * 1024 * 1024;  // 1 MB
+
+const ALLOWED_XML_EXT = '.xml';
+const ALLOWED_CSV_EXT = '.csv';
+
+function _checkFile(file, allowedExt, maxBytes) {
+  if (!file.name.toLowerCase().endsWith(allowedExt)) {
+    alert(`Ungültiger Dateityp. Nur ${allowedExt.toUpperCase()}-Dateien erlaubt.`);
+    return false;
+  }
+  if (file.size > maxBytes) {
+    alert(`Datei zu groß (max. ${Math.round(maxBytes / 1024 / 1024)} MB): ${file.name}`);
+    return false;
+  }
+  return true;
+}
+
 const App = (() => {
   let _currentFilter = 'all';
   let _currentSearch = '';
@@ -21,6 +40,7 @@ const App = (() => {
   async function loadCSV(input) {
     const file = input.files[0];
     if (!file) return;
+    if (!_checkFile(file, ALLOWED_CSV_EXT, MAX_CSV_SIZE)) { input.value = ''; return; }
     try {
       const text    = await file.text();
       const entries = CSVParser.parse(text);
@@ -41,8 +61,13 @@ const App = (() => {
   }
 
   async function loadXMLs(input) {
-    const files = Array.from(input.files).filter(f => f.name.toLowerCase().endsWith('.xml'));
-    if (!files.length) return;
+    const all = Array.from(input.files).filter(f => f.name.toLowerCase().endsWith(ALLOWED_XML_EXT));
+    const oversized = all.filter(f => f.size > MAX_XML_SIZE);
+    const files = all.filter(f => f.size <= MAX_XML_SIZE);
+    if (oversized.length) {
+      alert(`Übersprungen (max. ${MAX_XML_SIZE / 1024 / 1024} MB überschritten):\n${oversized.map(f => f.name).join('\n')}`);
+    }
+    if (!files.length) { input.value = ''; return; }
 
     let firstIdx = -1;
     const errors = [];
@@ -197,6 +222,7 @@ const App = (() => {
   async function loadEnforcement(input) {
     const file = input.files[0];
     if (!file) return;
+    if (!_checkFile(file, ALLOWED_CSV_EXT, MAX_CSV_SIZE)) { input.value = ''; return; }
     try {
       const text = await file.text();
       EnforcementMapper.load(text);
@@ -239,7 +265,7 @@ const App = (() => {
 
     let html = `<div class="enf-resource-title">&#x1F3E5; ${esc(fhirType)}</div>`;
     //html += `<a class="enf-fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${fhirType.toLowerCase()}.html" target="_blank" rel="noopener">`;
-    html += `<a class="enf-fhir-link" href="https://hl7.org/fhir/${fhirType.toLowerCase()}.html" target="_blank" rel="noopener">`;
+    html += `<a class="enf-fhir-link" href="https://hl7.org/fhir/${esc(fhirType.toLowerCase())}.html" target="_blank" rel="noopener">`;
     html += `&#x1F517; FHIR ${FHIR_VERSION} Spezifikation &rarr;</a>`;
 
     if (!data) {
@@ -307,6 +333,7 @@ const App = (() => {
   async function loadValFile(input) {
     const file = input.files[0];
     if (!file) return;
+    if (!_checkFile(file, ALLOWED_XML_EXT, MAX_XML_SIZE)) { input.value = ''; return; }
     _valFileName = file.name;
     _valFileText = await file.text();
     _runValidator();
@@ -316,7 +343,8 @@ const App = (() => {
   function handleValDrop(event) {
     event.preventDefault();
     const file = event.dataTransfer.files[0];
-    if (!file || !file.name.toLowerCase().endsWith('.xml')) return;
+    if (!file) return;
+    if (!_checkFile(file, ALLOWED_XML_EXT, MAX_XML_SIZE)) return;
     _valFileName = file.name;
     file.text().then(text => { _valFileText = text; _runValidator(); });
   }

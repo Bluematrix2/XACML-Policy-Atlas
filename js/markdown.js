@@ -29,8 +29,11 @@ function inlineMarkdown(text) {
   text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
   // Inline code `code`
   text = text.replace(/`([^`]+)`/g, (_, code) => `<code class="md-inline-code">${escHtml(code)}</code>`);
-  // Links [text](url)
-  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // Links [text](url) — only allow safe protocols
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, linkText, url) => {
+    const safe = /^(https?:\/\/|\/|\.\/|\.\.\/|#)/i.test(url.trim()) ? url.trim() : '#';
+    return `<a href="${safe}" target="_blank" rel="noopener">${linkText}</a>`;
+  });
   return text;
 }
 
@@ -71,7 +74,7 @@ export function parseMarkdown(text) {
 
     // ── Fenced code block ``` ... ```
     if (/^```/.test(line)) {
-      const lang = line.slice(3).trim();
+      // const lang = line.slice(3).trim(); // reserved for future syntax highlighting
       const codeLines = [];
       i++;
       while (i < lines.length && !/^```/.test(lines[i])) {

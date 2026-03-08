@@ -100,7 +100,7 @@ const TreeRenderer = (() => {
       tooltipParts.push(`<span class="tooltip-uri">${esc(v)}</span>`);
       tooltipParts.push(`<span class="tooltip-uri" style="color:#80cbc4">&#x1F517; FHIR ${FHIR_VERSION} Spezifikation</span>`);
       const tooltip = `<span class="tooltip">${tooltipParts.join('<br>')}</span>`;
-      const href = `https://hl7.org/fhir/${v.toLowerCase()}.html`;
+      const href = `https://hl7.org/fhir/${esc(v.toLowerCase())}.html`;
       const chip = `<a class="chip fhir-chip" href="${href}" target="_blank" rel="noopener"`
                  + ` style="background:${bg};color:${fg};border-color:${bg}">`
                  + esc(label) + tooltip + `</a>`;
