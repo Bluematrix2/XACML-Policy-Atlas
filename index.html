@@ -8,6 +8,15 @@
   <title>XACML Policy Atlas</title>
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/styles.css">
+  <!-- Anti-flash: set theme before CSS renders -->
+  <script>
+    (function() {
+      var saved = sessionStorage.getItem('xacml-theme');
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme = saved || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
   <script defer src="https://statistics.puschmann.io/script.js" data-website-id="42e00316-644f-4b96-b388-e271b095351a"></script>
 </head>
 <body>
@@ -19,6 +28,7 @@
   <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="App.loadCSV(this)">
   <input type="file" id="xml-input" accept=".xml" multiple style="display:none" onchange="App.loadXMLs(this)">
   <input type="file" id="dir-input" accept=".xml" webkitdirectory multiple style="display:none" onchange="App.loadXMLs(this)">
+  <button class="hbtn theme-toggle" id="theme-toggle" onclick="App.toggleTheme()" aria-label="Design: Hell (wechseln zu Dunkel)">&#x2600;&#xFE0F;</button>
   <button class="hbtn" id="enf-btn" onclick="App.triggerEnforcement()">&#x1F4CA; Enforcement-CSV</button>
   <input type="file" id="enf-input" accept=".csv" style="display:none" onchange="App.loadEnforcement(this)">
 </header>

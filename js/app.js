@@ -420,10 +420,39 @@ const App = (() => {
     return html;
   }
 
+  // ── Dark / Light Mode ──
+
+  let _theme = 'light';
+
+  function _applyTheme(theme) {
+    _theme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    sessionStorage.setItem('xacml-theme', theme);
+    const btn = document.getElementById('theme-toggle');
+    if (btn) {
+      btn.textContent    = theme === 'dark' ? '\uD83C\uDF19' : '\u2600\uFE0F';
+      btn.setAttribute('aria-label',
+        'Design: ' + (theme === 'dark' ? 'Dunkel (wechseln zu Hell)' : 'Hell (wechseln zu Dunkel)')
+      );
+    }
+  }
+
+  function toggleTheme() {
+    _applyTheme(_theme === 'dark' ? 'light' : 'dark');
+  }
+
+  // Init theme from sessionStorage or system preference
+  (function initTheme() {
+    const saved      = sessionStorage.getItem('xacml-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    _applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+  })();
+
   return {
     triggerCSV, triggerXML, loadCSV, loadXMLs, activatePolicy, applySearch, setFilter,
     triggerEnforcement, loadEnforcement, openEnfPanel, closeEnfPanel, switchTab,
-    loadValFile, handleValDrop, visualizeFromValidator, resetValidator
+    loadValFile, handleValDrop, visualizeFromValidator, resetValidator,
+    toggleTheme
   };
 })();
 

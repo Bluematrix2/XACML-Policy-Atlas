@@ -1,4 +1,170 @@
 /* ================================================================
-   CSS Custom Properties — Phase 4
-   Light / Dark Mode variables will be defined here.
+   CSS Custom Properties — Light & Dark Mode
+   Phase 4 Bereich B
    ================================================================ */
+
+/* ── Light Mode (default) ── */
+:root {
+  /* Backgrounds */
+  --bg-primary:    #FFFFFF;
+  --bg-secondary:  #F5F7FA;
+  --bg-card:       #FFFFFF;
+
+  /* Text */
+  --text-primary:   #1A1A2E;
+  --text-secondary: #4A5568;
+  --text-muted:     #718096;
+
+  /* Borders */
+  --border:        #E2E8F0;
+  --border-subtle: #F0F4F8;
+
+  /* Accent / Interactive */
+  --accent:        #3B82F6;
+  --accent-subtle: #EFF6FF;
+
+  /* Permit (green) */
+  --permit-bg:     #ECFDF5;
+  --permit-border: #10B981;
+
+  /* Deny (red) */
+  --deny-bg:       #FEF2F2;
+  --deny-border:   #EF4444;
+
+  /* Logic chips */
+  --chip-or-bg:    #FF9800;
+  --chip-or-text:  #ffffff;
+  --chip-and-bg:   #2196F3;
+  --chip-and-text: #ffffff;
+
+  /* Condition block */
+  --condition-bg:     #FFF8E1;
+  --condition-border: #FFE082;
+
+  /* Summary box */
+  --summary-bg:     #E8F4FD;
+  --summary-border: #90CAF9;
+
+  /* Accordion header */
+  --acc-hdr-bg:    #F8F9FF;
+  --acc-hdr-hover: #EEF0FF;
+
+  /* Sidebar */
+  --sidebar-active-bg: #E8EAF6;
+
+  /* Tooltip (intentionally dark in both modes for readability) */
+  --tooltip-bg: #263238;
+
+  /* Header (fixed dark, no theme change) */
+  --header-bg: #061E29;
+
+  /* Footer */
+  --footer-bg:   #1E293B;
+  --footer-link: #5EEAD4;
+}
+
+/* ── Dark Mode ── */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-primary:   #0F172A;
+  --bg-secondary: #1E293B;
+  --bg-card:      #1E293B;
+
+  /* Text */
+  --text-primary:   #F1F5F9;
+  --text-secondary: #CBD5E0;
+  --text-muted:     #94A3B8;
+
+  /* Borders */
+  --border:        #334155;
+  --border-subtle: #1E293B;
+
+  /* Accent / Interactive */
+  --accent:        #60A5FA;
+  --accent-subtle: #1E3A5F;
+
+  /* Permit */
+  --permit-bg:     #064E3B;
+  --permit-border: #34D399;
+
+  /* Deny */
+  --deny-bg:       #7F1D1D;
+  --deny-border:   #F87171;
+
+  /* Logic chips */
+  --chip-or-bg:    #C05621;
+  --chip-or-text:  #FEF3C7;
+  --chip-and-bg:   #1D4ED8;
+  --chip-and-text: #DBEAFE;
+
+  /* Condition block */
+  --condition-bg:     #1C1700;
+  --condition-border: #92400E;
+
+  /* Summary box */
+  --summary-bg:     #0C2340;
+  --summary-border: #1E40AF;
+
+  /* Accordion header */
+  --acc-hdr-bg:    #243447;
+  --acc-hdr-hover: #1a2a3a;
+
+  /* Sidebar */
+  --sidebar-active-bg: #1E3A5F;
+
+  /* Tooltip */
+  --tooltip-bg: #0F172A;
+
+  /* Header (stays fixed) */
+  --header-bg: #061E29;
+
+  /* Footer */
+  --footer-bg:   #0F172A;
+  --footer-link: #5EEAD4;
+}
+
+/* ── System preference: auto-dark when no explicit toggle ── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-primary:   #0F172A;
+    --bg-secondary: #1E293B;
+    --bg-card:      #1E293B;
+
+    --text-primary:   #F1F5F9;
+    --text-secondary: #CBD5E0;
+    --text-muted:     #94A3B8;
+
+    --border:        #334155;
+    --border-subtle: #1E293B;
+
+    --accent:        #60A5FA;
+    --accent-subtle: #1E3A5F;
+
+    --permit-bg:     #064E3B;
+    --permit-border: #34D399;
+
+    --deny-bg:       #7F1D1D;
+    --deny-border:   #F87171;
+
+    --chip-or-bg:    #C05621;
+    --chip-or-text:  #FEF3C7;
+    --chip-and-bg:   #1D4ED8;
+    --chip-and-text: #DBEAFE;
+
+    --condition-bg:     #1C1700;
+    --condition-border: #92400E;
+
+    --summary-bg:     #0C2340;
+    --summary-border: #1E40AF;
+
+    --acc-hdr-bg:    #243447;
+    --acc-hdr-hover: #1a2a3a;
+
+    --sidebar-active-bg: #1E3A5F;
+
+    --tooltip-bg: #0F172A;
+
+    --footer-bg:   #0F172A;
+    --footer-link: #5EEAD4;
+  }
+}
