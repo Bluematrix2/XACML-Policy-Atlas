@@ -48,7 +48,7 @@ Mehrere `<SubjectMatch>`-Elemente innerhalb eines `<Subject>` sind **UND-verknü
 
 ## Kombiniert — UND innerhalb von ODER
 
-Die echte Stärke: `(Arzt UND TLS) ODER Admin`
+Die echte Stärke: `(subject-id (CN) UND TLS) ODER user_role`
 
 ```xml
 <Subjects>
