@@ -30,6 +30,10 @@
   <input type="file" id="dir-input" accept=".xml" webkitdirectory multiple style="display:none" onchange="App.loadXMLs(this)">
   <button class="hbtn" id="enf-btn" onclick="App.triggerEnforcement()">&#x1F4CA; Enforcement-CSV</button>
   <input type="file" id="enf-input" accept=".csv" style="display:none" onchange="App.loadEnforcement(this)">
+  <div class="header-notices">
+    <span class="header-notice">&#x26A0;&#xFE0F; For educational purposes only. Use at your own risk.</span>
+    <span class="header-notice">&#x1F512; All data is processed locally in your browser and never uploaded.</span>
+  </div>
   <button class="hbtn theme-toggle" id="theme-toggle" onclick="App.toggleTheme()" aria-label="Design: Hell (wechseln zu Dunkel)">&#x2600;&#xFE0F;</button>
 </header>
 

@@ -54,12 +54,23 @@ Die echte Stärke: `(Arzt UND TLS) ODER Admin`
 <Subjects>
   <Subject>
     <!-- Beide müssen passen (UND) -->
-    <SubjectMatch>Rolle = Arzt</SubjectMatch>
-    <SubjectMatch>Verbindungstyp = TLS</SubjectMatch>
+    <SubjectMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>document-repository</AttributeValue>
+        <SubjectAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='urn:oasis:names:tc:xacml:1.0:subject:subject-id'/>
+    </SubjectMatch>
+    <SubjectMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:anyURI-equal'>
+        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#anyURI'> urn:oasis:names:tc:SAML:2.0:ac:classes:TLSClient </AttributeValue>
+        <SubjectAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#anyURI' AttributeId='urn:icw:2015:subject:authentication-type'/>
+    </SubjectMatch>
   </Subject>
   <Subject>
     <!-- Alternativ (ODER) -->
-    <SubjectMatch>Rolle = Admin</SubjectMatch>
+    <SubjectMatch MatchId='urn:hl7-org:v3:function:CV-equal'>
+        <AttributeValue DataType='urn:hl7-org:v3#CV'>
+            <CodedValue xmlns='urn:hl7-org:v3' code='user_role' codeSystem='2.999.999' />
+        </AttributeValue>
+        <SubjectAttributeDesignator DataType='urn:hl7-org:v3#CV' AttributeId='urn:oasis:names:tc:xacml:2.0:subject:role'/>
+    </SubjectMatch>
   </Subject>
 </Subjects>
 ```

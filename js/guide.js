@@ -76,6 +76,18 @@ const XACMLGuide = (() => {
     // Anchor copy buttons on all headings
     addAnchorButtons(container);
 
+    // Explicitly bound the container height so overflow:hidden clips correctly.
+    // body uses min-height:100vh (not height:100vh), so the flex chain alone
+    // doesn't create a definite height — the whole page would scroll otherwise.
+    function _resizeGuide() {
+      const hdr = document.querySelector('header');
+      const nav = document.querySelector('.tab-nav');
+      const used = (hdr ? hdr.offsetHeight : 52) + (nav ? nav.offsetHeight : 46);
+      container.style.height = (window.innerHeight - used) + 'px';
+    }
+    _resizeGuide();
+    window.addEventListener('resize', _resizeGuide);
+
     // Smooth scroll for ToC links (scroll inside guide-content, not window)
     const guideContent = document.getElementById('guide-content');
     container.querySelectorAll('.guide-toc-link').forEach(a => {
@@ -83,7 +95,11 @@ const XACMLGuide = (() => {
         e.preventDefault();
         const target = document.getElementById(a.dataset.id);
         if (target && guideContent) {
-          guideContent.scrollTo({ top: target.offsetTop - 16, behavior: 'smooth' });
+          const targetTop = target.getBoundingClientRect().top
+                          - guideContent.getBoundingClientRect().top
+                          + guideContent.scrollTop
+                          - 16;
+          guideContent.scrollTo({ top: targetTop, behavior: 'smooth' });
         }
       });
     });

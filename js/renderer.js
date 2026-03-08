@@ -399,7 +399,7 @@ const TreeRenderer = (() => {
     if (rule.condition) {
       body += renderCondition(rule.condition, rule.effect);
     } else {
-      body += `<div class="no-cond-hint">&#x2139;&#xFE0F; Keine Zusatzbedingung &mdash; Regel greift immer wenn Subject passt</div>`;
+      body += `<div class="no-cond-hint">&#x2139;&#xFE0F; Keine Zusatzbedingung &mdash; Regel greift immer wenn Subject übereinstimmt</div>`;
     }
 
     const bodyId = `rb_${index}_${Math.random().toString(36).slice(2, 7)}`;
