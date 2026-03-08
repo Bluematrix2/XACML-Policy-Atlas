@@ -51,7 +51,7 @@ Für alle Attribute, Aktionen, Algorithmen und Funktionen ist die `id` direkt di
 
 ```
 urn:oasis:names:tc:xacml:2.0:subject:role
-urn:icw:2013:record:view-all-response
+urn:fp:2013:record:view-all-response
 http://hl7.org/fhir/resource-types
 ```
 
