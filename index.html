@@ -474,6 +474,197 @@
       margin-bottom: 8px;
     }
 
+    /* ── Tab Navigation ── */
+    .tab-nav {
+      background: #fff;
+      border-bottom: 2px solid #e0e0e0;
+      display: flex;
+      padding: 0 12px;
+      flex-shrink: 0;
+      gap: 0;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: #757575;
+      margin-bottom: -2px;
+      white-space: nowrap;
+      transition: color .15s, border-color .15s;
+    }
+    .tab-btn:hover { color: #3949ab; }
+    .tab-btn.active { color: #3949ab; border-bottom-color: #3949ab; }
+
+    /* ── Slide-in Panel (Enforcement) ── */
+    .slide-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.22);
+      z-index: 98;
+    }
+    .slide-overlay.open { display: block; }
+    .slide-panel {
+      position: fixed;
+      top: 52px;
+      right: -420px;
+      width: 400px;
+      height: calc(100vh - 52px);
+      background: #fff;
+      border-left: 1px solid #e0e0e0;
+      z-index: 99;
+      display: flex;
+      flex-direction: column;
+      transition: right .3s ease;
+      box-shadow: -6px 0 24px rgba(0,0,0,.12);
+    }
+    .slide-panel.open { right: 0; }
+    .slide-panel-hdr {
+      display: flex;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid #e0e0e0;
+      gap: 8px;
+      background: #f8f9ff;
+      flex-shrink: 0;
+    }
+    .slide-panel-title { font-size: 14px; font-weight: 700; color: #1a237e; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .slide-close { background: none; border: none; cursor: pointer; font-size: 16px; color: #757575; padding: 2px 6px; border-radius: 3px; line-height: 1; flex-shrink: 0; }
+    .slide-close:hover { background: #f5f5f5; color: #212121; }
+    .slide-panel-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+
+    /* ── Enforcement Info Button ── */
+    .enf-info-btn {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      font-size: 12px;
+      opacity: .85;
+      vertical-align: middle;
+      border: none;
+      background: none;
+      padding: 0 1px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .enf-info-btn:hover { opacity: 1; }
+
+    /* ── Enforcement panel content ── */
+    .enf-resource-title { font-size: 15px; font-weight: 700; color: #1a237e; margin-bottom: 3px; }
+    .enf-fhir-link { font-size: 12px; color: #1976d2; text-decoration: none; display: inline-block; margin-bottom: 10px; }
+    .enf-fhir-link:hover { text-decoration: underline; }
+    .enf-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin-bottom: 12px;
+    }
+    .enf-badge.enforced         { background: #f3e5f5; color: #7B1FA2; border: 1px solid #ce93d8; }
+    .enf-badge.enforced-special { background: #fff3e0; color: #E65100; border: 1px solid #ffcc80; }
+    .enf-badge.public           { background: #f5f5f5; color: #607D8B; border: 1px solid #cfd8dc; }
+    .enf-public-msg {
+      background: #f5f5f5;
+      border: 1px solid #cfd8dc;
+      border-radius: 7px;
+      padding: 20px;
+      color: #607D8B;
+      font-size: 13px;
+      text-align: center;
+      margin: 8px 0 14px;
+    }
+    .enf-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
+    .enf-table th { text-align: left; padding: 5px 7px; background: #f5f5f5; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: #9e9e9e; border-bottom: 1px solid #e0e0e0; }
+    .enf-table td { padding: 5px 7px; border-bottom: 1px solid #f5f5f5; vertical-align: top; }
+    .enf-table tr:last-child td { border-bottom: none; }
+    .enf-table .sp-cell   { color: #1565c0; font-weight: 600; }
+    .enf-table .path-cell { color: #555; font-family: 'Consolas', monospace; font-size: 11px; word-break: break-all; }
+    .enf-table .xacml-cell { color: #2e7d32; }
+    .enf-table .comment-cell { color: #E65100; font-size: 10px; font-style: italic; }
+    .enf-summary-box { background: #f5f5f5; border-radius: 5px; padding: 8px 10px; font-size: 12px; color: #555; }
+    .enf-note { font-size: 11px; color: #E65100; margin-top: 6px; font-style: italic; }
+    .enf-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #9e9e9e; margin: 10px 0 5px; }
+
+    /* ── Schema Validator ── */
+    .validator-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .val-container { width: 100%; max-width: 720px; }
+    .val-hdr { margin-bottom: 20px; }
+    .val-hdr h2 { font-size: 20px; font-weight: 700; color: #1a237e; margin-bottom: 4px; }
+    .val-hdr p { font-size: 13px; color: #757575; }
+    .val-dropzone {
+      border: 2px dashed #bdbdbd;
+      border-radius: 10px;
+      padding: 36px 24px;
+      text-align: center;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      margin-bottom: 20px;
+    }
+    .val-dropzone:hover, .val-dropzone.drag-over { border-color: #3949ab; background: #f3f4ff; }
+    .val-drop-icon { font-size: 38px; margin-bottom: 8px; }
+    .val-dropzone p { color: #757575; font-size: 13px; margin: 6px 0; }
+    .val-file-btn { background: #3949ab; color: #fff; border: none; padding: 8px 20px; border-radius: 5px; cursor: pointer; font-size: 13px; margin-top: 6px; transition: background .15s; }
+    .val-file-btn:hover { background: #303f9f; }
+    .val-result { margin-top: 0; }
+    .val-banner {
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .val-banner.ok    { background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; }
+    .val-banner.warn  { background: #fff8e1; border: 1px solid #ffe082; color: #e65100; }
+    .val-banner.error { background: #ffebee; border: 1px solid #ef9a9a; color: #c62828; }
+    .val-banner-ico { font-size: 22px; }
+    .val-section { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+    .val-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #9e9e9e; margin-bottom: 8px; }
+    .val-check { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 13px; border-bottom: 1px solid #f5f5f5; }
+    .val-check:last-child { border-bottom: none; }
+    .val-check-ico { flex-shrink: 0; font-size: 14px; margin-top: 1px; min-width: 18px; }
+    .val-check.ok   .val-check-ico::before { content: '✅'; }
+    .val-check.err  .val-check-ico::before { content: '❌'; }
+    .val-check.warn .val-check-ico::before { content: '⚠️'; }
+    .val-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .val-info-cell { background: #f5f5f5; border-radius: 5px; padding: 8px 10px; }
+    .val-info-key { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: #9e9e9e; }
+    .val-info-val { font-size: 14px; font-weight: 600; color: #212121; margin-top: 2px; word-break: break-all; }
+    .val-viz-btn {
+      display: block;
+      width: 100%;
+      background: #3949ab;
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      margin-top: 8px;
+      transition: background .15s;
+    }
+    .val-viz-btn:hover { background: #303f9f; }
+    .val-id-list { font-size: 11px; font-family: 'Consolas', monospace; color: #555; background: #f5f5f5; border-radius: 4px; padding: 6px 8px; word-break: break-all; }
+
     /* ── Footer ── */
     footer {
       background: #212121;
@@ -497,9 +688,16 @@
   <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="App.loadCSV(this)">
   <input type="file" id="xml-input" accept=".xml" multiple style="display:none" onchange="App.loadXMLs(this)">
   <input type="file" id="dir-input" accept=".xml" webkitdirectory multiple style="display:none" onchange="App.loadXMLs(this)">
+  <button class="hbtn" id="enf-btn" onclick="App.triggerEnforcement()">&#x1F4CA; Enforcement-CSV</button>
+  <input type="file" id="enf-input" accept=".csv" style="display:none" onchange="App.loadEnforcement(this)">
 </header>
 
-<div class="layout">
+<div class="tab-nav">
+  <button class="tab-btn active" id="tab-viz" onclick="App.switchTab('viz')">&#x1F4CA; Visualisierung</button>
+  <button class="tab-btn" id="tab-val" onclick="App.switchTab('val')">&#x1F50D; Schema-Pr&uuml;fung</button>
+</div>
+
+<div class="layout" id="layout-viz">
   <nav class="sidebar">
     <div class="sidebar-head">Policies</div>
     <div class="sidebar-list" id="sidebar-list">
@@ -514,6 +712,36 @@
       <p>Alle Daten werden lokal im Browser verarbeitet.</p>
     </div>
   </div>
+</div>
+
+<div id="layout-val" style="display:none" class="validator-area">
+  <div class="val-container">
+    <div class="val-hdr">
+      <h2>&#x1F4CB; Schema-Pr&uuml;fung</h2>
+      <p>Strukturpr&uuml;fung einer XACML Policy-XML-Datei (keine vollst&auml;ndige XSD-Validierung)</p>
+    </div>
+    <div class="val-dropzone" id="val-drop"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="App.handleValDrop(event);this.classList.remove('drag-over')"
+         onclick="document.getElementById('val-input').click()">
+      <div class="val-drop-icon">&#x1F4CB;</div>
+      <p>XML-Datei hier ablegen oder klicken</p>
+      <button class="val-file-btn" onclick="event.stopPropagation();document.getElementById('val-input').click()">Datei ausw&auml;hlen</button>
+      <input type="file" id="val-input" accept=".xml" style="display:none" onchange="App.loadValFile(this)">
+    </div>
+    <div id="val-result"></div>
+  </div>
+</div>
+
+<!-- Slide-in panel for Enforcement details -->
+<div class="slide-overlay" id="enf-overlay" onclick="App.closeEnfPanel()"></div>
+<div class="slide-panel" id="enf-panel">
+  <div class="slide-panel-hdr">
+    <span class="slide-panel-title" id="enf-panel-title">FHIR Enforcement</span>
+    <button class="slide-close" onclick="App.closeEnfPanel()">&#x2715;</button>
+  </div>
+  <div class="slide-panel-body" id="enf-panel-body"></div>
 </div>
 
 <footer>
@@ -785,6 +1013,160 @@ const CSVParser = (() => {
 })();
 
 // ================================================================
+//  ENFORCEMENT MAPPER
+// ================================================================
+const EnforcementMapper = (() => {
+  let _data   = new Map(); // fhir_resource → { primaryControl, entries[] }
+  let _count  = 0;
+  let _loaded = false;
+
+  function load(csvText) {
+    // Strip UTF-8 BOM
+    const text    = csvText.replace(/^\uFEFF/, '');
+    const lines   = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) throw new Error('Enforcement-CSV ist leer');
+    const headers = lines[0].split(';').map(h => h.trim().toLowerCase());
+    const col = name => headers.indexOf(name);
+    const resIdx   = col('fhir_resource');
+    const accIdx   = col('access_control');
+    const spIdx    = col('search_parameter');
+    const enfIdx   = col('enforcement_attribute');
+    const xacmlIdx = col('xacml_attribute');
+    const commIdx  = col('comment');
+    if (resIdx < 0 || accIdx < 0) throw new Error('Spalten fhir_resource und access_control erforderlich');
+
+    _data = new Map();
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(';');
+      const res  = (cols[resIdx] || '').trim();
+      if (!res) continue;
+      const access = (cols[accIdx] || '').trim();
+      const sp     = (cols[spIdx]   || '').trim();
+      const enf    = (cols[enfIdx]  || '').trim();
+      const xacml  = (cols[xacmlIdx]|| '').trim();
+      const comm   = (cols[commIdx] || '').trim();
+
+      if (!_data.has(res)) _data.set(res, { primaryControl: access, entries: [] });
+      const entry = _data.get(res);
+      // Prefer "enforced" over "public" as primary
+      if (entry.primaryControl === 'public' && access !== 'public') entry.primaryControl = access;
+      if (sp !== '--' && sp !== '') entry.entries.push({ access, sp, enf, xacml, comm });
+    }
+    _count  = _data.size;
+    _loaded = true;
+  }
+
+  function lookup(fhirType) { return _data.get(fhirType) || null; }
+  function isLoaded()       { return _loaded; }
+  function getCount()       { return _count; }
+  function clear()          { _data = new Map(); _loaded = false; _count = 0; }
+
+  return { load, lookup, isLoaded, getCount, clear };
+})();
+
+// ================================================================
+//  XACML VALIDATOR
+// ================================================================
+const XACMLValidator = (() => {
+
+  function validate(xmlText, filename) {
+    const errors   = [];
+    const warnings = [];
+    const info     = { filename };
+
+    // 1. Well-formed XML
+    let doc;
+    try {
+      doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+      const pe = doc.querySelector('parsererror');
+      if (pe) {
+        errors.push('Kein valides XML: ' + (pe.textContent || '').split('\n')[0].slice(0, 120));
+        return { errors, warnings, info };
+      }
+    } catch (e) {
+      errors.push('XML-Parse-Fehler: ' + e.message);
+      return { errors, warnings, info };
+    }
+
+    const root = doc.documentElement;
+
+    // 2. XACML Namespace
+    const ns = root.namespaceURI || '';
+    if (ns.includes('2.0')) {
+      info.version = '2.0';
+    } else if (ns.includes('3.0')) {
+      info.version = '3.0';
+    } else {
+      errors.push('Kein XACML-Namespace erkannt (erwartet: urn:oasis:names:tc:xacml:2.0 oder 3.0)');
+    }
+
+    // 3. Root element
+    const rootName = root.localName;
+    if (rootName === 'Policy' || rootName === 'PolicySet') {
+      info.rootElement = rootName;
+      info.policyId    = root.getAttribute('PolicyId') || '(keine ID)';
+    } else {
+      errors.push(`Wurzelelement ist <${rootName}>, erwartet <Policy> oder <PolicySet>`);
+    }
+
+    // 4. CombiningAlgId on Policy/PolicySet
+    const allEls = Array.from(doc.getElementsByTagName('*'));
+    const policyEls = allEls.filter(e => e.localName === 'Policy' || e.localName === 'PolicySet');
+    for (const p of policyEls) {
+      const alg = p.getAttribute('RuleCombiningAlgId') || p.getAttribute('PolicyCombiningAlgId');
+      if (!alg) {
+        const pid = p.getAttribute('PolicyId') || '(unbekannt)';
+        errors.push(`Policy "${pid.split(':').pop()}" hat kein CombiningAlgId`);
+      }
+    }
+
+    // 5. Rules have Effect (Permit/Deny)
+    const ruleEls = allEls.filter(e => e.localName === 'Rule');
+    info.ruleCount   = ruleEls.length;
+    info.permitCount = 0;
+    info.denyCount   = 0;
+    for (const r of ruleEls) {
+      const effect = r.getAttribute('Effect') || '';
+      if (effect === 'Permit') { info.permitCount++; }
+      else if (effect === 'Deny') { info.denyCount++; }
+      else {
+        const rid = (r.getAttribute('RuleId') || '').split(':').pop() || '(unbekannt)';
+        errors.push(`Rule "${rid}" hat kein gültiges Effect-Attribut (Permit/Deny)`);
+      }
+    }
+
+    // 6. Rules without Description (warning)
+    let noDescCount = 0;
+    for (const r of ruleEls) {
+      const hasDesc = Array.from(r.children).some(c => c.localName === 'Description');
+      if (!hasDesc) {
+        const rid = (r.getAttribute('RuleId') || '').split(':').pop().slice(-16) || '(unbekannt)';
+        warnings.push(`Rule "${rid}" hat keine Description`);
+        noDescCount++;
+      }
+    }
+
+    // 7. AttributeDesignator: AttributeId + DataType
+    let badDesig = 0;
+    for (const el of allEls) {
+      if (el.localName.includes('Designator')) {
+        if (!el.getAttribute('AttributeId') || !el.getAttribute('DataType')) {
+          errors.push(`${el.localName} ohne AttributeId oder DataType`);
+          if (++badDesig >= 3) break;
+        }
+      }
+    }
+
+    // Collect PolicyIds for overview
+    info.policyIds = policyEls.map(p => p.getAttribute('PolicyId')).filter(Boolean);
+
+    return { errors, warnings, info };
+  }
+
+  return { validate };
+})();
+
+// ================================================================
 //  LABEL MAPPER
 // ================================================================
 const LabelMapper = (() => {
@@ -887,13 +1269,24 @@ const TreeRenderer = (() => {
     const e = LabelMapper.lookup(v);
 
     if (isFhir) {
-      // FHIR resource: chip + spec link
-      const chip = e
-        ? chipHtml(e.label, e.description, v, e.color)
-        : chipHtml(v, '', v, '#1565c0');
-      const link = `<a class="fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${v.toLowerCase()}.html"`
-                 + ` target="_blank" rel="noopener" title="FHIR ${FHIR_VERSION} Spezifikation: ${esc(v)}">&#x1F517;</a>`;
-      return chip + link;
+      // Enforcement coloring + ℹ️ icon
+      const enfData = EnforcementMapper.isLoaded() ? EnforcementMapper.lookup(v) : null;
+      let chipColor = e ? (e.color || '#1565c0') : '#1565c0';
+      if (enfData) {
+        const ac = enfData.primaryControl;
+        if (ac === 'public') chipColor = '#9E9E9E';
+        else if (ac.endsWith('*')) chipColor = '#E65100';
+        else chipColor = '#7B1FA2'; // policy enforced
+      }
+      const label = e ? e.label : v;
+      const desc  = e ? (e.description || '') : '';
+      const chip  = chipHtml(label, desc, v, chipColor);
+      const link  = `<a class="fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${v.toLowerCase()}.html"`
+                  + ` target="_blank" rel="noopener" title="FHIR ${FHIR_VERSION} Spezifikation: ${esc(v)}">&#x1F517;</a>`;
+      const info  = enfData
+        ? `<span class="enf-info-btn" title="Enforcement-Details: ${esc(v)}" onclick="event.stopPropagation();App.openEnfPanel(${JSON.stringify(v)})">&#x2139;&#xFE0F;</span>`
+        : '';
+      return chip + link + info;
     }
 
     if (e) return chipHtml(e.label, e.description, v, e.color);
@@ -1154,6 +1547,14 @@ const TreeRenderer = (() => {
         }).join('');
       }
 
+      html += `</div>`;
+    }
+
+    // Enforcement count
+    if (EnforcementMapper.isLoaded()) {
+      html += `<div class="summary-row">`;
+      html += `<span class="summary-label">Enforcement</span>`;
+      html += `<span class="summary-chip" style="color:#7B1FA2;border-color:#ce93d8">&#x1F4CA; ${EnforcementMapper.getCount()} Ressourcen geladen</span>`;
       html += `</div>`;
     }
 
@@ -1485,7 +1886,256 @@ const App = (() => {
     }).join('');
   }
 
-  return { triggerCSV, triggerXML, loadCSV, loadXMLs, activatePolicy, applySearch, setFilter };
+  // ── Tab switching ──
+
+  let _activeTab = 'viz';
+
+  function switchTab(tab) {
+    _activeTab = tab;
+    document.getElementById('layout-viz').style.display = tab === 'viz' ? 'flex'  : 'none';
+    document.getElementById('layout-val').style.display = tab === 'val' ? 'flex'  : 'none';
+    document.getElementById('tab-viz').classList.toggle('active', tab === 'viz');
+    document.getElementById('tab-val').classList.toggle('active', tab === 'val');
+  }
+
+  // ── Enforcement ──
+
+  function triggerEnforcement() { document.getElementById('enf-input').click(); }
+
+  async function loadEnforcement(input) {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      EnforcementMapper.load(text);
+      // Re-render active policy to show ℹ️ icons and coloring
+      const active = UIState.getActive();
+      if (active) showPolicy(active);
+      const btn = document.getElementById('enf-btn');
+      if (btn) {
+        const orig = btn.innerHTML;
+        btn.textContent = '\u2713 ' + EnforcementMapper.getCount() + ' Ressourcen geladen';
+        setTimeout(() => { btn.innerHTML = orig; }, 2500);
+      }
+    } catch (e) {
+      alert('Enforcement-CSV-Fehler: ' + e.message);
+    }
+    input.value = '';
+  }
+
+  function openEnfPanel(fhirType) {
+    const panel   = document.getElementById('enf-panel');
+    const overlay = document.getElementById('enf-overlay');
+    const title   = document.getElementById('enf-panel-title');
+    const body    = document.getElementById('enf-panel-body');
+    if (!panel || !body) return;
+
+    title.textContent = 'FHIR: ' + fhirType;
+    body.innerHTML    = _buildEnfPanelHtml(fhirType);
+    panel.classList.add('open');
+    overlay.classList.add('open');
+  }
+
+  function closeEnfPanel() {
+    document.getElementById('enf-panel').classList.remove('open');
+    document.getElementById('enf-overlay').classList.remove('open');
+  }
+
+  function _buildEnfPanelHtml(fhirType) {
+    const FHIR_VERSION = 'R4';
+    const data = EnforcementMapper.lookup(fhirType);
+
+    let html = `<div class="enf-resource-title">&#x1F3E5; ${esc(fhirType)}</div>`;
+    html += `<a class="enf-fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${fhirType.toLowerCase()}.html" target="_blank" rel="noopener">`;
+    html += `&#x1F517; FHIR ${FHIR_VERSION} Spezifikation &rarr;</a>`;
+
+    if (!data) {
+      html += `<p style="color:#9e9e9e;font-size:13px">Kein Enforcement-Eintrag f&uuml;r diese Ressource.</p>`;
+      return html;
+    }
+
+    const ac = data.primaryControl;
+    if (ac === 'public') {
+      html += `<span class="enf-badge public">&#x1F310; Public</span>`;
+      html += `<div class="enf-public-msg">&#x1F310; &Ouml;ffentlich zug&auml;nglich &mdash; keine Policy-Einschr&auml;nkung</div>`;
+    } else if (ac.endsWith('*')) {
+      html += `<span class="enf-badge enforced-special">&#x26A0; Policy Enforced*</span>`;
+    } else {
+      html += `<span class="enf-badge enforced">&#x1F512; Policy Enforced</span>`;
+    }
+
+    if (data.entries.length > 0) {
+      html += `<div class="enf-section-label">Enforcement-Attribute</div>`;
+      html += `<table class="enf-table"><thead><tr>`;
+      html += `<th>Suchparameter</th><th>FHIR-Pfad</th><th>XACML-Attribut</th>`;
+      html += `</tr></thead><tbody>`;
+
+      const spLabels = [];
+      for (const e of data.entries) {
+        const xacmlLabel = _resolveXacmlLabel(e.xacml);
+        const isSpecial  = e.access.endsWith('*');
+        html += `<tr>`;
+        html += `<td class="sp-cell">${esc(e.sp)}${isSpecial ? '<span class="comment-cell">*</span>' : ''}</td>`;
+        html += `<td class="path-cell">${esc(e.enf)}</td>`;
+        html += `<td class="xacml-cell">${esc(xacmlLabel)}</td>`;
+        html += `</tr>`;
+        if (e.comm) {
+          html += `<tr><td colspan="3" class="comment-cell" style="padding-top:0">${esc(e.comm)}</td></tr>`;
+        }
+        if (!spLabels.includes(e.sp) && e.sp) spLabels.push(e.sp);
+      }
+
+      html += `</tbody></table>`;
+
+      // Summary
+      html += `<div class="enf-summary-box">`;
+      html += `<strong>${data.entries.length} Attribute kontrolliert:</strong> `;
+      html += spLabels.slice(0, 6).map(s => esc(s)).join(', ');
+      if (spLabels.length > 6) html += `, (+${spLabels.length - 6} weitere)`;
+      html += `</div>`;
+    }
+
+    return html;
+  }
+
+  function _resolveXacmlLabel(xacmlUri) {
+    if (!xacmlUri) return '—';
+    const e = LabelMapper.lookup(xacmlUri);
+    return e ? e.label : xacmlUri;
+  }
+
+  // ── Schema Validator ──
+
+  let _valFileText = '';
+  let _valFileName = '';
+
+  function triggerValFile() { document.getElementById('val-input').click(); }
+
+  async function loadValFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    _valFileName = file.name;
+    _valFileText = await file.text();
+    _runValidator();
+    input.value = '';
+  }
+
+  function handleValDrop(event) {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (!file || !file.name.toLowerCase().endsWith('.xml')) return;
+    _valFileName = file.name;
+    file.text().then(text => { _valFileText = text; _runValidator(); });
+  }
+
+  function _runValidator() {
+    const result = XACMLValidator.validate(_valFileText, _valFileName);
+    document.getElementById('val-result').innerHTML = _buildValidatorReport(result);
+    // Hide dropzone while showing result, allow re-upload
+    document.getElementById('val-drop').style.display = 'none';
+  }
+
+  function resetValidator() {
+    _valFileText = '';
+    _valFileName = '';
+    document.getElementById('val-drop').style.display = '';
+    document.getElementById('val-result').innerHTML = '';
+  }
+
+  function visualizeFromValidator() {
+    if (!_valFileText) return;
+    try {
+      const policy = XACMLParser.parse(_valFileText, _valFileName);
+      const idx    = UIState.addOrReplace(policy);
+      switchTab('viz');
+      activatePolicy(idx);
+    } catch (e) {
+      alert('Fehler beim Laden: ' + e.message);
+    }
+  }
+
+  function _buildValidatorReport(result) {
+    const { errors, warnings, info } = result;
+    const hasErrors   = errors.length > 0;
+    const hasWarnings = warnings.length > 0;
+
+    let html = `<div class="val-result">`;
+
+    // Banner
+    if (hasErrors) {
+      html += `<div class="val-banner error"><span class="val-banner-ico">&#x274C;</span>`;
+      html += `<span>${errors.length} Fehler gefunden &mdash; Policy ist nicht valide</span></div>`;
+    } else if (hasWarnings) {
+      html += `<div class="val-banner warn"><span class="val-banner-ico">&#x26A0;&#xFE0F;</span>`;
+      html += `<span>Valide mit ${warnings.length} Warnung${warnings.length > 1 ? 'en' : ''}</span></div>`;
+    } else {
+      html += `<div class="val-banner ok"><span class="val-banner-ico">&#x2705;</span>`;
+      html += `<span>Valide &mdash; keine Fehler gefunden</span></div>`;
+    }
+
+    // Prüfungen section
+    const checks = [
+      { label: 'XML wohlgeformt',             ok: !hasErrors || errors.every(e => !e.includes('valides XML')), detail: '' },
+      { label: `XACML-Namespace ${info.version ? '(' + info.version + ')' : ''}`, ok: !!info.version, detail: !info.version ? 'Kein XACML-Namespace erkannt' : '' },
+      { label: `Wurzelelement (${info.rootElement || '?'})`, ok: !!info.rootElement, detail: '' },
+      { label: 'Rules haben Effect',          ok: !errors.some(e => e.includes('Effect')), detail: errors.filter(e => e.includes('Effect')).join('; ') },
+      { label: 'Policies haben CombiningAlgId', ok: !errors.some(e => e.includes('CombiningAlgId')), detail: '' },
+      { label: 'Designatoren vollständig',    ok: !errors.some(e => e.includes('Designator')), detail: '' },
+    ];
+
+    html += `<div class="val-section">`;
+    html += `<div class="val-section-title">&#x1F50D; Pr&uuml;fergebnisse</div>`;
+    for (const c of checks) {
+      const cls = c.ok ? 'ok' : 'err';
+      html += `<div class="val-check ${cls}"><span class="val-check-ico"></span>`;
+      html += `<span>${esc(c.label)}${c.detail ? ` &mdash; <em>${esc(c.detail)}</em>` : ''}</span></div>`;
+    }
+    // Warnings
+    for (const w of warnings) {
+      html += `<div class="val-check warn"><span class="val-check-ico"></span><span>${esc(w)}</span></div>`;
+    }
+    // Extra errors not mapped above
+    for (const e of errors) {
+      if (!checks.some(c => !c.ok && c.detail && e.includes(c.detail))) {
+        html += `<div class="val-check err"><span class="val-check-ico"></span><span>${esc(e)}</span></div>`;
+      }
+    }
+    html += `</div>`;
+
+    // Strukturübersicht
+    if (info.ruleCount !== undefined) {
+      html += `<div class="val-section">`;
+      html += `<div class="val-section-title">&#x1F4CA; Struktur&uuml;bersicht</div>`;
+      html += `<div class="val-info-grid">`;
+      html += `<div class="val-info-cell"><div class="val-info-key">Datei</div><div class="val-info-val" style="font-size:12px">${esc(info.filename || '')}</div></div>`;
+      html += `<div class="val-info-cell"><div class="val-info-key">XACML-Version</div><div class="val-info-val">${esc(info.version || '?')}</div></div>`;
+      html += `<div class="val-info-cell"><div class="val-info-key">Regeln gesamt</div><div class="val-info-val">${info.ruleCount}</div></div>`;
+      html += `<div class="val-info-cell"><div class="val-info-key">Permit / Deny</div><div class="val-info-val" style="color:#2e7d32">${info.permitCount}P <span style="color:#c62828">/ ${info.denyCount}D</span></div></div>`;
+      html += `</div>`;
+      if ((info.policyIds || []).length > 0) {
+        html += `<div class="val-section-label" style="margin-top:10px">PolicyIds</div>`;
+        html += `<div class="val-id-list">${info.policyIds.map(esc).join('<br>')}</div>`;
+      }
+      html += `</div>`;
+    }
+
+    // "Jetzt visualisieren" button
+    if (!hasErrors) {
+      html += `<button class="val-viz-btn" onclick="App.visualizeFromValidator()">`;
+      html += `&#x1F4CA; Policy jetzt visualisieren &rarr;</button>`;
+    }
+
+    // Re-upload button
+    html += `<button class="ctrl-btn" style="margin-top:10px;display:block" onclick="App.resetValidator()">`;
+    html += `&#x1F504; Neue Datei pr&uuml;fen</button>`;
+
+    html += `</div>`;
+    return html;
+  }
+
+  return { triggerCSV, triggerXML, loadCSV, loadXMLs, activatePolicy, applySearch, setFilter,
+           triggerEnforcement, loadEnforcement, openEnfPanel, closeEnfPanel, switchTab,
+           loadValFile, handleValDrop, visualizeFromValidator, resetValidator };
 })();
 </script>
 </body>
