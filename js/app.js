@@ -10,6 +10,7 @@ import { XACMLValidator } from './validator.js';
 import { TreeRenderer } from './renderer.js';
 import { UIState } from './ui.js';
 import { XACMLGuide } from './guide.js';
+import { KnowledgeBase } from './kb.js';
 
 // ── Upload security constants ──
 const MAX_XML_SIZE = 5 * 1024 * 1024;  // 5 MB
@@ -205,13 +206,16 @@ const App = (() => {
 
   function switchTab(tab) {
     _activeTab = tab;
-    document.getElementById('layout-viz').style.display   = tab === 'viz'   ? 'flex' : 'none';
-    document.getElementById('layout-val').style.display   = tab === 'val'   ? 'flex' : 'none';
+    document.getElementById('layout-viz').style.display   = tab === 'viz'   ? 'flex'  : 'none';
+    document.getElementById('layout-val').style.display   = tab === 'val'   ? 'flex'  : 'none';
     document.getElementById('layout-guide').style.display = tab === 'guide' ? 'block' : 'none';
+    document.getElementById('layout-kb').style.display    = tab === 'kb'    ? 'block' : 'none';
     document.getElementById('tab-viz').classList.toggle('active',   tab === 'viz');
     document.getElementById('tab-val').classList.toggle('active',   tab === 'val');
     document.getElementById('tab-guide').classList.toggle('active', tab === 'guide');
+    document.getElementById('tab-kb').classList.toggle('active',    tab === 'kb');
     if (tab === 'guide') return XACMLGuide.init();
+    if (tab === 'kb')    return KnowledgeBase.init();
     return Promise.resolve();
   }
 
