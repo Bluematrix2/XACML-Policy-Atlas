@@ -182,11 +182,12 @@ const App = (() => {
     _activeTab = tab;
     document.getElementById('layout-viz').style.display   = tab === 'viz'   ? 'flex' : 'none';
     document.getElementById('layout-val').style.display   = tab === 'val'   ? 'flex' : 'none';
-    document.getElementById('layout-guide').style.display = tab === 'guide' ? 'flex' : 'none';
+    document.getElementById('layout-guide').style.display = tab === 'guide' ? 'block' : 'none';
     document.getElementById('tab-viz').classList.toggle('active',   tab === 'viz');
     document.getElementById('tab-val').classList.toggle('active',   tab === 'val');
     document.getElementById('tab-guide').classList.toggle('active', tab === 'guide');
-    if (tab === 'guide') XACMLGuide.init();
+    if (tab === 'guide') return XACMLGuide.init();
+    return Promise.resolve();
   }
 
   // ── Enforcement ──
@@ -464,3 +465,16 @@ const App = (() => {
 // ── Expose to window for inline event handlers in HTML ──
 window.App = App;
 window.TreeRenderer = TreeRenderer;
+
+// ── Handle URL hash on initial load (e.g. shared guide anchor links) ──
+(function handleInitialHash() {
+  const hash = location.hash.slice(1);
+  if (!hash) return;
+  // Switch to guide tab, wait for markdown to load, then scroll to anchor
+  App.switchTab('guide').then(() => {
+    setTimeout(() => {
+      const el = document.getElementById(hash);
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }, 100);
+  });
+})();

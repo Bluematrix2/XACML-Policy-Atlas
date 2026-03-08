@@ -16,17 +16,19 @@ const XACMLGuide = (() => {
   let _initialized = false;
   let _observer    = null;
 
+  let _initPromise = null;
+
   function init() {
-    if (_initialized) return;
+    if (_initialized) return _initPromise || Promise.resolve();
     _initialized = true;
 
     const container = document.getElementById('layout-guide');
-    if (!container) return;
+    if (!container) return Promise.resolve();
 
     // Show loading state
     container.innerHTML = '<div class="guide-loading">Inhalte werden geladen…</div>';
 
-    Promise.all(SECTIONS.map(s => fetch(s.file).then(r => {
+    _initPromise = Promise.all(SECTIONS.map(s => fetch(s.file).then(r => {
       if (!r.ok) throw new Error(`HTTP ${r.status} beim Laden von ${s.file}`);
       return r.text();
     })))
@@ -45,6 +47,8 @@ const XACMLGuide = (() => {
           </p>
         </div>`;
       });
+
+    return _initPromise;
   }
 
   function render(markdownTexts) {
@@ -71,40 +75,21 @@ const XACMLGuide = (() => {
 
     const content = `<div class="guide-content" id="guide-content">${sections}</div>`;
 
-    container.innerHTML = toc + content;
+    container.innerHTML = `<div class="guide-body">${toc}${content}</div>`;
 
     // Anchor copy buttons on all headings
     addAnchorButtons(container);
 
-    // Explicitly bound the container height so overflow:hidden clips correctly.
-    // body uses min-height:100vh (not height:100vh), so the flex chain alone
-    // doesn't create a definite height — the whole page would scroll otherwise.
-    function _resizeGuide() {
-      const hdr = document.querySelector('header');
-      const nav = document.querySelector('.tab-nav');
-      const used = (hdr ? hdr.offsetHeight : 52) + (nav ? nav.offsetHeight : 46);
-      container.style.height = (window.innerHeight - used) + 'px';
-    }
-    _resizeGuide();
-    window.addEventListener('resize', _resizeGuide);
-
-    // Smooth scroll for ToC links (scroll inside guide-content, not window)
-    const guideContent = document.getElementById('guide-content');
+    // Smooth scroll for ToC links — page scrolls normally (no fixed height container)
     container.querySelectorAll('.guide-toc-link').forEach(a => {
       a.addEventListener('click', e => {
         e.preventDefault();
         const target = document.getElementById(a.dataset.id);
-        if (target && guideContent) {
-          const targetTop = target.getBoundingClientRect().top
-                          - guideContent.getBoundingClientRect().top
-                          + guideContent.scrollTop
-                          - 16;
-          guideContent.scrollTo({ top: targetTop, behavior: 'smooth' });
-        }
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
 
-    // IntersectionObserver — track topmost visible section in document order
+    // IntersectionObserver — watch sections against the viewport (root: null)
     if (_observer) _observer.disconnect();
     const _visibleSections = new Set();
     const sectionIds = SECTIONS.map(s => s.id);
@@ -127,8 +112,8 @@ const XACMLGuide = (() => {
       }
       updateActiveLink();
     }, {
-      root: guideContent,
-      rootMargin: '0px 0px -50% 0px',
+      root: null,
+      rootMargin: '-10% 0px -55% 0px',
       threshold: 0,
     });
 
@@ -137,6 +122,15 @@ const XACMLGuide = (() => {
     // Highlight first item initially
     _visibleSections.add(sectionIds[0]);
     updateActiveLink();
+
+    // Scroll to URL anchor if present (e.g. shared link)
+    const hash = location.hash.slice(1);
+    if (hash) {
+      setTimeout(() => {
+        const el = document.getElementById(hash);
+        if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+      }, 80);
+    }
   }
 
   function addAnchorButtons(container) {
