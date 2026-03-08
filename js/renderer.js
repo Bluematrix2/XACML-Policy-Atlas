@@ -82,24 +82,32 @@ const TreeRenderer = (() => {
     const e = LabelMapper.lookup(v);
 
     if (isFhir) {
-      // Enforcement coloring + ℹ️ icon
       const enfData = EnforcementMapper.isLoaded() ? EnforcementMapper.lookup(v) : null;
       let chipColor = e ? (e.color || '#1565c0') : '#1565c0';
       if (enfData) {
         const ac = enfData.primaryControl;
         if (ac === 'public') chipColor = '#9E9E9E';
         else if (ac.endsWith('*')) chipColor = '#E65100';
-        else chipColor = '#7B1FA2'; // policy enforced
+        else chipColor = '#7B1FA2';
       }
       const label = e ? e.label : v;
       const desc  = e ? (e.description || '') : '';
-      const chip  = chipHtml(label, desc, v, chipColor, null, attrHint);
-      const link  = `<a class="fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${v.toLowerCase()}.html"`
-                  + ` target="_blank" rel="noopener" title="FHIR ${FHIR_VERSION} Spezifikation: ${esc(v)}">&#x1F517;</a>`;
-      const info  = enfData
+      const bg = chipColor;
+      const fg = isLightColor(bg) ? '#212121' : '#ffffff';
+      const tooltipParts = [];
+      if (attrHint) tooltipParts.push(`<span class="tooltip-attr">${attrHint}</span>`);
+      if (desc)     tooltipParts.push(esc(desc));
+      tooltipParts.push(`<span class="tooltip-uri">${esc(v)}</span>`);
+      tooltipParts.push(`<span class="tooltip-uri" style="color:#80cbc4">&#x1F517; FHIR ${FHIR_VERSION} Spezifikation</span>`);
+      const tooltip = `<span class="tooltip">${tooltipParts.join('<br>')}</span>`;
+      const href = `https://hl7.org/fhir/${FHIR_VERSION}/${v.toLowerCase()}.html`;
+      const chip = `<a class="chip fhir-chip" href="${href}" target="_blank" rel="noopener"`
+                 + ` style="background:${bg};color:${fg};border-color:${bg}">`
+                 + esc(label) + tooltip + `</a>`;
+      const info = enfData
         ? `<span class="enf-info-btn" title="Enforcement-Details: ${esc(v)}" onclick="event.stopPropagation();App.openEnfPanel(${JSON.stringify(v)})">&#x2139;&#xFE0F;</span>`
         : '';
-      return chip + link + info;
+      return chip + info;
     }
 
     if (e) return chipHtml(e.label, e.description, v, e.color, null, attrHint);

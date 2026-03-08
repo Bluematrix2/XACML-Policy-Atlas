@@ -298,16 +298,14 @@ header h1 { font-size: 15px; font-weight: 600; letter-spacing: .3px; flex: 1; }
 .chip .star { color: #f9a825; }
 .chip:hover .tooltip { display: block; }
 
-/* ── FHIR link ── */
-.fhir-link {
-  color: var(--accent);
+/* ── FHIR clickable chip ── */
+a.chip.fhir-chip {
   text-decoration: none;
-  font-size: 11px;
-  opacity: .75;
-  vertical-align: middle;
-  flex-shrink: 0;
+  cursor: pointer;
 }
-.fhir-link:hover { opacity: 1; }
+a.chip.fhir-chip:hover {
+  filter: brightness(1.12);
+}
 
 /* ── Tooltip ── */
 .tooltip {
