@@ -95,7 +95,7 @@ header h1 { font-size: 15px; font-weight: 600; letter-spacing: .3px; flex: 1; }
   line-height: 1;
   padding: 2px 4px;
   border-radius: 4px;
-  color: var(--text-muted);
+  color: var(--text-primary);
   transition: color 0.15s, background 0.15s;
 }
 .sb-clear-btn:hover { color: var(--deny-border); background: var(--deny-bg); }
@@ -692,6 +692,49 @@ mark.hl { background: #FFE082; color: #212121; border-radius: 2px; padding: 0 1p
 }
 .val-viz-btn:hover { opacity: .85; }
 .val-id-list { font-size: 11px; font-family: 'Consolas', monospace; color: var(--text-secondary); background: var(--bg-secondary); border-radius: 4px; padding: 6px 8px; word-break: break-all; }
+
+/* ── Mobile hint overlay ── */
+.mobile-hint {
+  display: none;
+}
+@media (max-width: 800px) {
+  .mobile-hint {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: var(--bg-primary);
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+}
+.mobile-hint-card {
+  max-width: 360px;
+  text-align: center;
+  padding: 40px 32px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+}
+.mobile-hint-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  line-height: 1;
+}
+.mobile-hint-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+}
+.mobile-hint-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 8px;
+}
 
 /* ── Footer ── */
 footer {
