@@ -76,6 +76,9 @@ header h1 { font-size: 15px; font-weight: 600; letter-spacing: .3px; flex: 1; }
   flex-shrink: 0;
 }
 .sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 9px 12px 8px;
   font-size: 10px;
   font-weight: 700;
@@ -84,6 +87,18 @@ header h1 { font-size: 15px; font-weight: 600; letter-spacing: .3px; flex: 1; }
   color: var(--text-primary);
   border-bottom: 1px solid var(--border);
 }
+.sb-clear-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  transition: color 0.15s, background 0.15s;
+}
+.sb-clear-btn:hover { color: var(--deny-border); background: var(--deny-bg); }
 .sidebar-list { flex: 1; overflow-y: auto; }
 .sb-item {
   padding: 8px 12px 7px;

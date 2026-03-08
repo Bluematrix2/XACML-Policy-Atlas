@@ -18,8 +18,9 @@ const UIState = (() => {
   function setActive(idx) { activeIdx = idx; }
   function getActive()    { return activeIdx >= 0 ? policies[activeIdx] : null; }
   function getAll()       { return policies; }
+  function clear()        { policies = []; activeIdx = -1; }
 
-  return { addOrReplace, setActive, getActive, getAll };
+  return { addOrReplace, setActive, getActive, getAll, clear };
 })();
 
 export { UIState };

@@ -38,6 +38,12 @@ const App = (() => {
   function triggerCSV() { document.getElementById('csv-input').click(); }
   function triggerXML() { document.getElementById('xml-input').click(); }
 
+  function clearPolicies() {
+    UIState.clear();
+    document.getElementById('content').innerHTML = '';
+    refreshSidebar();
+  }
+
   async function loadCSV(input) {
     const file = input.files[0];
     if (!file) return;
@@ -488,6 +494,7 @@ const App = (() => {
 
   return {
     triggerCSV, triggerXML, loadCSV, loadXMLs, activatePolicy, applySearch, setFilter,
+    clearPolicies,
     triggerEnforcement, loadEnforcement, openEnfPanel, closeEnfPanel, switchTab,
     loadValFile, handleValDrop, visualizeFromValidator, resetValidator,
     toggleTheme
