@@ -9,6 +9,7 @@ import { CSVParser, LabelMapper, EnforcementMapper } from './mappers.js';
 import { XACMLValidator } from './validator.js';
 import { TreeRenderer } from './renderer.js';
 import { UIState } from './ui.js';
+import { XACMLGuide } from './guide.js';
 
 const App = (() => {
   let _currentFilter = 'all';
@@ -179,10 +180,13 @@ const App = (() => {
 
   function switchTab(tab) {
     _activeTab = tab;
-    document.getElementById('layout-viz').style.display  = tab === 'viz'  ? 'flex'  : 'none';
-    document.getElementById('layout-val').style.display  = tab === 'val'  ? 'flex'  : 'none';
-    document.getElementById('tab-viz').classList.toggle('active', tab === 'viz');
-    document.getElementById('tab-val').classList.toggle('active', tab === 'val');
+    document.getElementById('layout-viz').style.display   = tab === 'viz'   ? 'flex' : 'none';
+    document.getElementById('layout-val').style.display   = tab === 'val'   ? 'flex' : 'none';
+    document.getElementById('layout-guide').style.display = tab === 'guide' ? 'flex' : 'none';
+    document.getElementById('tab-viz').classList.toggle('active',   tab === 'viz');
+    document.getElementById('tab-val').classList.toggle('active',   tab === 'val');
+    document.getElementById('tab-guide').classList.toggle('active', tab === 'guide');
+    if (tab === 'guide') XACMLGuide.init();
   }
 
   // ── Enforcement ──
@@ -233,7 +237,8 @@ const App = (() => {
     const data = EnforcementMapper.lookup(fhirType);
 
     let html = `<div class="enf-resource-title">&#x1F3E5; ${esc(fhirType)}</div>`;
-    html += `<a class="enf-fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${fhirType.toLowerCase()}.html" target="_blank" rel="noopener">`;
+    //html += `<a class="enf-fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${fhirType.toLowerCase()}.html" target="_blank" rel="noopener">`;
+    html += `<a class="enf-fhir-link" href="https://hl7.org/fhir/${fhirType.toLowerCase()}.html" target="_blank" rel="noopener">`;
     html += `&#x1F517; FHIR ${FHIR_VERSION} Spezifikation &rarr;</a>`;
 
     if (!data) {

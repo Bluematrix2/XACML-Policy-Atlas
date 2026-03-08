@@ -36,6 +36,7 @@
 <div class="tab-nav">
   <button class="tab-btn active" id="tab-viz" onclick="App.switchTab('viz')">&#x1F4CA; Visualisierung</button>
   <button class="tab-btn" id="tab-val" onclick="App.switchTab('val')">&#x1F50D; Schema-Pr&uuml;fung</button>
+  <button class="tab-btn" id="tab-guide" onclick="App.switchTab('guide')">&#x1F4D6; XACML verstehen</button>
 </div>
 
 <div class="layout" id="layout-viz">
@@ -54,6 +55,8 @@
     </div>
   </div>
 </div>
+
+<div id="layout-guide" style="display:none" class="guide-layout"></div>
 
 <div id="layout-val" style="display:none" class="validator-area">
   <div class="val-container">
