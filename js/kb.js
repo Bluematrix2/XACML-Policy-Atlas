@@ -76,6 +76,7 @@ const KnowledgeBase = (() => {
         <span class="guide-search-icon">⌕</span>
         <input type="search" class="guide-search" id="kb-search"
                placeholder="Suche…" aria-label="Knowledge Base durchsuchen" autocomplete="off">
+        <button class="guide-search-clear" id="kb-search-clear" style="display:none" title="Suche leeren" aria-label="Suche leeren">&#x2715;</button>
       </div>
       <ul class="guide-toc-list" id="kb-toc-list">${tocItems}</ul>
     </nav>`;
@@ -143,11 +144,13 @@ const KnowledgeBase = (() => {
   }
 
   function setupSearch(container) {
-    const input = document.getElementById('kb-search');
+    const input    = document.getElementById('kb-search');
+    const clearBtn = document.getElementById('kb-search-clear');
     if (!input) return;
 
-    input.addEventListener('input', () => {
+    function runSearch() {
       const q = input.value.trim().toLowerCase();
+      if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
 
       SECTIONS.forEach(s => {
         const tocItem = container.querySelector(`.guide-toc-item[data-id="${s.id}"]`);
@@ -169,7 +172,17 @@ const KnowledgeBase = (() => {
         });
         if (visible.length === 1) openSection(visible[0].id, false);
       }
-    });
+    }
+
+    input.addEventListener('input', runSearch);
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
+        input.focus();
+      });
+    }
   }
 
   function setupObserver(container) {

@@ -106,8 +106,11 @@ const App = (() => {
   function showPolicy(policy) {
     const sv = esc(_currentSearch);
     const searchBar = `<div class="search-bar">`
+      + `<div class="search-input-wrap">`
       + `<input class="search-input" id="s-input" type="text" value="${sv}"`
       + ` placeholder="&#x1F50D; Suchen (Beschreibung, Label, URI...)" oninput="App.applySearch(this.value)">`
+      + `<button class="search-clear-btn" id="s-clear" onclick="App.clearSearch()" title="Suche leeren" aria-label="Suche leeren" style="display:${sv?'flex':'none'}">&#x2715;</button>`
+      + `</div>`
       + `<button class="filter-btn${_currentFilter==='all'?' active':''}" id="f-all" onclick="App.setFilter('all')">Alle</button>`
       + `<button class="filter-btn${_currentFilter==='permit'?' active':''}" id="f-permit" onclick="App.setFilter('permit')">&#x2705; Nur Permit</button>`
       + `<button class="filter-btn${_currentFilter==='deny'?' active':''}" id="f-deny" onclick="App.setFilter('deny')">&#x274C; Nur Deny</button>`
@@ -122,6 +125,17 @@ const App = (() => {
 
   function applySearch(query) {
     _currentSearch = query.trim();
+    const btn = document.getElementById('s-clear');
+    if (btn) btn.style.display = _currentSearch ? 'flex' : 'none';
+    _applyFiltersAndSearch();
+  }
+
+  function clearSearch() {
+    _currentSearch = '';
+    const input = document.getElementById('s-input');
+    if (input) input.value = '';
+    const btn = document.getElementById('s-clear');
+    if (btn) btn.style.display = 'none';
     _applyFiltersAndSearch();
   }
 
@@ -493,7 +507,7 @@ const App = (() => {
   })();
 
   return {
-    triggerCSV, triggerXML, loadCSV, loadXMLs, activatePolicy, applySearch, setFilter,
+    triggerCSV, triggerXML, loadCSV, loadXMLs, activatePolicy, applySearch, clearSearch, setFilter,
     clearPolicies,
     triggerEnforcement, loadEnforcement, openEnfPanel, closeEnfPanel, switchTab,
     loadValFile, handleValDrop, visualizeFromValidator, resetValidator,
