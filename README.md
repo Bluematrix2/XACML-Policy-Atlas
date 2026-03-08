@@ -15,7 +15,6 @@ A **web-based tool** to visualize and explore **XACML policies**.
 - Supports **multiple policy files**.  
 - Includes a **XACML explanation/info page** to help understand policies.  
 - Clean, modern, **developer-friendly UI**.  
-- Safe processing: **all uploaded files are sanitized** to prevent XSS.
 
 ---
 
