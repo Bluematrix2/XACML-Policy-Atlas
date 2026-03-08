@@ -78,14 +78,14 @@ Die echte Stärke: `(Arzt UND TLS) ODER Admin`
 <div class="guide-diagram">
   <div class="gd-group">
     <div class="gd-group-label">ODER-Gruppe 1</div>
-    <div class="gd-box gd-green">Arzt</div>
+    <div class="gd-box gd-green">document-repository</div>
     <div class="gd-chip gd-chip--and">UND</div>
-    <div class="gd-box gd-green">TLS</div>
+    <div class="gd-box gd-green">TLSClient</div>
   </div>
   <div class="gd-chip gd-chip--or">ODER</div>
   <div class="gd-group">
     <div class="gd-group-label">ODER-Gruppe 2</div>
-    <div class="gd-box gd-green">Admin</div>
+    <div class="gd-box gd-green">user_role</div>
   </div>
   <div class="gd-arrow">→</div>
   <div class="gd-box gd-blue">✅ Match</div>

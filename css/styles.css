@@ -682,13 +682,36 @@ mark.hl { background: #FFE082; color: #212121; border-radius: 2px; padding: 0 1p
 footer {
   background: var(--footer-bg);
   color: var(--text-muted);
-  text-align: center;
-  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 0;
+  padding: 10px 24px;
   font-size: 14px;
+  font-family: 'Consolas', 'SF Mono', monospace;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+footer a {
+  color: var(--footer-link);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.15s;
+  opacity: 0.85;
+}
+footer a:hover { opacity: 1; text-decoration: none; }
+.footer-sep { color: rgba(255, 255, 255, 0.904); margin: 0 10px; }
+.footer-copy { color: rgba(255, 255, 255, 0.904); }
+.footer-icon {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
   flex-shrink: 0;
 }
-footer a { color: var(--footer-link); text-decoration: none; }
-footer a:hover { text-decoration: underline; }
 
 /* ── Guide Tab Layout ── */
 #layout-guide {
