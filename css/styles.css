@@ -354,7 +354,8 @@ a.chip.fhir-chip:hover {
   white-space: normal;
   line-height: 1.45;
   box-shadow: 0 3px 10px rgba(0,0,0,.3);
-  word-break: break-all;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .tooltip::after {
   content: '';

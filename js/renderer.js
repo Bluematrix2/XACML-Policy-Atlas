@@ -429,10 +429,7 @@ const TreeRenderer = (() => {
     html += `<div class="acc-hdr-info">`;
     html += `<div class="acc-hdr-title">${esc(shortId)}</div>`;
     if (policy.description) {
-      const desc = policy.description.length > 130
-        ? policy.description.slice(0, 130) + '…'
-        : policy.description;
-      html += `<div class="acc-hdr-desc">${esc(desc)}</div>`;
+      html += `<div class="acc-hdr-desc">${esc(policy.description)}</div>`;
     }
     html += `</div>`;
     html += `<div class="acc-hdr-badges">`;
