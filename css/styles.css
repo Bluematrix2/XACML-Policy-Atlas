@@ -681,13 +681,8 @@ footer a:hover { text-decoration: underline; }
   flex: 1;
   display: flex;
   overflow: hidden;
+  min-height: 0;
   background: var(--bg-primary);
-}
-
-.guide-layout {
-  width: 100%;
-  display: flex;
-  overflow: hidden;
 }
 
 .guide-toc {
@@ -697,10 +692,8 @@ footer a:hover { text-decoration: underline; }
   border-right: 1px solid var(--border);
   background: var(--bg-secondary);
   overflow-y: auto;
-  position: sticky;
-  top: 0;
-  height: 100%;
   flex-shrink: 0;
+  height: 100%;
 }
 
 .guide-toc-title {
@@ -745,9 +738,38 @@ footer a:hover { text-decoration: underline; }
 .guide-section-divider { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
 
 /* Markdown rendered elements */
+.md-h1, .md-h2, .md-h3 { display: flex; align-items: center; gap: 8px; }
 .md-h1 { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin: 0 0 16px; line-height: 1.25; }
 .md-h2 { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin: 32px 0 12px; }
 .md-h3 { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 24px 0 8px; }
+
+/* ── Heading anchor button ── */
+.heading-anchor-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  background: none;
+  border: none;
+  padding: 2px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+.md-h1:hover .heading-anchor-btn,
+.md-h2:hover .heading-anchor-btn,
+.md-h3:hover .heading-anchor-btn { opacity: 1; }
+.heading-anchor-btn:hover { background: var(--acc-hdr-hover); }
+.heading-anchor-icon {
+  font-style: normal;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1;
+}
+.heading-anchor-copied { color: #10b981; }
 .md-p  { color: var(--text-secondary); line-height: 1.7; margin: 0 0 12px; font-size: 0.94rem; }
 .md-ul, .md-ol { color: var(--text-secondary); line-height: 1.7; margin: 0 0 12px; padding-left: 24px; font-size: 0.94rem; }
 .md-li { margin-bottom: 4px; }

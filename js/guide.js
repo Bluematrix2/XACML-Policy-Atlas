@@ -63,9 +63,9 @@ const XACMLGuide = (() => {
 
     // Build content sections
     const sections = SECTIONS.map((s, idx) => {
-      const html     = parseMarkdown(markdownTexts[idx] || '');
-      const isLast   = idx === SECTIONS.length - 1;
-      const divider  = isLast ? '' : '<hr class="guide-section-divider">';
+      const html    = parseMarkdown(markdownTexts[idx] || '');
+      const isLast  = idx === SECTIONS.length - 1;
+      const divider = isLast ? '' : '<hr class="guide-section-divider">';
       return `<section class="guide-section" id="${s.id}">${html}${divider}</section>`;
     }).join('');
 
@@ -73,40 +73,82 @@ const XACMLGuide = (() => {
 
     container.innerHTML = toc + content;
 
-    // Smooth scroll for ToC links
+    // Anchor copy buttons on all headings
+    addAnchorButtons(container);
+
+    // Smooth scroll for ToC links (scroll inside guide-content, not window)
+    const guideContent = document.getElementById('guide-content');
     container.querySelectorAll('.guide-toc-link').forEach(a => {
       a.addEventListener('click', e => {
         e.preventDefault();
         const target = document.getElementById(a.dataset.id);
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (target && guideContent) {
+          guideContent.scrollTo({ top: target.offsetTop - 16, behavior: 'smooth' });
         }
       });
     });
 
-    // IntersectionObserver for active ToC highlighting
+    // IntersectionObserver — track topmost visible section in document order
     if (_observer) _observer.disconnect();
+    const _visibleSections = new Set();
+    const sectionIds = SECTIONS.map(s => s.id);
+
+    function updateActiveLink() {
+      const activeId = sectionIds.find(id => _visibleSections.has(id));
+      if (!activeId) return;
+      container.querySelectorAll('.guide-toc-link').forEach(a => {
+        a.classList.toggle('active', a.dataset.id === activeId);
+      });
+    }
 
     _observer = new IntersectionObserver(entries => {
       for (const entry of entries) {
         if (entry.isIntersecting) {
-          const id = entry.target.id;
-          container.querySelectorAll('.guide-toc-link').forEach(a => {
-            a.classList.toggle('active', a.dataset.id === id);
-          });
+          _visibleSections.add(entry.target.id);
+        } else {
+          _visibleSections.delete(entry.target.id);
         }
       }
+      updateActiveLink();
     }, {
-      root: document.getElementById('guide-content'),
-      rootMargin: '0px 0px -60% 0px',
+      root: guideContent,
+      rootMargin: '0px 0px -50% 0px',
       threshold: 0,
     });
 
     container.querySelectorAll('.guide-section').forEach(el => _observer.observe(el));
 
     // Highlight first item initially
-    const firstLink = container.querySelector('.guide-toc-link');
-    if (firstLink) firstLink.classList.add('active');
+    _visibleSections.add(sectionIds[0]);
+    updateActiveLink();
+  }
+
+  function addAnchorButtons(container) {
+    container.querySelectorAll('.guide-section h1[id], .guide-section h2[id], .guide-section h3[id]').forEach(heading => {
+      const btn = document.createElement('button');
+      btn.className = 'heading-anchor-btn';
+      btn.title = 'Link zu diesem Abschnitt kopieren';
+      btn.setAttribute('aria-label', 'Abschnittslink kopieren');
+      btn.innerHTML = '<span class="heading-anchor-icon">#</span>';
+      btn.addEventListener('click', () => {
+        const url = `${location.origin}${location.pathname}#${heading.id}`;
+        navigator.clipboard.writeText(url).then(() => {
+          btn.innerHTML = '<span class="heading-anchor-icon heading-anchor-copied">✓</span>';
+          setTimeout(() => {
+            btn.innerHTML = '<span class="heading-anchor-icon">#</span>';
+          }, 1500);
+        }).catch(() => {
+          // Fallback for browsers without clipboard API
+          const ta = document.createElement('textarea');
+          ta.value = url;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        });
+      });
+      heading.appendChild(btn);
+    });
   }
 
   return { init, render, get _initialized() { return _initialized; } };

@@ -100,7 +100,7 @@ const TreeRenderer = (() => {
       tooltipParts.push(`<span class="tooltip-uri">${esc(v)}</span>`);
       tooltipParts.push(`<span class="tooltip-uri" style="color:#80cbc4">&#x1F517; FHIR ${FHIR_VERSION} Spezifikation</span>`);
       const tooltip = `<span class="tooltip">${tooltipParts.join('<br>')}</span>`;
-      const href = `https://hl7.org/fhir/${FHIR_VERSION}/${v.toLowerCase()}.html`;
+      const href = `https://hl7.org/fhir/${v.toLowerCase()}.html`;
       const chip = `<a class="chip fhir-chip" href="${href}" target="_blank" rel="noopener"`
                  + ` style="background:${bg};color:${fg};border-color:${bg}">`
                  + esc(label) + tooltip + `</a>`;
@@ -345,7 +345,7 @@ const TreeRenderer = (() => {
         const badge    = readOnly ? 'READ' : 'READ+WRITE';
         const bColor   = readOnly ? '#1565c0' : '#2e7d32';
         return `<span class="summary-chip">`
-             + `<a class="fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${type.toLowerCase()}.html" target="_blank" rel="noopener" title="FHIR ${FHIR_VERSION}: ${esc(type)}">&#x1F517;</a>`
+             + `<a class="fhir-link" href="https://hl7.org/fhir/${type.toLowerCase()}.html" target="_blank" rel="noopener" title="FHIR ${FHIR_VERSION}: ${esc(type)}">&#x1F517;</a>`
              + ` ${esc(type)}&nbsp;<span style="color:${bColor};font-size:10px;font-weight:700">${badge}</span>`
              + `</span>`;
       };
