@@ -776,16 +776,18 @@ footer a:hover { opacity: 1; text-decoration: none; }
 .guide-search-wrap {
   position: relative;
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
 }
 .guide-search-icon {
   position: absolute;
   left: 9px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text-muted);
   pointer-events: none;
   line-height: 1;
+  display: flex;
+  align-items: center;
 }
 .guide-search {
   width: 100%;
@@ -853,6 +855,28 @@ footer a:hover { opacity: 1; text-decoration: none; }
 }
 .guide-acc-body { border-top: 1px solid var(--border); }
 .guide-section-inner { padding: 24px 32px 32px; }
+
+/* ── Guide back-to-top ── */
+.guide-back-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 24px auto 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.guide-back-top:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
 
 /* Markdown rendered elements */
 .md-h1, .md-h2, .md-h3 { display: flex; align-items: center; gap: 8px; }

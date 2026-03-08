@@ -71,3 +71,7 @@ Mit `not(...)` wird eine Condition umgekehrt: Die Regel gilt, wenn die Bedingung
 *"Verweigere, wenn der anfragende Patient NICHT der Inhaber der Akte ist."*
 
 > **Zusammenfassung:** Conditions ermöglichen kontextabhängige Regeln. true → Effect. false → Not Applicable. Fehler → Indeterminate. Negation mit `not(...)` kehrt das Ergebnis um.
+
+<div class="guide-back-btn-wrap">
+  <button class="guide-back-btn" onclick="App.switchTab('viz')">← Zurück zur Visualisierung</button>
+</div>

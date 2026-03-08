@@ -99,3 +99,7 @@ Dieselbe UND/ODER-Logik gilt für `<Resources>` und `<Actions>`:
 - Mehrere `<ResourceMatch>` = UND: *"Ressource = Patient UND Kontext = klinisch"*
 
 > **Zusammenfassung:** ODER = mehrere `<Subject>`/`<Resource>`/`<Action>`-Elemente. UND = mehrere `<SubjectMatch>`/`<ResourceMatch>`/`<ActionMatch>` innerhalb eines Elements. Kombinationen sind frei möglich.
+
+<div class="guide-back-btn-wrap">
+  <button class="guide-back-btn" onclick="App.switchTab('viz')">← Zurück zur Visualisierung</button>
+</div>

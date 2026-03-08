@@ -53,3 +53,7 @@ Eine `Rule` ist die kleinste Einheit. Sie enthält:
 ```
 
 > **Zusammenfassung:** PolicySet → Policy → Rule. Jede Ebene hat ein eigenes Target und einen Combining Algorithm. Rules sind die kleinste Einheit mit dem konkreten Permit/Deny.
+
+<div class="guide-back-btn-wrap">
+  <button class="guide-back-btn" onclick="App.switchTab('viz')">← Zurück zur Visualisierung</button>
+</div>

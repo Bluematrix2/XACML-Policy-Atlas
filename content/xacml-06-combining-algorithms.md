@@ -47,3 +47,7 @@ Im XML als Attribut des PolicySet oder der Policy:
 ```
 
 > **Zusammenfassung:** deny-overrides → Deny gewinnt immer. permit-overrides → Permit gewinnt immer. first-applicable → Reihenfolge entscheidend. Der Algorithmus steht im PolicySet/Policy-Attribut.
+
+<div class="guide-back-btn-wrap">
+  <button class="guide-back-btn" onclick="App.switchTab('viz')">← Zurück zur Visualisierung</button>
+</div>

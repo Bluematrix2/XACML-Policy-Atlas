@@ -43,3 +43,7 @@ Typische Einsatzgebiete im Gesundheitswesen:
 - Welche Benutzerrollen haben Zugriff auf Notfalldaten?
 
 > **Zusammenfassung:** XACML ist der Standard, um Zugriffsrechte maschinenlesbar, versionierbar und prüfbar zu definieren. Die Kernfrage: Wer darf was mit welchen Daten unter welchen Bedingungen tun?
+
+<div class="guide-back-btn-wrap">
+  <button class="guide-back-btn" onclick="App.switchTab('viz')">← Zurück zur Visualisierung</button>
+</div>

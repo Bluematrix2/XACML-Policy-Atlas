@@ -42,3 +42,7 @@ Stimmt das Target nicht überein, ist das Ergebnis **Not Applicable** — die Re
 Ein leeres `<Target/>` bedeutet: **Diese Regel gilt für alle Anfragen.** Das ist oft beim PolicySet der Fall.
 
 > **Zusammenfassung:** Das Target ist der Vorfilter einer Regel. Passt Subject, Resource und Action — wird die Regel ausgewertet. Passt eines nicht — Not Applicable, Regel übersprungen.
+
+<div class="guide-back-btn-wrap">
+  <button class="guide-back-btn" onclick="App.switchTab('viz')">← Zurück zur Visualisierung</button>
+</div>

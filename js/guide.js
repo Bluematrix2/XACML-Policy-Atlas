@@ -93,25 +93,28 @@ const XACMLGuide = (() => {
 
     // Accordions
     const accItems = SECTIONS.map((s, idx) => {
-      const html    = parseMarkdown(markdownTexts[idx] || '');
-      const isFirst = idx === 0;
-      const numStr  = String(idx + 1).padStart(2, '0');
-      const label   = s.title.replace(/^\d+\.\s*/, '');
+      const html   = parseMarkdown(markdownTexts[idx] || '');
+      const numStr = String(idx + 1).padStart(2, '0');
+      const label  = s.title.replace(/^\d+\.\s*/, '');
       return `<div class="guide-acc" id="${s.id}">
-        <button class="guide-acc-hdr${isFirst ? ' open' : ''}"
-                aria-expanded="${isFirst}"
+        <button class="guide-acc-hdr"
+                aria-expanded="false"
                 data-id="${s.id}">
           <span class="guide-acc-num">${numStr}</span>
           <span class="guide-acc-label">${label}</span>
           <span class="guide-acc-chevron" aria-hidden="true"></span>
         </button>
-        <div class="guide-acc-body" id="acc-body-${s.id}"${isFirst ? '' : ' style="display:none"'}>
+        <div class="guide-acc-body" id="acc-body-${s.id}" style="display:none">
           <div class="guide-section-inner">${html}</div>
         </div>
       </div>`;
     }).join('');
 
-    const content = `<div class="guide-content" id="guide-content">${accItems}</div>`;
+    const backToTop = `<button class="guide-back-top" id="guide-back-top"
+        title="Zurück nach oben" aria-label="Zurück nach oben"
+        onclick="window.scrollTo({top:0,behavior:'smooth'})">&#x2191;</button>`;
+
+    const content = `<div class="guide-content" id="guide-content">${accItems}${backToTop}</div>`;
     container.innerHTML = `<div class="guide-body">${toc}${content}</div>`;
 
     // Cache plain text for search
@@ -134,12 +137,17 @@ const XACMLGuide = (() => {
     }
   }
 
-  // ── Accordion click ────────────────────────────────────────────────────────
+  // ── Accordion click — toggle open/close ───────────────────────────────────
   function setupAccordionClicks(container) {
     container.querySelectorAll('.guide-acc-hdr').forEach(hdr => {
       hdr.addEventListener('click', () => {
-        // If already open, keep open (no toggle-close behaviour)
-        if (!hdr.classList.contains('open')) {
+        if (hdr.classList.contains('open')) {
+          // Close this accordion
+          const body = document.getElementById(`acc-body-${hdr.dataset.id}`);
+          hdr.classList.remove('open');
+          hdr.setAttribute('aria-expanded', 'false');
+          if (body) body.style.display = 'none';
+        } else {
           openSection(hdr.dataset.id, false);
         }
       });
@@ -208,8 +216,6 @@ const XACMLGuide = (() => {
     }, { root: null, rootMargin: '-10% 0px -55% 0px', threshold: 0 });
 
     container.querySelectorAll('.guide-acc').forEach(el => _observer.observe(el));
-    visible.add(sectionIds[0]);
-    updateActive();
   }
 
   // ── Anchor copy buttons on headings inside the section bodies ─────────────
