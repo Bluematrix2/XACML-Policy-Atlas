@@ -29,10 +29,11 @@ const TreeRenderer = (() => {
 
   // ── Chip rendering ──
 
-  function chipHtml(label, description, uri, color, prefix) {
+  function chipHtml(label, description, uri, color, prefix, attrHint) {
     const bg = color || FALLBACK_COLOR;
     const fg = isLightColor(bg) ? '#212121' : '#ffffff';
     const tooltipParts = [];
+    if (attrHint)    tooltipParts.push(`<span class="tooltip-attr">${attrHint}</span>`);
     if (description) tooltipParts.push(esc(description));
     if (uri)         tooltipParts.push(`<span class="tooltip-uri">${esc(uri)}</span>`);
     const tooltip = tooltipParts.length
@@ -44,32 +45,36 @@ const TreeRenderer = (() => {
          + `</span>`;
   }
 
-  function fallbackChip(uri) {
-    const tip = LabelMapper.isLoaded()
-      ? `Kein Label im Mapping gefunden<span class="tooltip-uri">${esc(uri)}</span>`
-      : `<span class="tooltip-uri">${esc(uri)}</span>`;
-    return `<span class="chip fallback">${esc(uri)}<span class="tooltip">${tip}</span></span>`;
+  function fallbackChip(uri, attrHint) {
+    const parts = [];
+    if (attrHint) parts.push(`<span class="tooltip-attr">${attrHint}</span>`);
+    if (LabelMapper.isLoaded()) parts.push(`Kein Label im Mapping gefunden`);
+    parts.push(`<span class="tooltip-uri">${esc(uri)}</span>`);
+    return `<span class="chip fallback">${esc(uri)}<span class="tooltip">${parts.join('<br>')}</span></span>`;
   }
 
   // Returns chip HTML + optional FHIR link for a match value
-  function valueChip(matchValue, attributeId) {
+  function valueChip(matchValue, attributeId, attrHint) {
     const { dataType, value, code, codeSystem, root, isWildcard } = matchValue;
     const isFhir = attributeId === FHIR_ATTR_ID;
 
     if (dataType === 'CV') {
       const e = LabelMapper.lookupCV(code, codeSystem);
-      if (e) return chipHtml(e.label, e.description, `${code}@${codeSystem}`, e.color);
-      return chipHtml(code, `CodeSystem: ${codeSystem}`, `${code}@${codeSystem}`, FALLBACK_COLOR);
+      if (e) return chipHtml(e.label, e.description, `${code}@${codeSystem}`, e.color, null, attrHint);
+      return chipHtml(code, `CodeSystem: ${codeSystem}`, `${code}@${codeSystem}`, FALLBACK_COLOR, null, attrHint);
     }
 
     if (dataType === 'II') {
       if (isWildcard) {
+        const wParts = [];
+        if (attrHint) wParts.push(`<span class="tooltip-attr">${attrHint}</span>`);
+        wParts.push(`Wildcard-Policy: Gilt automatisch f&uuml;r alle Patientenakten`);
+        wParts.push(`<span class="tooltip-uri">root=&apos;*&apos;</span>`);
         return `<span class="chip" style="background:#fff8e1;color:#f57f17;border-color:#ffe082">`
              + `<span class="star">&#x2B50;</span>Alle Patienten (Wildcard)`
-             + `<span class="tooltip">Wildcard-Policy: Gilt automatisch f&uuml;r alle Patientenakten`
-             + `<span class="tooltip-uri">root=&apos;*&apos;</span></span></span>`;
+             + `<span class="tooltip">${wParts.join('<br>')}</span></span>`;
       }
-      return chipHtml(root || 'II', '', root, '#795548');
+      return chipHtml(root || 'II', '', root, '#795548', null, attrHint);
     }
 
     // string / anyURI
@@ -88,7 +93,7 @@ const TreeRenderer = (() => {
       }
       const label = e ? e.label : v;
       const desc  = e ? (e.description || '') : '';
-      const chip  = chipHtml(label, desc, v, chipColor);
+      const chip  = chipHtml(label, desc, v, chipColor, null, attrHint);
       const link  = `<a class="fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${v.toLowerCase()}.html"`
                   + ` target="_blank" rel="noopener" title="FHIR ${FHIR_VERSION} Spezifikation: ${esc(v)}">&#x1F517;</a>`;
       const info  = enfData
@@ -97,8 +102,8 @@ const TreeRenderer = (() => {
       return chip + link + info;
     }
 
-    if (e) return chipHtml(e.label, e.description, v, e.color);
-    return fallbackChip(v);
+    if (e) return chipHtml(e.label, e.description, v, e.color, null, attrHint);
+    return fallbackChip(v, attrHint);
   }
 
   // Returns plain text label for a matchValue (for summary box)
@@ -114,16 +119,7 @@ const TreeRenderer = (() => {
     return e ? e.label : lastSegment(v);
   }
 
-  // Attribute label with tooltip (used in readable sentences)
-  function matchAttrLabel(attributeId) {
-    const e     = LabelMapper.lookup(attributeId);
-    const label = e ? e.label : lastSegment(attributeId);
-    const desc  = e ? e.description : '';
-    const tip   = `${desc ? esc(desc) + '<br>' : ''}<span class="tooltip-uri">${esc(attributeId)}</span>`;
-    return `<span class="match-attr-label">${esc(label)}<span class="tooltip">${tip}</span></span>`;
-  }
-
-  // ── Match group rendering (outer=ODER, inner=UND, readable sentences) ──
+  // ── Match group rendering (outer=ODER, inner=UND) ──
 
   function renderMatchGroups(groups, groupLabel) {
     if (!groups || groups.length === 0) return '';
@@ -131,12 +127,15 @@ const TreeRenderer = (() => {
     const groupsHtml = groups.map(group => {
       if (!group || group.length === 0) return '';
 
-      // Each match → readable sentence: [attr label] ist [value chip]
       const parts = group.map(match => {
-        const attrId  = match.designator ? match.designator.attributeId : '';
-        const valHtml = valueChip(match.value, attrId);
-        const attrHtml = matchAttrLabel(attrId);
-        return `<span class="match-sentence">${attrHtml}<span class="match-connector">ist</span>${valHtml}</span>`;
+        const attrId    = match.designator ? match.designator.attributeId : '';
+        const attrEntry = attrId ? LabelMapper.lookup(attrId) : null;
+        const attrLabel = attrEntry ? attrEntry.label : (attrId ? lastSegment(attrId) : '');
+        const attrDesc  = attrEntry ? (attrEntry.description || '') : '';
+        const attrHint  = attrId
+          ? `${attrDesc ? esc(attrDesc) + '<br>' : ''}${esc(attrLabel)} &mdash; <span class="tooltip-uri">${esc(attrId)}</span>`
+          : '';
+        return valueChip(match.value, attrId, attrHint);
       });
 
       return parts.join(undChip());

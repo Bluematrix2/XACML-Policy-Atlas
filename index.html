@@ -28,9 +28,9 @@
   <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="App.loadCSV(this)">
   <input type="file" id="xml-input" accept=".xml" multiple style="display:none" onchange="App.loadXMLs(this)">
   <input type="file" id="dir-input" accept=".xml" webkitdirectory multiple style="display:none" onchange="App.loadXMLs(this)">
-  <button class="hbtn theme-toggle" id="theme-toggle" onclick="App.toggleTheme()" aria-label="Design: Hell (wechseln zu Dunkel)">&#x2600;&#xFE0F;</button>
   <button class="hbtn" id="enf-btn" onclick="App.triggerEnforcement()">&#x1F4CA; Enforcement-CSV</button>
   <input type="file" id="enf-input" accept=".csv" style="display:none" onchange="App.loadEnforcement(this)">
+  <button class="hbtn theme-toggle" id="theme-toggle" onclick="App.toggleTheme()" aria-label="Design: Hell (wechseln zu Dunkel)">&#x2600;&#xFE0F;</button>
 </header>
 
 <div class="tab-nav">
@@ -49,7 +49,7 @@
     <div class="empty-state">
       <div class="icon">&#x1F510;</div>
       <p>Lade eine XACML Policy-XML-Datei, um zu beginnen.</p>
-      <p style="font-size:14px;color:#212121">Mehrere Dateien oder einen Ordner per Knopf oben rechts</p>
+      <p>Mehrere Dateien oder einen Ordner per Knopf oben rechts</p>
       <p>Alle Daten werden lokal im Browser verarbeitet.</p>
     </div>
   </div>
@@ -86,7 +86,8 @@
 </div>
 
 <footer>
-  &copy; <script>document.write(new Date().getFullYear())</script> <a href="https://florian-puschmann.de?utm_source=policy_atlas&utm_medium=footer" target="_blank" rel="noopener noreferrer">Crafted by Florian Puschmann</a>
+  <a href="https://florian-puschmann.de/impressum?utm_source=policy_atlas&utm_medium=footer" target="_blank" rel="noopener noreferrer">Impressum</a>
+  &copy; <script>document.write(new Date().getFullYear())</script> <a href="https://florian-puschmann.de?utm_source=policy_atlas&utm_medium=footer" target="_blank" rel="noopener noreferrer">Crafted by Florian Puschmann</a> 
 </footer>
 
 <script type="module" src="js/app.js"></script>

@@ -266,19 +266,8 @@ header h1 { font-size: 15px; font-weight: 600; letter-spacing: .3px; flex: 1; }
 .logic-chip.und  { background: var(--chip-and-bg); color: var(--chip-and-text); }
 .logic-chip:hover .tooltip { display: block; }
 
-/* ── Readable match sentence ── */
+/* ── Match groups ── */
 .or-group { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-.match-sentence { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-.match-attr-label {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: default;
-  position: relative;
-}
-.match-attr-label:hover .tooltip { display: block; }
-.match-connector { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 
 /* ── Chips ── */
 .chip {
@@ -355,6 +344,14 @@ header h1 { font-size: 15px; font-weight: 600; letter-spacing: .3px; flex: 1; }
   display: block;
   margin-top: 3px;
   word-break: break-all;
+}
+.tooltip-attr {
+  font-size: 11px;
+  color: #b0bec5;
+  display: block;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
 }
 
 /* ── Condition block ── */
