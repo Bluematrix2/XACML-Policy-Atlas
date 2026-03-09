@@ -16,13 +16,13 @@ const TreeRenderer = (() => {
   // ── Logic chips ──
 
   function oderChip() {
-    return `<span class="logic-chip oder">ODER`
+    return `<span class="logic-chip oder">ODER (or)`
          + `<span class="tooltip" style="min-width:210px">Eine dieser Bedingungen muss zutreffen</span>`
          + `</span>`;
   }
 
   function undChip() {
-    return `<span class="logic-chip und">UND`
+    return `<span class="logic-chip und">UND (and)`
          + `<span class="tooltip" style="min-width:210px">Alle Bedingungen m&uuml;ssen gleichzeitig zutreffen</span>`
          + `</span>`;
   }
