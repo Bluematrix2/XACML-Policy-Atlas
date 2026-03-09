@@ -96,10 +96,22 @@ const App = (() => {
   }
 
   function activatePolicy(idx) {
+    // Flush current editor dirty state before switching (beats 500ms debounce)
+    if (_activeContentTab === 'xml-editor' && editor && editorState.policyId) {
+      const current = editorGetValue();
+      if (current !== editorState.originalXml) {
+        _dirtyEdits.set(editorState.policyId, current);
+      } else {
+        _dirtyEdits.delete(editorState.policyId);
+      }
+    }
     UIState.setActive(idx);
     const policy = UIState.getActive();
     if (policy) showPolicy(policy);
     refreshSidebar();
+    if (_activeContentTab === 'xml-editor' && policy && policy.rawXml) {
+      loadPolicyIntoEditor(policy.filename, policy.rawXml);
+    }
   }
 
   function showPolicy(policy) {
@@ -221,9 +233,11 @@ const App = (() => {
              + `</div></div>`;
       }
 
+      const hasDirty = _dirtyEdits.has(p.filename);
+
       return `<div class="sb-item${isActive ? ' active' : ''}" onclick="App.activatePolicy(${i})" title="${esc(p.filename)}">`
            + `<div class="sb-item-main">`
-           + `<div class="sb-name">${esc(shortName)}</div>`
+           + `<div class="sb-name">${esc(shortName)}${hasDirty ? '<span class="sb-dirty-dot" title="Ungespeicherte \u00c4nderungen">\u25CF</span>' : ''}</div>`
            + `<div class="sb-meta">${total} Regel${total !== 1 ? 'n' : ''} &middot; ${permitCount}P&thinsp;/&thinsp;${denyCount}D</div>`
            + `<div class="sb-bar">`
            + `<div class="sb-permit" style="width:${pPct}%"></div>`
@@ -263,6 +277,9 @@ const App = (() => {
 
   function confirmPolicyDelete(idx) {
     _confirmingDelete.delete(idx);
+    const policies = UIState.getAll();
+    const filename  = policies[idx] && policies[idx].filename;
+    if (filename) _dirtyEdits.delete(filename);
     const wasActive = UIState.remove(idx);
     refreshSidebar();
     const remaining = UIState.getAll();
@@ -718,6 +735,9 @@ const App = (() => {
     isDirty: false,
   };
 
+  const _dirtyEdits = new Map(); // filename → edited xml (for policies with unsaved changes)
+  let _activeContentTab = 'viz';
+
   let editor = null;
   let _editorInitialized = false;
 
@@ -746,12 +766,21 @@ const App = (() => {
     editor.on('change', debounce(() => {
       const current = editorGetValue();
       editorState.isDirty = current !== editorState.originalXml;
+      if (editorState.policyId) {
+        if (editorState.isDirty) {
+          _dirtyEdits.set(editorState.policyId, current);
+        } else {
+          _dirtyEdits.delete(editorState.policyId);
+        }
+      }
       updateDirtyIndicator();
       validateXmlInline(current);
+      refreshSidebar();
     }, 500));
   }
 
   function switchContentTab(tab) {
+    _activeContentTab = tab;
     const content     = document.getElementById('content');
     const editorPanel = document.getElementById('editor-panel');
     document.getElementById('ctab-viz').classList.toggle('active',    tab === 'viz');
@@ -761,15 +790,16 @@ const App = (() => {
       editorPanel.style.display = 'flex';
       _initEditor();
       const active = UIState.getActive();
-      if (active && active.rawXml && !editorState.isDirty && editorState.policyId !== active.filename) {
+      if (active && active.rawXml && editorState.policyId !== active.filename) {
         editorState.policyId    = active.filename;
         editorState.originalXml = active.rawXml;
-        editorState.isDirty     = false;
         editorState.mode        = 'edit';
+        const savedDirty = _dirtyEdits.get(active.filename);
+        editorState.isDirty = !!savedDirty;
         setTimeout(() => {
-          editorSetValue(active.rawXml);
+          editorSetValue(savedDirty || active.rawXml);
           updateDirtyIndicator();
-          validateXmlInline(active.rawXml);
+          validateXmlInline(savedDirty || active.rawXml);
           editor && editor.refresh();
         }, 0);
       } else {
@@ -856,7 +886,9 @@ const App = (() => {
     URL.revokeObjectURL(a.href);
     editorState.originalXml = content;
     editorState.isDirty     = false;
+    _dirtyEdits.delete(editorState.policyId);
     updateDirtyIndicator();
+    refreshSidebar();
   }
 
   function handleReset() {
@@ -866,7 +898,9 @@ const App = (() => {
   function confirmReset() {
     editorSetValue(editorState.originalXml);
     editorState.isDirty = false;
+    _dirtyEdits.delete(editorState.policyId);
     updateDirtyIndicator();
+    refreshSidebar();
     validateXmlInline(editorState.originalXml);
     hideEditorError();
     document.getElementById('editorResetConfirm').style.display = 'none';
@@ -885,6 +919,9 @@ const App = (() => {
       const fname  = editorState.policyId || 'edited-policy.xml';
       const policy = XACMLParser.parse(xml, fname);
       policy.rawXml = xml;
+      _dirtyEdits.delete(fname);
+      editorState.originalXml = xml;
+      editorState.isDirty     = false;
       const idx    = UIState.addOrReplace(policy);
       switchContentTab('viz');
       activatePolicy(idx);
@@ -894,19 +931,24 @@ const App = (() => {
   }
 
   function loadPolicyIntoEditor(policyId, xmlContent) {
-    editorState.policyId     = policyId;
-    editorState.originalXml  = xmlContent;
-    editorState.isDirty      = false;
-    editorState.mode         = 'edit';
+    editorState.policyId    = policyId;
+    editorState.originalXml = xmlContent; // always the clean baseline
+    editorState.mode        = 'edit';
+    const savedDirty        = _dirtyEdits.get(policyId);
+    editorState.isDirty     = !!savedDirty;
     switchContentTab('xml-editor');
-    editorSetValue(xmlContent);
-    updateDirtyIndicator();
-    validateXmlInline(xmlContent);
+    const contentToLoad = savedDirty || xmlContent;
+    setTimeout(() => {
+      editorSetValue(contentToLoad);
+      updateDirtyIndicator();
+      validateXmlInline(contentToLoad);
+      editor && editor.refresh();
+    }, 0);
   }
 
   // beforeunload guard
   window.addEventListener('beforeunload', (e) => {
-    if (editorState.isDirty) { e.preventDefault(); e.returnValue = ''; }
+    if (editorState.isDirty || _dirtyEdits.size > 0) { e.preventDefault(); e.returnValue = ''; }
   });
 
   // ── Dark / Light Mode ──

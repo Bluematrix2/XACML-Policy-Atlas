@@ -133,6 +133,7 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; }
 .sb-permit { background: #4CAF50; }
 .sb-deny   { background: #F44336; }
 .sb-empty  { padding: 16px 12px; font-size: 13px; color: var(--text-muted); }
+.sb-dirty-dot { color: #ef4444; font-size: 10px; vertical-align: middle; margin-left: 4px; }
 
 /* Policy action buttons (edit / delete) */
 .policy-actions {
