@@ -18,7 +18,7 @@
     window.APP_VERSION = '__APP_VERSION__';
     // Lokaler Fallback: Platzhalter wird nur durch GitHub Actions ersetzt.
     // Beim lokalen Testen bleibt er als 'dev-local' sichtbar.
-    if (window.APP_VERSION === '__APP_VERSION__') {
+    if (window.APP_VERSION === '__APP_' + 'VERSION__') {
       window.APP_VERSION = 'dev-local';
     }
   </script>
@@ -147,7 +147,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('appVersion');
-    if (el && el.textContent === '__APP_VERSION__') {
+    if (el && el.textContent.trim() === '__APP_' + 'VERSION__') {
       el.textContent = 'dev-local';
     }
   });
