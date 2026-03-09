@@ -833,7 +833,8 @@ footer {
   gap: 6px 0;
   padding: 10px 24px;
   font-size: 14px;
-  font-family: 'Consolas', 'SF Mono', monospace;
+  font-family: 'Montserrat Alternates', sans-serif;
+ /* font-family: 'Consolas', 'SF Mono', monospace; */
   letter-spacing: 0.04em;
   flex-shrink: 0;
   border-top: 1px solid rgba(255,255,255,0.06);
@@ -1247,7 +1248,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
 /* ── Footer version ── */
 .footer-version { color: var(--footer-link); font-size: 14px; }
 .footer-bug-link { color: var(--footer-link); font-size: 14px; text-decoration: none; }
-.footer-bug-link:hover { color: rgb(255, 255, 255); text-decoration: underline; }
+.footer-bug-link:hover { color: var(--footer-link); text-decoration: underline; }
 
 /* ── Mapping Status Dot ── */
 .mapping-status-dot {
