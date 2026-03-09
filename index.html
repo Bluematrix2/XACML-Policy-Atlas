@@ -46,10 +46,7 @@
     <span class="header-notice">&#x1F512; All data is processed locally in your browser and is never uploaded.</span>
   </div>
   <button class="hbtn" id="csv-btn" onclick="App.triggerCSV()">&#x1F4C4; Mapping-CSV laden</button>
-  <button class="hbtn" onclick="App.triggerXML()">&#x1F4C2; Policy-XML(s) laden</button>
   <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="App.loadCSV(this)">
-  <input type="file" id="xml-input" accept=".xml" multiple style="display:none" onchange="App.loadXMLs(this)">
-  <input type="file" id="dir-input" accept=".xml" webkitdirectory multiple style="display:none" onchange="App.loadXMLs(this)">
   <button class="hbtn" id="enf-btn" onclick="App.triggerEnforcement()">&#x1F4CA; Enforcement-CSV</button>
   <input type="file" id="enf-input" accept=".csv" style="display:none" onchange="App.loadEnforcement(this)">
   <button class="hbtn theme-toggle" id="theme-toggle" onclick="App.toggleTheme()" aria-label="Design: Hell (wechseln zu Dunkel)">&#x2600;&#xFE0F;</button>
@@ -69,16 +66,16 @@
       <span>Policies</span>
       <button class="sb-clear-btn" id="sb-clear-btn" onclick="App.clearPolicies()" title="Alle Policies entfernen" aria-label="Alle Policies entfernen">&#x1F5D1;</button>
     </div>
-    <div class="sidebar-list" id="sidebar-list">
-      <div class="sb-empty">Noch keine Dateien geladen</div>
+    <div class="sidebar-list" id="sidebar-list"></div>
+    <div class="sb-import-wrap">
+      <button class="sb-import-btn" onclick="App.openImportModal()">+ Policy importieren</button>
     </div>
   </nav>
   <div class="content" id="content">
     <div class="empty-state">
-      <div class="icon">&#x1F510;</div>
-      <p>Lade eine XACML Policy-XML-Datei, um zu beginnen.</p>
-      <p>Mehrere Dateien oder einen Ordner per Knopf oben rechts</p>
-      <p>Alle Daten werden lokal im Browser verarbeitet und niemals auf den Server geladen.</p>
+      <div class="icon">&#x1F4C2;</div>
+      <p>Noch keine Policy geladen</p>
+      <button class="import-trigger-btn" onclick="App.openImportModal()">+ Policy importieren</button>
     </div>
   </div>
 </div>
@@ -140,6 +137,42 @@
   <span class="footer-sep">•</span>
   <span id="appVersion" class="footer-version">__APP_VERSION__</span>
 </footer>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="import-overlay" onclick="if(event.target===this)App.closeImportModal()">
+  <div class="modal" id="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+    <div class="modal-hdr">
+      <span class="modal-title" id="import-modal-title">Policy importieren</span>
+      <button class="modal-close" onclick="App.closeImportModal()" aria-label="Dialog schlie&szlig;en">&#x2715;</button>
+    </div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="mtab-file" onclick="App.switchImportTab('file')">&#x1F4C1; Datei hochladen</button>
+      <button class="modal-tab" id="mtab-paste" onclick="App.switchImportTab('paste')">&#x1F4CB; XML einf&uuml;gen</button>
+    </div>
+    <div id="mtab-file-body" class="modal-tab-body">
+      <div class="import-dropzone" id="import-drop"
+           ondragover="App.importDragOver(event)"
+           ondragleave="App.importDragLeave(event)"
+           ondrop="App.importDrop(event)"
+           onclick="document.getElementById('import-file-input').click()">
+        <div class="import-drop-icon">&#x1F4C2;</div>
+        <p class="import-drop-text">XML-Datei hier ablegen</p>
+        <button class="import-file-btn" onclick="event.stopPropagation();document.getElementById('import-file-input').click()">Oder Datei ausw&auml;hlen</button>
+        <input type="file" id="import-file-input" accept="application/xml,text/xml,.xml" multiple style="display:none" onchange="App.importFromFiles(this)">
+      </div>
+      <div class="import-error" id="import-file-error" style="display:none"></div>
+    </div>
+    <div id="mtab-paste-body" class="modal-tab-body" style="display:none">
+      <textarea class="import-textarea" id="import-textarea" rows="18"
+        placeholder="XACML-Policy hier einf&#252;gen...&#10;&#10;Beispiel:&#10;&lt;PolicySet xmlns=&quot;urn:oasis:names:tc:xacml:3.0:core:schema:wd-17&quot; ...&gt;&#10;  ...&#10;&lt;/PolicySet&gt;"></textarea>
+      <div class="import-error" id="import-paste-error" style="display:none"></div>
+      <button class="import-load-btn" onclick="App.importFromPaste()">&#x1F4E5; Laden</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="import-toast" role="alert" aria-live="polite"></div>
 
 <script src="lib/codemirror.min.js"></script>
 <script src="lib/xml.min.js"></script>

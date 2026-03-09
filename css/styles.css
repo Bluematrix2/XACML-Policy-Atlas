@@ -1187,3 +1187,211 @@ footer a:hover { opacity: 1; text-decoration: none; }
 }
 .guide-error h3 { color: var(--deny-border); margin-bottom: 8px; }
 .guide-error code { font-family: 'Consolas', 'SF Mono', monospace; font-size: 0.85em; }
+
+/* ── Footer version ── */
+.footer-version { color: rgba(255,255,255,0.5); font-size: 12px; }
+
+/* ── Empty state ── */
+.empty-state .import-trigger-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.empty-state .import-trigger-btn:hover { opacity: 0.85; }
+
+/* ── Sidebar import button ── */
+.sb-import-wrap {
+  padding: 8px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sb-import-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.sb-import-btn:hover {
+  background: var(--acc-hdr-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 540px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 64px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+.modal-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--acc-hdr-bg);
+  flex-shrink: 0;
+}
+.modal-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-muted);
+  padding: 3px 7px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+.modal-close:hover { background: var(--bg-secondary); color: var(--text-primary); }
+
+/* ── Modal tabs ── */
+.modal-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+.modal-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+.modal-tab:hover { color: var(--accent); }
+.modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.modal-tab-body { padding: 20px; overflow-y: auto; flex: 1; }
+
+/* ── Import dropzone ── */
+.import-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 36px 24px;
+  text-align: center;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.import-dropzone:hover { border-color: var(--accent); background: var(--acc-hdr-bg); }
+.import-dropzone.drag-over {
+  border-color: var(--accent);
+  border-style: solid;
+  background: var(--accent-subtle);
+}
+.import-drop-icon { font-size: 38px; margin-bottom: 8px; }
+.import-drop-text { color: var(--text-muted); font-size: 13px; margin: 6px 0 12px; }
+.import-file-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 7px 18px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: opacity 0.15s;
+}
+.import-file-btn:hover { opacity: 0.85; }
+
+/* ── Import error ── */
+.import-error {
+  background: var(--deny-bg);
+  border: 1px solid var(--deny-border);
+  border-radius: 5px;
+  padding: 8px 12px;
+  color: #ef4444;
+  font-size: 13px;
+  margin-top: 10px;
+  white-space: pre-wrap;
+}
+
+/* ── Import textarea ── */
+.import-textarea {
+  width: 100%;
+  font-family: 'Consolas', 'SF Mono', monospace;
+  font-size: 13px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+  line-height: 1.5;
+}
+.import-textarea:focus { border-color: var(--accent); }
+
+/* ── Import load button ── */
+.import-load-btn {
+  display: block;
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 10px;
+  transition: opacity 0.15s;
+}
+.import-load-btn:hover { opacity: 0.85; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  background: #1e293b;
+  color: #f1f5f9;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  max-width: 360px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }

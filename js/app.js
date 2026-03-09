@@ -36,12 +36,11 @@ const App = (() => {
   let _currentSearch = '';
 
   function triggerCSV() { document.getElementById('csv-input').click(); }
-  function triggerXML() { document.getElementById('xml-input').click(); }
 
   function clearPolicies() {
     UIState.clear();
-    document.getElementById('content').innerHTML = '';
     refreshSidebar();
+    _renderEmptyState();
   }
 
   async function loadCSV(input) {
@@ -197,7 +196,7 @@ const App = (() => {
     const active   = UIState.getActive();
 
     if (!policies.length) {
-      list.innerHTML = '<div class="sb-empty">Noch keine Dateien geladen</div>';
+      list.innerHTML = '';
       return;
     }
 
@@ -478,6 +477,176 @@ const App = (() => {
     return html;
   }
 
+  // ── Import Modal ──
+
+  function parseAndValidateXml(xmlString, filename) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlString, 'application/xml');
+    const parseError = doc.querySelector('parsererror');
+    if (parseError) {
+      const text = parseError.textContent;
+      const lineMatch = text.match(/line[^\d]*(\d+)/i);
+      const line = lineMatch ? lineMatch[1] : '?';
+      return { success: false, error: `Zeile ${line}: XML ist nicht wohlgeformt. Bitte Syntax pr\u00fcfen.` };
+    }
+    return { success: true, doc, filename };
+  }
+
+  function _renderEmptyState() {
+    document.getElementById('content').innerHTML =
+      `<div class="empty-state">`
+      + `<div class="icon">&#x1F4C2;</div>`
+      + `<p>Noch keine Policy geladen</p>`
+      + `<button class="import-trigger-btn" onclick="App.openImportModal()">+ Policy importieren</button>`
+      + `</div>`;
+  }
+
+  function _showToast(message) {
+    const toast = document.getElementById('import-toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+
+  let _modalEscHandler = null;
+
+  function openImportModal() {
+    document.getElementById('import-overlay').classList.add('open');
+    _modalEscHandler = (e) => { if (e.key === 'Escape') _closeModalInternal(); };
+    document.addEventListener('keydown', _modalEscHandler);
+  }
+
+  function closeImportModal() {
+    _closeModalInternal();
+  }
+
+  function _closeModalInternal() {
+    document.getElementById('import-overlay').classList.remove('open');
+    if (_modalEscHandler) {
+      document.removeEventListener('keydown', _modalEscHandler);
+      _modalEscHandler = null;
+    }
+    ['import-file-error', 'import-paste-error'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = 'none'; el.textContent = ''; }
+    });
+  }
+
+  function switchImportTab(tab) {
+    document.getElementById('mtab-file').classList.toggle('active', tab === 'file');
+    document.getElementById('mtab-paste').classList.toggle('active', tab === 'paste');
+    document.getElementById('mtab-file-body').style.display = tab === 'file' ? '' : 'none';
+    document.getElementById('mtab-paste-body').style.display = tab === 'paste' ? '' : 'none';
+  }
+
+  function importDragOver(event) {
+    event.preventDefault();
+    document.getElementById('import-drop').classList.add('drag-over');
+  }
+
+  function importDragLeave(event) {
+    document.getElementById('import-drop').classList.remove('drag-over');
+  }
+
+  function importDrop(event) {
+    event.preventDefault();
+    document.getElementById('import-drop').classList.remove('drag-over');
+    _importFiles(Array.from(event.dataTransfer.files));
+  }
+
+  async function importFromFiles(input) {
+    const files = Array.from(input.files);
+    input.value = '';
+    await _importFiles(files);
+  }
+
+  async function _importFiles(files) {
+    const errEl = document.getElementById('import-file-error');
+    errEl.style.display = 'none';
+    errEl.textContent = '';
+
+    const xmlFiles = files.filter(f => f.name.toLowerCase().endsWith('.xml'));
+    if (!xmlFiles.length) {
+      errEl.textContent = 'Keine XML-Datei gefunden. Bitte eine .xml-Datei w\u00e4hlen.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    const oversized = xmlFiles.filter(f => f.size > MAX_XML_SIZE);
+    const toLoad    = xmlFiles.filter(f => f.size <= MAX_XML_SIZE);
+    const errors    = [];
+    let loadedCount = 0;
+    let firstIdx    = -1;
+
+    for (const file of toLoad) {
+      try {
+        const text       = await file.text();
+        const validation = parseAndValidateXml(text, file.name);
+        if (!validation.success) { errors.push(`${file.name}: ${validation.error}`); continue; }
+        const policy = XACMLParser.parse(text, file.name);
+        const idx    = UIState.addOrReplace(policy);
+        if (firstIdx < 0) firstIdx = idx;
+        loadedCount++;
+      } catch (e) {
+        errors.push(`${file.name}: ${e.message}`);
+      }
+    }
+    oversized.forEach(f => errors.push(`${f.name}: Datei zu gro\u00df (max. ${MAX_XML_SIZE / 1024 / 1024} MB)`));
+
+    if (!loadedCount) {
+      errEl.textContent = errors.join('\n');
+      errEl.style.display = 'block';
+      return;
+    }
+
+    _closeModalInternal();
+    refreshSidebar();
+    if (firstIdx >= 0) activatePolicy(firstIdx);
+
+    const msg = loadedCount === 1
+      ? `\u201e${toLoad[0].name}\u201c wurde erfolgreich geladen.`
+      : `${loadedCount} Policies erfolgreich geladen.`;
+    _showToast(msg);
+
+    if (errors.length) setTimeout(() => alert('Fehler beim Laden:\n' + errors.join('\n')), 100);
+  }
+
+  async function importFromPaste() {
+    const textarea = document.getElementById('import-textarea');
+    const errEl    = document.getElementById('import-paste-error');
+    errEl.style.display = 'none';
+    errEl.textContent   = '';
+
+    const text = textarea.value.trim();
+    if (!text) {
+      errEl.textContent = 'Bitte XML-Inhalt eingeben.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    const validation = parseAndValidateXml(text, 'paste.xml');
+    if (!validation.success) {
+      errEl.textContent = validation.error;
+      errEl.style.display = 'block';
+      return;
+    }
+
+    try {
+      const policy = XACMLParser.parse(text, 'paste.xml');
+      const idx    = UIState.addOrReplace(policy);
+      _closeModalInternal();
+      textarea.value = '';
+      refreshSidebar();
+      activatePolicy(idx);
+      _showToast(`\u201e${policy.filename || 'Policy'}\u201c wurde erfolgreich geladen.`);
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    }
+  }
+
   // ── Dark / Light Mode ──
 
   let _theme = 'light';
@@ -507,11 +676,13 @@ const App = (() => {
   })();
 
   return {
-    triggerCSV, triggerXML, loadCSV, loadXMLs, activatePolicy, applySearch, clearSearch, setFilter,
+    triggerCSV, loadCSV, activatePolicy, applySearch, clearSearch, setFilter,
     clearPolicies,
     triggerEnforcement, loadEnforcement, openEnfPanel, closeEnfPanel, switchTab,
     loadValFile, handleValDrop, visualizeFromValidator, resetValidator,
-    toggleTheme
+    toggleTheme,
+    openImportModal, closeImportModal, switchImportTab,
+    importDragOver, importDragLeave, importDrop, importFromFiles, importFromPaste
   };
 })();
 
