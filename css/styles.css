@@ -857,7 +857,8 @@ footer {
   gap: 6px 0;
   padding: 10px 24px;
   font-size: 14px;
-  font-family: 'Raleway', sans-serif;
+  font-family: 'Orbitron', sans-serif;
+  text-align: center;
   letter-spacing: 0.04em;
   flex-shrink: 0;
   border-top: 1px solid rgba(255,255,255,0.06);
@@ -1687,7 +1688,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
   inset: 0;
   height: 100%;
   font-family: 'Raleway', sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
 }
 .editor-cm-wrap .CodeMirror-scroll { height: 100%; }
