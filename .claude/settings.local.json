@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(curl -s \"https://api.github.com/repos/codemirror/CodeMirror/tags?per_page=10\")"
-    ]
-  }
-}
