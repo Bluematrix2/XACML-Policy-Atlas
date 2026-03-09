@@ -113,6 +113,7 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; }
 .sb-item:hover { background: var(--acc-hdr-bg); }
 .sb-item.active { background: var(--sidebar-active-bg); border-left-color: var(--accent); }
 .sb-item-main { flex: 1; min-width: 0; }
+.sb-name-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .sb-name {
   font-size: 13px;
   font-weight: 500;
@@ -120,6 +121,8 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; }
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
 }
 .sb-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .sb-bar {
@@ -1243,8 +1246,8 @@ footer a:hover { opacity: 1; text-decoration: none; }
 
 /* ── Footer version ── */
 .footer-version { color: rgb(255, 255, 255); font-size: 12px; }
-.footer-bug-link { color: rgba(255,255,255,0.7); font-size: 12px; text-decoration: none; }
-.footer-bug-link:hover { color: #fff; text-decoration: underline; }
+.footer-bug-link { color: rgb(255, 255, 255); font-size: 12px; text-decoration: none; }
+.footer-bug-link:hover { color: #ffffffb0; text-decoration: underline; }
 
 /* ── Empty state ── */
 .empty-state .import-trigger-btn {

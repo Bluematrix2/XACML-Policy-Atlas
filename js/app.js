@@ -237,7 +237,10 @@ const App = (() => {
 
       return `<div class="sb-item${isActive ? ' active' : ''}" onclick="App.activatePolicy(${i})" title="${esc(p.filename)}">`
            + `<div class="sb-item-main">`
-           + `<div class="sb-name">${esc(shortName)}${hasDirty ? '<span class="sb-dirty-dot" title="Ungespeicherte \u00c4nderungen">\u25CF</span>' : ''}</div>`
+           + `<div class="sb-name-row">`
+           + `<div class="sb-name">${esc(shortName)}</div>`
+           + (hasDirty ? `<span class="sb-dirty-dot" title="Ungespeicherte \u00c4nderungen">\u25CF</span>` : '')
+           + `</div>`
            + `<div class="sb-meta">${total} Regel${total !== 1 ? 'n' : ''} &middot; ${permitCount}P&thinsp;/&thinsp;${denyCount}D</div>`
            + `<div class="sb-bar">`
            + `<div class="sb-permit" style="width:${pPct}%"></div>`
@@ -285,6 +288,14 @@ const App = (() => {
     const remaining = UIState.getAll();
     if (!remaining.length) {
       _renderEmptyState();
+      editorState.policyId    = null;
+      editorState.originalXml = '';
+      editorState.isDirty     = false;
+      editorSetValue('');
+      updateDirtyIndicator();
+      const statusEl = document.getElementById('editorValidationStatus');
+      if (statusEl) statusEl.textContent = '';
+      if (_activeContentTab === 'xml-editor') switchContentTab('viz');
     } else if (wasActive) {
       const newActive = UIState.getActive();
       if (newActive) showPolicy(newActive);
