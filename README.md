@@ -1,4 +1,4 @@
-# XACML Policy Visualizer
+# XACML Policy Atlas
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repo-black.svg)](https://github.com/Bluematrix2/XACML-Policy-Atlas)
@@ -14,7 +14,9 @@ A **web-based tool** to visualize and explore **XACML policies**.
 - Interactive: **hover nodes** to see conditions and effects.  
 - Supports **multiple policy files**.  
 - Includes a **XACML explanation/info page** to help understand policies.  
-- Clean, modern, **developer-friendly UI**.  
+- Clean, modern, **developer-friendly UI**.
+- Multiple **Validation Checks**.
+- XACML **Editor** with Beautify and **Validation**.
 
 ---
 
@@ -22,7 +24,7 @@ A **web-based tool** to visualize and explore **XACML policies**.
 
 Open the tool directly in your browser:
 
-👉 [XACML Policy Visualizer](https://policyatlas.puschmann.io)
+👉 [XACML Policy Atlas](https://policyatlas.puschmann.io)
 
 
 ## Security & Privacy
