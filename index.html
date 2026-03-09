@@ -165,6 +165,8 @@
   <a href="https://florian-puschmann.de/impressum?utm_source=policy_atlas&utm_medium=footer" target="_blank" rel="noopener noreferrer">&#x2696;&#xFE0F; Impressum</a>
   <span class="footer-sep">•</span>
   <span id="appVersion" class="footer-version">__APP_VERSION__</span>
+  <span class="footer-sep">•</span>
+  <a id="bugReportLink" href="#" target="_blank" rel="noopener noreferrer" class="footer-bug-link">Report a Bug &#x2197;</a>
 </footer>
 
 <!-- Import Modal -->
@@ -207,11 +209,36 @@
 <script src="lib/xml.min.js"></script>
 <script type="module" src="js/app.js"></script>
 <script>
+  function buildBugReportUrl() {
+    const repoUrl = 'https://github.com/Bluematrix2/XACML-Policy-Atlas';
+    const version = window.APP_VERSION || 'unbekannt';
+    const body = encodeURIComponent(
+`**Version:** ${version}
+
+**Browser:** ${navigator.userAgent}
+
+**Beschreibung des Fehlers:**
+<!-- Was ist passiert? -->
+
+**Schritte zur Reproduktion:**
+1.
+2.
+
+**Erwartetes Verhalten:**
+
+**Tatsächliches Verhalten:**
+`);
+    const title = encodeURIComponent('[Bug] ');
+    return `${repoUrl}/issues/new?title=${title}&body=${body}&labels=bug`;
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('appVersion');
     if (el && el.textContent.trim() === '__APP_' + 'VERSION__') {
       el.textContent = 'dev-local';
     }
+    const bugLink = document.getElementById('bugReportLink');
+    if (bugLink) bugLink.href = buildBugReportUrl();
   });
 </script>
 </body>
