@@ -9,6 +9,7 @@ testdata/
 # *.md
 *.csv
 *.xml
+*.af
 
 # Ignoriere lokale Konfigurationsdateien
 .env
