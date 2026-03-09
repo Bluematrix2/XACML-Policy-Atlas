@@ -586,6 +586,7 @@ const App = (() => {
         const validation = parseAndValidateXml(text, file.name);
         if (!validation.success) { errors.push(`${file.name}: ${validation.error}`); continue; }
         const policy = XACMLParser.parse(text, file.name);
+        policy.rawXml = text;
         const idx    = UIState.addOrReplace(policy);
         if (firstIdx < 0) firstIdx = idx;
         loadedCount++;
@@ -635,6 +636,7 @@ const App = (() => {
 
     try {
       const policy = XACMLParser.parse(text, 'paste.xml');
+      policy.rawXml = text;
       const idx    = UIState.addOrReplace(policy);
       _closeModalInternal();
       textarea.value = '';
@@ -698,7 +700,21 @@ const App = (() => {
       content.style.display     = 'none';
       editorPanel.style.display = 'flex';
       _initEditor();
-      setTimeout(() => editor && editor.refresh(), 0);
+      const active = UIState.getActive();
+      if (active && active.rawXml && !editorState.isDirty && editorState.policyId !== active.filename) {
+        editorState.policyId    = active.filename;
+        editorState.originalXml = active.rawXml;
+        editorState.isDirty     = false;
+        editorState.mode        = 'edit';
+        setTimeout(() => {
+          editorSetValue(active.rawXml);
+          updateDirtyIndicator();
+          validateXmlInline(active.rawXml);
+          editor && editor.refresh();
+        }, 0);
+      } else {
+        setTimeout(() => editor && editor.refresh(), 0);
+      }
     } else {
       content.style.display     = '';
       editorPanel.style.display = 'none';
@@ -808,6 +824,7 @@ const App = (() => {
     try {
       const fname  = editorState.policyId || 'edited-policy.xml';
       const policy = XACMLParser.parse(xml, fname);
+      policy.rawXml = xml;
       const idx    = UIState.addOrReplace(policy);
       switchContentTab('viz');
       activatePolicy(idx);
