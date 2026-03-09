@@ -22,6 +22,8 @@
       window.APP_VERSION = 'dev-local';
     }
   </script>
+  <!-- CodeMirror – XML-Editor (lokal, kein CDN) -->
+  <link rel="stylesheet" href="lib/codemirror.min.css">
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/styles.css">
   <!-- Anti-flash: set theme before CSS renders -->
@@ -139,6 +141,8 @@
   <span id="appVersion" class="footer-version">__APP_VERSION__</span>
 </footer>
 
+<script src="lib/codemirror.min.js"></script>
+<script src="lib/xml.min.js"></script>
 <script type="module" src="js/app.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
