@@ -2,7 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repo-black.svg)](https://github.com/Bluematrix2/XACML-Policy-Atlas)
-[![Live Demo](https://img.shields.io/badge/Live_Demo-online-blue)](https://policyatlas.puschmann.io)
+[![Page_Link](https://img.shields.io/badge/Page_link-online-green)](https://policyatlas.puschmann.io)
 
 A **web-based tool** to visualize and explore **XACML policies**. 
 
