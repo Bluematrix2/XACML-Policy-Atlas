@@ -190,6 +190,8 @@ const App = (() => {
     });
   }
 
+  const _confirmingDelete = new Set();
+
   function refreshSidebar() {
     const list     = document.getElementById('sidebar-list');
     const policies = UIState.getAll();
@@ -208,15 +210,73 @@ const App = (() => {
       const pPct        = total > 0 ? (permitCount / total * 100).toFixed(1) : 0;
       const dPct        = total > 0 ? (denyCount   / total * 100).toFixed(1) : 0;
       const shortName   = p.filename.replace(/\.xml$/i, '');
+      const confirming  = _confirmingDelete.has(i);
+
+      if (confirming) {
+        return `<div class="sb-item${isActive ? ' active' : ''} confirming">`
+             + `<div class="sb-confirm">`
+             + `<span class="sb-confirm-text">${esc(shortName)} entfernen?</span>`
+             + `<button class="sb-confirm-yes" onclick="event.stopPropagation();App.confirmPolicyDelete(${i})">Ja</button>`
+             + `<button class="sb-confirm-no" onclick="event.stopPropagation();App.cancelPolicyDelete(${i})">Abbrechen</button>`
+             + `</div></div>`;
+      }
 
       return `<div class="sb-item${isActive ? ' active' : ''}" onclick="App.activatePolicy(${i})" title="${esc(p.filename)}">`
+           + `<div class="sb-item-main">`
            + `<div class="sb-name">${esc(shortName)}</div>`
            + `<div class="sb-meta">${total} Regel${total !== 1 ? 'n' : ''} &middot; ${permitCount}P&thinsp;/&thinsp;${denyCount}D</div>`
            + `<div class="sb-bar">`
            + `<div class="sb-permit" style="width:${pPct}%"></div>`
            + `<div class="sb-deny" style="width:${dPct}%"></div>`
+           + `</div></div>`
+           + `<div class="policy-actions">`
+           + `<button class="sb-action-btn" onclick="event.stopPropagation();App.handlePolicyEdit(${i})" title="Bearbeiten" aria-label="Bearbeiten">&#x270F;&#xFE0F;</button>`
+           + `<button class="sb-action-btn sb-action-delete" onclick="event.stopPropagation();App.handlePolicyDelete(${i})" title="Entfernen" aria-label="Entfernen">&#x1F5D1;</button>`
            + `</div></div>`;
     }).join('');
+  }
+
+  function handlePolicyEdit(idx) {
+    const policies = UIState.getAll();
+    const policy   = policies[idx];
+    if (!policy || !policy.rawXml) return;
+    UIState.setActive(idx);
+    refreshSidebar();
+    loadPolicyIntoEditor(policy.filename, policy.rawXml);
+  }
+
+  function handlePolicyDelete(idx) {
+    _confirmingDelete.add(idx);
+    refreshSidebar();
+    // Close confirm on outside click
+    setTimeout(() => {
+      function onOutside(e) {
+        const item = document.querySelector(`.sb-item.confirming`);
+        if (item && !item.contains(e.target)) {
+          cancelPolicyDelete(idx);
+          document.removeEventListener('click', onOutside, true);
+        }
+      }
+      document.addEventListener('click', onOutside, true);
+    }, 0);
+  }
+
+  function confirmPolicyDelete(idx) {
+    _confirmingDelete.delete(idx);
+    const wasActive = UIState.remove(idx);
+    refreshSidebar();
+    const remaining = UIState.getAll();
+    if (!remaining.length) {
+      _renderEmptyState();
+    } else if (wasActive) {
+      const newActive = UIState.getActive();
+      if (newActive) showPolicy(newActive);
+    }
+  }
+
+  function cancelPolicyDelete(idx) {
+    _confirmingDelete.delete(idx);
+    refreshSidebar();
   }
 
   // ── Tab switching ──
@@ -886,7 +946,8 @@ const App = (() => {
     openImportModal, closeImportModal, switchImportTab,
     importDragOver, importDragLeave, importDrop, importFromFiles, importFromPaste,
     switchContentTab, handleEditorUpdate, handleBeautify, handleDownload,
-    handleReset, confirmReset, cancelReset, loadPolicyIntoEditor
+    handleReset, confirmReset, cancelReset, loadPolicyIntoEditor,
+    handlePolicyEdit, handlePolicyDelete, confirmPolicyDelete, cancelPolicyDelete
   };
 })();
 
