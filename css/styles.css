@@ -1249,6 +1249,28 @@ footer a:hover { opacity: 1; text-decoration: none; }
 .footer-bug-link { color: rgb(255, 255, 255); font-size: 12px; text-decoration: none; }
 .footer-bug-link:hover { color: #ffffffb0; text-decoration: underline; }
 
+/* ── Mapping Status Dot ── */
+.mapping-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
+  transition: background 0.3s;
+}
+.mapping-status-dot[data-state="none"]   { background: #d1d5db; }
+.mapping-status-dot[data-state="loaded"] { background: #22c55e; }
+.mapping-status-dot[data-state="error"]  { background: #ef4444; }
+.mapping-status-dot[data-state="loaded"].pulse {
+  animation: mapping-pulse 1s ease-out 1;
+}
+@keyframes mapping-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(34, 197, 94, 0.6); }
+  70%  { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);   }
+  100% { box-shadow: 0 0 0 0   rgba(34, 197, 94, 0);   }
+}
+
 /* ── Empty state ── */
 .empty-state .import-trigger-btn {
   background: var(--accent);

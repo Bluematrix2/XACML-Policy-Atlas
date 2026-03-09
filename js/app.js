@@ -37,6 +37,113 @@ const App = (() => {
 
   function triggerCSV() { document.getElementById('csv-input').click(); }
 
+  // ── Mapping Persistence ──
+
+  const STORAGE_PREFIX = 'atlas_mapping_';
+
+  function storageKey(filename) {
+    return STORAGE_PREFIX + filename.replace(/[^a-zA-Z0-9_\-.]/g, '_');
+  }
+
+  function saveMappingToStorage(filename, csvContent) {
+    const entry = {
+      filename,
+      loadedAt: new Date().toISOString(),
+      sizeBytes: new Blob([csvContent]).size,
+      data: csvContent
+    };
+    try {
+      localStorage.setItem(storageKey(filename), JSON.stringify(entry));
+      return true;
+    } catch (e) {
+      if (e.name === 'QuotaExceededError') {
+        _showToast('Speicher voll \u2013 Mapping-Tabelle wurde nur tempor\u00e4r geladen.');
+      }
+      return false;
+    }
+  }
+
+  function getAllStoredMappings() {
+    return Object.keys(localStorage)
+      .filter(k => k.startsWith(STORAGE_PREFIX))
+      .map(k => safeRestoreEntry(k))
+      .filter(Boolean);
+  }
+
+  function safeRestoreEntry(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      localStorage.removeItem(key);
+      return null;
+    }
+  }
+
+  function clearAllMappings() {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith(STORAGE_PREFIX))
+      .forEach(k => localStorage.removeItem(k));
+    setMappingStatus('none');
+    updateMappingTooltip();
+    _showToast('Alle Mapping-Tabellen wurden entfernt.');
+  }
+
+  function setMappingStatus(state) {
+    const dot = document.getElementById('mappingStatusDot');
+    if (!dot) return;
+    dot.dataset.state = state;
+    if (state === 'loaded') {
+      dot.classList.remove('pulse');
+      void dot.offsetWidth; // Reflow erzwingen
+      dot.classList.add('pulse');
+    }
+  }
+
+  function updateMappingTooltip() {
+    const stored = getAllStoredMappings();
+    const btn = document.getElementById('csv-btn');
+    if (!btn) return;
+    if (!stored.length) {
+      btn.title = 'Keine Mapping-Tabelle geladen';
+      return;
+    }
+    btn.title = stored.map(e => {
+      const date = new Date(e.loadedAt).toLocaleString('de-DE');
+      const kb   = Math.round(e.sizeBytes / 1024);
+      return `${e.filename} (${kb} KB, geladen: ${date})`;
+    }).join('\n');
+  }
+
+  function loadMappingIntoApp(_filename, csvContent) {
+    const entries = CSVParser.parse(csvContent);
+    LabelMapper.load(entries);
+    const active = UIState.getActive();
+    if (active) showPolicy(active);
+    refreshSidebar();
+  }
+
+  function onMappingFileLoaded(filename, csvContent) {
+    const isUpdate = !!localStorage.getItem(storageKey(filename));
+    loadMappingIntoApp(filename, csvContent);
+    saveMappingToStorage(filename, csvContent);
+    setMappingStatus('loaded');
+    updateMappingTooltip();
+    _showToast(isUpdate
+      ? `\u201e${filename}\u201c wurde aktualisiert.`
+      : `\u201e${filename}\u201c wurde erfolgreich geladen.`);
+  }
+
+  function restoreMappingsOnStartup() {
+    const stored = getAllStoredMappings();
+    if (!stored.length) return;
+    stored.forEach(entry => loadMappingIntoApp(entry.filename, entry.data));
+    const count = stored.length;
+    _showToast(`${count} Mapping-${count === 1 ? 'Tabelle' : 'Tabellen'} wiederhergestellt.`);
+    setMappingStatus('loaded');
+    updateMappingTooltip();
+  }
+
   function clearPolicies() {
     UIState.clear();
     refreshSidebar();
@@ -48,20 +155,11 @@ const App = (() => {
     if (!file) return;
     if (!_checkFile(file, ALLOWED_CSV_EXT, MAX_CSV_SIZE)) { input.value = ''; return; }
     try {
-      const text    = await file.text();
-      const entries = CSVParser.parse(text);
-      LabelMapper.load(entries);
-      const active = UIState.getActive();
-      if (active) showPolicy(active);
-      refreshSidebar();
-      const btn = document.getElementById('csv-btn');
-      if (btn) {
-        const orig = btn.textContent;
-        btn.textContent = '\u2713 ' + entries.length + ' Labels geladen';
-        setTimeout(() => { btn.textContent = orig; }, 2500);
-      }
+      const text = await file.text();
+      onMappingFileLoaded(file.name, text);
     } catch (e) {
-      alert('CSV-Fehler: ' + e.message);
+      setMappingStatus('error');
+      _showToast('CSV-Fehler: ' + e.message);
     }
     input.value = '';
   }
@@ -1000,7 +1098,8 @@ const App = (() => {
     importDragOver, importDragLeave, importDrop, importFromFiles, importFromPaste,
     switchContentTab, handleEditorUpdate, handleBeautify, handleDownload,
     handleReset, confirmReset, cancelReset, loadPolicyIntoEditor,
-    handlePolicyEdit, handlePolicyDelete, confirmPolicyDelete, cancelPolicyDelete
+    handlePolicyEdit, handlePolicyDelete, confirmPolicyDelete, cancelPolicyDelete,
+    restoreMappingsOnStartup, clearAllMappings
   };
 })();
 
