@@ -1,7 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Orbitron', sans-serif;
   background: var(--bg-secondary);
   color: var(--text-primary);
   display: flex;
@@ -376,7 +376,7 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; }
   background: var(--bg-secondary) !important;
   border-color: var(--border) !important;
   color: var(--text-muted) !important;
-  font-family: 'Consolas', 'SF Mono', monospace;
+  font-family: 'Orbitron', sans-serif;
   font-size: 13px;
   max-width: 320px;
 }
@@ -422,7 +422,7 @@ a.chip.fhir-chip:hover {
   border-top-color: var(--tooltip-bg);
 }
 .tooltip-uri {
-  font-family: 'Consolas', 'SF Mono', monospace;
+  font-family: 'Orbitron', sans-serif;
   font-size: 11px;
   color: #80cbc4;
   display: block;
@@ -453,7 +453,7 @@ a.chip.fhir-chip:hover {
 .cond-subj { color: #10b981; }
 .cond-res  { color: #a78bfa; }
 .cond-act  { color: #fb923c; }
-.cond-val  { color: var(--text-secondary); font-family: monospace; }
+.cond-val  { color: var(--text-secondary); font-family: 'Orbitron', sans-serif; }
 
 /* ── Condition impact ── */
 .cond-impact {
@@ -699,7 +699,7 @@ mark.hl { background: #FFE082; color: #212121; border-radius: 2px; padding: 0 1p
 .enf-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; color: var(--text-primary); }
 .enf-table tr:last-child td { border-bottom: none; }
 .enf-table .sp-cell   { color: var(--accent); font-weight: 600; }
-.enf-table .path-cell { color: var(--text-secondary); font-family: 'Consolas', monospace; font-size: 12px; word-break: break-all; }
+.enf-table .path-cell { color: var(--text-secondary); font-family: 'Orbitron', sans-serif; font-size: 12px; word-break: break-all; }
 .enf-table .xacml-cell { color: #10b981; }
 .enf-table .comment-cell { color: #fb923c; font-size: 10px; font-style: italic; }
 .enf-summary-box { background: var(--bg-secondary); border-radius: 5px; padding: 9px 11px; font-size: 13px; color: var(--text-secondary); }
@@ -777,7 +777,7 @@ mark.hl { background: #FFE082; color: #212121; border-radius: 2px; padding: 0 1p
   transition: opacity .15s;
 }
 .val-viz-btn:hover { opacity: .85; }
-.val-id-list { font-size: 11px; font-family: 'Consolas', monospace; color: var(--text-secondary); background: var(--bg-secondary); border-radius: 4px; padding: 6px 8px; word-break: break-all; }
+.val-id-list { font-size: 11px; font-family: 'Orbitron', sans-serif; color: var(--text-secondary); background: var(--bg-secondary); border-radius: 4px; padding: 6px 8px; word-break: break-all; }
 
 /* ── Mobile hint overlay ── */
 .mobile-hint {
@@ -833,8 +833,7 @@ footer {
   gap: 6px 0;
   padding: 10px 24px;
   font-size: 14px;
-  font-family: 'Montserrat Alternates', sans-serif;
- /* font-family: 'Consolas', 'SF Mono', monospace; */
+  font-family: 'Orbitron', sans-serif;
   letter-spacing: 0.04em;
   flex-shrink: 0;
   border-top: 1px solid rgba(255,255,255,0.06);
@@ -991,7 +990,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
 .guide-acc-hdr:hover { background: var(--acc-hdr-hover); }
 .guide-acc-hdr.open  { background: var(--accent-subtle); color: var(--accent); }
 .guide-acc-num {
-  font-family: 'Consolas', 'SF Mono', monospace;
+  font-family: 'Orbitron', sans-serif;
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--text-muted);
@@ -1093,7 +1092,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
 }
 .md-blockquote .md-p { margin: 0; color: var(--text-primary); }
 .md-inline-code {
-  font-family: 'Consolas', 'SF Mono', monospace;
+  font-family: 'Orbitron', sans-serif;
   font-size: 0.85em;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
@@ -1110,7 +1109,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
   margin: 0 0 16px;
 }
 .md-code {
-  font-family: 'Consolas', 'SF Mono', monospace;
+  font-family: 'Orbitron', sans-serif;
   font-size: 0.82rem;
   color: var(--text-primary);
   white-space: pre;
@@ -1243,7 +1242,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
   color: var(--text-secondary);
 }
 .guide-error h3 { color: var(--deny-border); margin-bottom: 8px; }
-.guide-error code { font-family: 'Consolas', 'SF Mono', monospace; font-size: 0.85em; }
+.guide-error code { font-family: 'Orbitron', sans-serif; font-size: 0.85em; }
 
 /* ── Footer version ── */
 .footer-version { color: var(--footer-link); font-size: 14px; }
@@ -1483,7 +1482,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
 /* ── Import textarea ── */
 .import-textarea {
   width: 100%;
-  font-family: 'Consolas', 'SF Mono', monospace;
+  font-family: 'Orbitron', sans-serif;
   font-size: 13px;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -1663,7 +1662,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
   position: absolute;
   inset: 0;
   height: 100%;
-  font-family: 'Consolas', 'SF Mono', monospace;
+  font-family: 'Orbitron', sans-serif;
   font-size: 13px;
   line-height: 1.5;
 }
