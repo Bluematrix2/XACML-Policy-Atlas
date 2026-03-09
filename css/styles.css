@@ -1245,9 +1245,9 @@ footer a:hover { opacity: 1; text-decoration: none; }
 .guide-error code { font-family: 'Consolas', 'SF Mono', monospace; font-size: 0.85em; }
 
 /* ── Footer version ── */
-.footer-version { color: rgb(255, 255, 255); font-size: 12px; }
-.footer-bug-link { color: rgb(255, 255, 255); font-size: 12px; text-decoration: none; }
-.footer-bug-link:hover { color: #ffffffb0; text-decoration: underline; }
+.footer-version { color: rgb(255, 255, 255); font-size: 14px; }
+.footer-bug-link { color: rgb(255, 255, 255); font-size: 14px; text-decoration: none; }
+.footer-bug-link:hover { color: rgb(255, 255, 255); text-decoration: underline; }
 
 /* ── Mapping Status Dot ── */
 .mapping-status-dot {
