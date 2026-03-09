@@ -849,7 +849,7 @@ footer a {
 }
 footer a:hover { opacity: 1; text-decoration: none; }
 .footer-sep { color: rgb(255, 255, 255); margin: 0 10px; }
-.footer-copy { color: rgb(255, 255, 255); }
+.footer-copy { color: var(--footer-link); }
 .footer-icon {
   width: 13px;
   height: 13px;
@@ -1245,8 +1245,8 @@ footer a:hover { opacity: 1; text-decoration: none; }
 .guide-error code { font-family: 'Consolas', 'SF Mono', monospace; font-size: 0.85em; }
 
 /* ── Footer version ── */
-.footer-version { color: rgb(255, 255, 255); font-size: 14px; }
-.footer-bug-link { color: rgb(255, 255, 255); font-size: 14px; text-decoration: none; }
+.footer-version { color: var(--footer-link); font-size: 14px; }
+.footer-bug-link { color: var(--footer-link); font-size: 14px; text-decoration: none; }
 .footer-bug-link:hover { color: rgb(255, 255, 255); text-decoration: underline; }
 
 /* ── Mapping Status Dot ── */

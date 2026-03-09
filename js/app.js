@@ -1311,11 +1311,14 @@ const App = (() => {
       const fname  = editorState.policyId || 'edited-policy.xml';
       const policy = XACMLParser.parse(xml, fname);
       policy.rawXml = xml;
-      _dirtyEdits.delete(fname);
+      // Keep dirty state: user has not downloaded/saved yet.
+      // Only update _dirtyEdits to ensure the applied xml is tracked.
+      if (xml !== editorState.originalXml) {
+        _dirtyEdits.set(fname, xml);
+        editorState.isDirty = true;
+      }
       invalidateValidationCache(fname);
       getOrComputeValidation(fname, xml);
-      editorState.originalXml = xml;
-      editorState.isDirty     = false;
       const idx    = UIState.addOrReplace(policy);
       switchContentTab('viz');
       activatePolicy(idx);
