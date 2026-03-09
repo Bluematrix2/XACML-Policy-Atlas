@@ -487,7 +487,7 @@ const App = (() => {
       const text = parseError.textContent;
       const lineMatch = text.match(/line[^\d]*(\d+)/i);
       const line = lineMatch ? lineMatch[1] : '?';
-      return { success: false, error: `Zeile ${line}: XML ist nicht wohlgeformt. Bitte Syntax pr\u00fcfen.` };
+      return { success: false, error: `Zeile ${line}: XML ist fehlerhaft. Bitte Syntax pr\u00fcfen.` };
     }
     return { success: true, doc, filename };
   }
@@ -647,6 +647,191 @@ const App = (() => {
     }
   }
 
+  // ── XML Editor ──
+
+  const editorState = {
+    mode: 'edit',
+    policyId: null,
+    originalXml: '',
+    isDirty: false,
+  };
+
+  let editor = null;
+  let _editorInitialized = false;
+
+  function debounce(fn, delay) {
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
+  }
+
+  const editorGetValue = () => editor ? editor.getValue() : '';
+  const editorSetValue = (xml) => { if (!editor) return; editor.setValue(xml); editor.clearHistory(); };
+
+  function _initEditor() {
+    if (_editorInitialized) return;
+    _editorInitialized = true;
+    editor = CodeMirror.fromTextArea(document.getElementById('xmlEditorTextarea'), {
+      mode: 'xml',
+      lineNumbers: true,
+      lineWrapping: false,
+      theme: 'default',
+      tabSize: 2,
+      indentWithTabs: false,
+      autofocus: false,
+      extraKeys: { 'Tab': (cm) => cm.replaceSelection('  ') }
+    });
+    editor.setSize('100%', '100%');
+    editor.on('change', debounce(() => {
+      const current = editorGetValue();
+      editorState.isDirty = current !== editorState.originalXml;
+      updateDirtyIndicator();
+      validateXmlInline(current);
+    }, 500));
+  }
+
+  function switchContentTab(tab) {
+    const content     = document.getElementById('content');
+    const editorPanel = document.getElementById('editor-panel');
+    document.getElementById('ctab-viz').classList.toggle('active',    tab === 'viz');
+    document.getElementById('ctab-editor').classList.toggle('active', tab === 'xml-editor');
+    if (tab === 'xml-editor') {
+      content.style.display     = 'none';
+      editorPanel.style.display = 'flex';
+      _initEditor();
+      setTimeout(() => editor && editor.refresh(), 0);
+    } else {
+      content.style.display     = '';
+      editorPanel.style.display = 'none';
+    }
+  }
+
+  function updateDirtyIndicator() {
+    const el = document.getElementById('editorDirtyIndicator');
+    if (el) el.style.display = editorState.isDirty ? 'inline' : 'none';
+  }
+
+  function validateXmlInline(xmlString) {
+    const statusEl = document.getElementById('editorValidationStatus');
+    if (!statusEl) return;
+    if (!xmlString.trim()) { statusEl.textContent = ''; return; }
+    const parser = new DOMParser();
+    const doc    = parser.parseFromString(xmlString, 'application/xml');
+    const err    = doc.querySelector('parsererror');
+    if (err) {
+      const line = (err.textContent.match(/line[^\d]*(\d+)/i) || [])[1] || '?';
+      statusEl.textContent = `\u274C Zeile ${line}: XML ist fehlerhaft`;
+      statusEl.style.color = '#ef4444';
+    } else {
+      statusEl.textContent = '\u2705 G\u00fcltiges XML';
+      statusEl.style.color = '#22c55e';
+    }
+  }
+
+  function showEditorError(msg) {
+    const el = document.getElementById('editorErrorMsg');
+    if (el) { el.textContent = msg; el.style.display = 'inline'; }
+  }
+
+  function hideEditorError() {
+    const el = document.getElementById('editorErrorMsg');
+    if (el) { el.style.display = 'none'; el.textContent = ''; }
+  }
+
+  function beautifyXml(xmlString) {
+    const parser = new DOMParser();
+    const doc    = parser.parseFromString(xmlString, 'application/xml');
+    if (doc.querySelector('parsererror')) return null;
+    return formatNode(doc.documentElement, 0);
+  }
+
+  function formatNode(node, depth) {
+    const pad = '  '.repeat(depth);
+    if (node.nodeType === Node.TEXT_NODE) {
+      const t = node.textContent.trim();
+      return t ? pad + t : '';
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const tag      = node.tagName;
+    const attrs    = Array.from(node.attributes).map(a => ` ${a.name}="${a.value}"`).join('');
+    const children = Array.from(node.childNodes)
+      .map(c => formatNode(c, depth + 1)).filter(s => s.trim());
+    if (!children.length) return `${pad}<${tag}${attrs}/>`;
+    if (children.length === 1 && !children[0].includes('\n'))
+      return `${pad}<${tag}${attrs}>${children[0].trim()}</${tag}>`;
+    return `${pad}<${tag}${attrs}>\n${children.join('\n')}\n${pad}</${tag}>`;
+  }
+
+  function handleBeautify() {
+    const result = beautifyXml(editorGetValue());
+    if (!result) { showEditorError('XML ist fehlerhaft \u2013 Beautify nicht m\u00f6glich.'); return; }
+    hideEditorError();
+    editorSetValue(result);
+  }
+
+  function handleDownload() {
+    const content  = editorGetValue();
+    const ts       = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+    const filename = `xacml-policy_${ts}.xml`;
+    const blob     = new Blob([content], { type: 'application/xml' });
+    const a        = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    editorState.originalXml = content;
+    editorState.isDirty     = false;
+    updateDirtyIndicator();
+  }
+
+  function handleReset() {
+    document.getElementById('editorResetConfirm').style.display = 'flex';
+  }
+
+  function confirmReset() {
+    editorSetValue(editorState.originalXml);
+    editorState.isDirty = false;
+    updateDirtyIndicator();
+    validateXmlInline(editorState.originalXml);
+    hideEditorError();
+    document.getElementById('editorResetConfirm').style.display = 'none';
+  }
+
+  function cancelReset() {
+    document.getElementById('editorResetConfirm').style.display = 'none';
+  }
+
+  function handleEditorUpdate() {
+    const xml        = editorGetValue();
+    const validation = parseAndValidateXml(xml, editorState.policyId || 'editor');
+    if (!validation.success) { showEditorError(validation.error); return; }
+    hideEditorError();
+    try {
+      const fname  = editorState.policyId || 'edited-policy.xml';
+      const policy = XACMLParser.parse(xml, fname);
+      const idx    = UIState.addOrReplace(policy);
+      switchContentTab('viz');
+      activatePolicy(idx);
+    } catch (e) {
+      showEditorError('Fehler beim Rendern: ' + e.message);
+    }
+  }
+
+  function loadPolicyIntoEditor(policyId, xmlContent) {
+    editorState.policyId     = policyId;
+    editorState.originalXml  = xmlContent;
+    editorState.isDirty      = false;
+    editorState.mode         = 'edit';
+    switchContentTab('xml-editor');
+    editorSetValue(xmlContent);
+    updateDirtyIndicator();
+    validateXmlInline(xmlContent);
+  }
+
+  // beforeunload guard
+  window.addEventListener('beforeunload', (e) => {
+    if (editorState.isDirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+
   // ── Dark / Light Mode ──
 
   let _theme = 'light';
@@ -682,7 +867,9 @@ const App = (() => {
     loadValFile, handleValDrop, visualizeFromValidator, resetValidator,
     toggleTheme,
     openImportModal, closeImportModal, switchImportTab,
-    importDragOver, importDragLeave, importDrop, importFromFiles, importFromPaste
+    importDragOver, importDragLeave, importDrop, importFromFiles, importFromPaste,
+    switchContentTab, handleEditorUpdate, handleBeautify, handleDownload,
+    handleReset, confirmReset, cancelReset, loadPolicyIntoEditor
   };
 })();
 

@@ -71,11 +71,40 @@
       <button class="sb-import-btn" onclick="App.openImportModal()">+ Policy importieren</button>
     </div>
   </nav>
-  <div class="content" id="content">
-    <div class="empty-state">
-      <div class="icon">&#x1F4C2;</div>
-      <p>Noch keine Policy geladen</p>
-      <button class="import-trigger-btn" onclick="App.openImportModal()">+ Policy importieren</button>
+  <div class="content-area" id="content-area">
+    <div class="content-tab-nav">
+      <button class="content-tab active" id="ctab-viz" onclick="App.switchContentTab('viz')">&#x1F4CA; Visualizer</button>
+      <button class="content-tab" id="ctab-editor" onclick="App.switchContentTab('xml-editor')">&#x270F;&#xFE0F; XML-Editor</button>
+    </div>
+    <div class="content" id="content">
+      <div class="empty-state">
+        <div class="icon">&#x1F4C2;</div>
+        <p>Noch keine Policy geladen</p>
+        <button class="import-trigger-btn" onclick="App.openImportModal()">+ Policy importieren</button>
+      </div>
+    </div>
+    <div class="editor-panel" id="editor-panel" style="display:none">
+      <div class="editor-hdr">
+        <div class="editor-toolbar">
+          <button class="editor-btn" onclick="App.handleEditorUpdate()">&#x21BB; Visualizer aktualisieren</button>
+          <button class="editor-btn" onclick="App.handleBeautify()">&#x2728; Beautify</button>
+          <button class="editor-btn" onclick="App.handleDownload()">&#x2B07; Als XML herunterladen</button>
+          <button class="editor-btn editor-btn-reset" onclick="App.handleReset()">&#x21BA; Zur&#252;cksetzen</button>
+          <span id="editorDirtyIndicator" class="editor-dirty" style="display:none">&#x25CF; Ungespeicherte &#196;nderungen</span>
+        </div>
+        <div class="editor-reset-confirm" id="editorResetConfirm" style="display:none">
+          <span class="editor-confirm-text">Alle &#196;nderungen verwerfen?</span>
+          <button class="editor-confirm-yes" onclick="App.confirmReset()">Ja</button>
+          <button class="editor-confirm-no" onclick="App.cancelReset()">Abbrechen</button>
+        </div>
+        <div class="editor-status-bar">
+          <span id="editorValidationStatus"></span>
+          <span id="editorErrorMsg" class="editor-error-msg" style="display:none"></span>
+        </div>
+      </div>
+      <div class="editor-cm-wrap">
+        <textarea id="xmlEditorTextarea"></textarea>
+      </div>
     </div>
   </div>
 </div>
