@@ -50,6 +50,57 @@ const App = (() => {
       .trim();
   }
 
+  // Known XACML DataTypes (short and full URIs)
+  const _XACML_DATATYPES = new Set([
+    'string','boolean','integer','double','date','time','dateTime','anyURI',
+    'hexBinary','base64Binary','dayTimeDuration','yearMonthDuration',
+    'http://www.w3.org/2001/XMLSchema#string',
+    'http://www.w3.org/2001/XMLSchema#boolean',
+    'http://www.w3.org/2001/XMLSchema#integer',
+    'http://www.w3.org/2001/XMLSchema#double',
+    'http://www.w3.org/2001/XMLSchema#date',
+    'http://www.w3.org/2001/XMLSchema#time',
+    'http://www.w3.org/2001/XMLSchema#dateTime',
+    'http://www.w3.org/2001/XMLSchema#anyURI',
+    'http://www.w3.org/2001/XMLSchema#hexBinary',
+    'http://www.w3.org/2001/XMLSchema#base64Binary',
+    'http://www.w3.org/2001/XMLSchema#dayTimeDuration',
+    'http://www.w3.org/2001/XMLSchema#yearMonthDuration',
+    'urn:oasis:names:tc:xacml:1.0:data-type:rfc822Name',
+    'urn:oasis:names:tc:xacml:1.0:data-type:x500Name',
+    'urn:oasis:names:tc:xacml:2.0:data-type:ipAddress',
+    'urn:oasis:names:tc:xacml:2.0:data-type:dnsName',
+  ]);
+
+  // Known XACML element local names
+  const _XACML_ELEMENTS = new Set([
+    'Policy','PolicySet','Rule','Target','Condition','Apply','Function',
+    'AttributeValue','AttributeDesignator','AttributeSelector',
+    'SubjectAttributeDesignator','ResourceAttributeDesignator',
+    'ActionAttributeDesignator','EnvironmentAttributeDesignator',
+    'Description','PolicyIssuer','PolicyDefaults',
+    'Subjects','Subject','SubjectMatch',
+    'Resources','Resource','ResourceMatch',
+    'Actions','Action','ActionMatch',
+    'Environments','Environment','EnvironmentMatch',
+    'Obligations','ObligationExpressions','Obligation','ObligationExpression',
+    'AttributeAssignment','AttributeAssignmentExpression',
+    'PolicySetIdReference','PolicyIdReference',
+    'VariableDefinition','VariableReference',
+    'AnyOf','AllOf','Match',
+    'Request','Response','Result','Decision','Status','StatusCode','StatusMessage',
+  ]);
+
+  function _getPolicyNestingDepth(el, depth) {
+    let max = depth;
+    for (const child of el.children) {
+      if (child.localName === 'PolicySet') {
+        max = Math.max(max, _getPolicyNestingDepth(child, depth + 1));
+      }
+    }
+    return max;
+  }
+
   function validatePolicy(xmlString) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xmlString, 'application/xml');
@@ -64,12 +115,15 @@ const App = (() => {
         errors: [{ line: lineMatch ? parseInt(lineMatch[1]) : null, message: msg }],
         warnings: [],
         checks: [
-          { label: 'XML wohlgeformt',              ok: false, detail: msg },
-          { label: 'XACML-Namespace',              ok: false, detail: '' },
-          { label: 'Wurzelelement (Policy)',        ok: false, detail: '' },
-          { label: 'Rules haben Effect',           ok: false, detail: '' },
-          { label: 'Policies haben CombiningAlgId',ok: false, detail: '' },
-          { label: 'Designatoren vollst\u00e4ndig',ok: false, detail: '' },
+          { label: 'XML ist syntaktisch korrekt',                      ok: false, detail: msg },
+          { label: 'Gültiger XACML Namespace (2.0 oder 3.0)',          ok: false, detail: '' },
+          { label: 'Wurzelelement ist Policy oder PolicySet',           ok: false, detail: '' },
+          { label: 'Alle Rules besitzen ein Effect (Permit/Deny)',      ok: false, detail: '' },
+          { label: 'Policies besitzen einen Combining Algorithm',       ok: false, detail: '' },
+          { label: 'Designatoren enthalten AttributeId und DataType',   ok: false, detail: '' },
+          { label: 'Policy oder Rules definieren ein Target',           ok: false, detail: '' },
+          { label: 'Policies enthalten Rules',                          ok: false, detail: '' },
+          { label: 'Policy- und Rule-IDs sind eindeutig',               ok: false, detail: '' },
         ],
         info: {}
       };
@@ -80,7 +134,7 @@ const App = (() => {
     const info     = {};
     const root     = doc.documentElement;
 
-    // 2. XACML Namespace
+    // ── Check 2: XACML Namespace ──
     const ns = root.namespaceURI || '';
     const nsOk = _XACML_NAMESPACES.includes(ns);
     if (nsOk) {
@@ -90,7 +144,7 @@ const App = (() => {
       errors.push({ line: 1, message: `Unbekannter XACML-Namespace: \u201e${ns}\u201c. Erwartet: XACML 3.0 oder 2.0.` });
     }
 
-    // 3. Root element
+    // ── Check 3: Root element ──
     const rootName = root.localName;
     const rootOk   = rootName === 'Policy' || rootName === 'PolicySet';
     if (rootOk) {
@@ -100,19 +154,20 @@ const App = (() => {
       errors.push({ line: null, message: `Wurzelelement ist <${rootName}>, erwartet <Policy> oder <PolicySet>` });
     }
 
-    // 4. CombiningAlgId
     const allEls    = Array.from(doc.getElementsByTagName('*'));
     const policyEls = allEls.filter(e => e.localName === 'Policy' || e.localName === 'PolicySet');
+    const ruleEls   = allEls.filter(e => e.localName === 'Rule');
+
+    // ── Check 4: CombiningAlgId ──
     const missingAlg = [];
     for (const p of policyEls) {
       if (!p.getAttribute('RuleCombiningAlgId') && !p.getAttribute('PolicyCombiningAlgId')) {
         missingAlg.push((p.getAttribute('PolicyId') || '(unbekannt)').split(':').pop());
       }
     }
-    if (missingAlg.length) errors.push({ line: null, message: `Kein CombiningAlgId bei: ${missingAlg.join(', ')}` });
+    if (missingAlg.length) errors.push({ line: null, message: `Kein Combining Algorithm bei: ${missingAlg.join(', ')}` });
 
-    // 5. Rules Effect
-    const ruleEls    = allEls.filter(e => e.localName === 'Rule');
+    // ── Check 5: Rules Effect ──
     info.ruleCount   = ruleEls.length;
     info.permitCount = 0;
     info.denyCount   = 0;
@@ -125,14 +180,7 @@ const App = (() => {
     }
     if (badEffect.length) errors.push({ line: null, message: `Rule ohne g\u00fcltiges Effect: ${badEffect.join(', ')}` });
 
-    // 6. Warnings: Rules without Description
-    for (const r of ruleEls) {
-      if (!Array.from(r.children).some(c => c.localName === 'Description')) {
-        warnings.push(`Rule \u201e${(r.getAttribute('RuleId') || '').split(':').pop().slice(-20) || '?'}\u201c hat keine Description`);
-      }
-    }
-
-    // 7. Designators
+    // ── Check 6: Designators ──
     let badDesig = 0;
     const desigNames = new Set();
     for (const el of allEls) {
@@ -141,17 +189,170 @@ const App = (() => {
         if (++badDesig >= 3) break;
       }
     }
-    if (desigNames.size) errors.push({ line: null, message: `Designator ohne AttributeId/DataType: ${[...desigNames].join(', ')}` });
+    if (desigNames.size) errors.push({ line: null, message: `Designatoren enthalten kein AttributeId oder DataType: ${[...desigNames].join(', ')}` });
+
+    // ── Check 7: Target defined ──
+    const targetEls  = allEls.filter(e => e.localName === 'Target');
+    const hasTargets = targetEls.length > 0;
+    if (!hasTargets) warnings.push('Keine Targets definiert \u2014 Policy gilt f\u00fcr alle Requests');
+
+    // ── Check 8: Policies contain Rules ──
+    const emptyPolicies = policyEls
+      .filter(p => p.localName === 'Policy' && !Array.from(p.children).some(c => c.localName === 'Rule'))
+      .map(p => (p.getAttribute('PolicyId') || '?').split(':').pop());
+    if (emptyPolicies.length) warnings.push(`Policy ohne Rules: ${emptyPolicies.join(', ')}`);
+
+    // ── Check 9: Unique IDs ──
+    const idSet = new Set();
+    const duplicateIds = [];
+    for (const el of allEls) {
+      const id = el.getAttribute('PolicyId') || el.getAttribute('RuleId');
+      if (!id) continue;
+      if (idSet.has(id)) { if (!duplicateIds.includes(id)) duplicateIds.push(id); }
+      else idSet.add(id);
+    }
+    if (duplicateIds.length) errors.push({ line: null, message: `Doppelte IDs: ${duplicateIds.map(i => i.split(':').pop()).join(', ')}` });
 
     info.policyIds = policyEls.map(p => p.getAttribute('PolicyId')).filter(Boolean);
 
+    // ════════════════════════════════════════════════════
+    // Extended Linter Checks (10–24) → warnings
+    // ════════════════════════════════════════════════════
+
+    // Check 10: PolicySet contains Policies
+    const emptySets = policyEls
+      .filter(p => p.localName === 'PolicySet' && !Array.from(p.children).some(c => c.localName === 'Policy' || c.localName === 'PolicySet'))
+      .map(p => (p.getAttribute('PolicyId') || '?').split(':').pop());
+    if (emptySets.length) warnings.push(`PolicySet ohne Policy-Kinder: ${emptySets.join(', ')}`);
+
+    // Check 11: Empty Target elements
+    const emptyTargets = targetEls.filter(t => t.children.length === 0);
+    if (emptyTargets.length) warnings.push(`${emptyTargets.length} leere(s) <Target/>-Element(e) gefunden \u2014 Policy gilt uneingeschr\u00e4nkt`);
+
+    // Check 12 & 13 & 14: Rules without Condition / Permit-all / Deny-all
+    let noCondCount    = 0;
+    let permitAllCount = 0;
+    let denyAllCount   = 0;
+    for (const r of ruleEls) {
+      const hasCondition = Array.from(r.children).some(c => c.localName === 'Condition');
+      const hasTarget    = Array.from(r.children).some(c => c.localName === 'Target');
+      const effect       = r.getAttribute('Effect') || '';
+      if (!hasCondition) {
+        noCondCount++;
+        if (!hasTarget) {
+          if (effect === 'Permit') permitAllCount++;
+          else if (effect === 'Deny')   denyAllCount++;
+        }
+      }
+    }
+    if (noCondCount)    warnings.push(`${noCondCount} Rule(s) ohne Condition \u2014 greifen bei jedem passenden Request`);
+    if (permitAllCount) warnings.push(`${permitAllCount} unbedingte Permit-Rule(s) ohne Target/Condition \u2014 m\u00f6glicherweise zu weite Rechte`);
+    if (denyAllCount)   warnings.push(`${denyAllCount} unbedingte Deny-Rule(s) ohne Target/Condition \u2014 k\u00f6nnte Zugriff vollst\u00e4ndig sperren`);
+
+    // Check 15: Overlapping Rules (heuristic: multiple rules without Target in same Policy)
+    for (const p of policyEls) {
+      if (p.localName !== 'Policy') continue;
+      const rules = Array.from(p.children).filter(c => c.localName === 'Rule');
+      const noTargetRules = rules.filter(r => !Array.from(r.children).some(c => c.localName === 'Target'));
+      if (noTargetRules.length > 1) {
+        const pid = (p.getAttribute('PolicyId') || '?').split(':').pop();
+        warnings.push(`Policy \u201e${pid}\u201c: ${noTargetRules.length} Rules ohne eigenes Target \u2014 m\u00f6gliche \u00dcberschneidungen`);
+        break;
+      }
+    }
+
+    // Check 16: Unreachable Rules (permit-overrides: unconditional Permit blocks subsequent rules)
+    for (const p of policyEls) {
+      if (p.localName !== 'Policy') continue;
+      const alg = (p.getAttribute('RuleCombiningAlgId') || '').toLowerCase();
+      if (!alg.includes('permit-overrides')) continue;
+      const rules = Array.from(p.children).filter(c => c.localName === 'Rule');
+      let foundUnconditionalPermit = false;
+      let unreachableCount = 0;
+      for (const r of rules) {
+        if (foundUnconditionalPermit) { unreachableCount++; continue; }
+        const hasCond   = Array.from(r.children).some(c => c.localName === 'Condition');
+        const hasTarget = Array.from(r.children).some(c => c.localName === 'Target');
+        if (r.getAttribute('Effect') === 'Permit' && !hasCond && !hasTarget) foundUnconditionalPermit = true;
+      }
+      if (unreachableCount > 0) {
+        const pid = (p.getAttribute('PolicyId') || '?').split(':').pop();
+        warnings.push(`Policy \u201e${pid}\u201c (permit-overrides): ${unreachableCount} Rule(s) nach unbedingtem Permit nicht erreichbar`);
+      }
+    }
+
+    // Check 17: Missing Description (Rules)
+    for (const r of ruleEls) {
+      if (!Array.from(r.children).some(c => c.localName === 'Description')) {
+        const rid = (r.getAttribute('RuleId') || '').split(':').pop().slice(-20) || '?';
+        warnings.push(`Rule \u201e${rid}\u201c hat keine Description`);
+      }
+    }
+
+    // Check 18: AttributeId format inconsistency
+    const attrIds = allEls
+      .filter(e => e.hasAttribute('AttributeId'))
+      .map(e => e.getAttribute('AttributeId'));
+    const hasUri  = attrIds.some(id => id.startsWith('urn:') || id.startsWith('http'));
+    const hasDot  = attrIds.some(id => !id.includes(':') && !id.includes('/') && id.includes('.'));
+    if (hasUri && hasDot) warnings.push('Inkonsistente AttributeId-Formate: Mischung aus URI und Kurzform gefunden');
+
+    // Check 19: Unsupported DataType
+    const badDtSet = new Set();
+    for (const el of allEls) {
+      const dt = el.getAttribute('DataType');
+      if (dt && !_XACML_DATATYPES.has(dt)) badDtSet.add(dt);
+    }
+    if (badDtSet.size) warnings.push(`Nicht-standardisierte DataTypes: ${[...badDtSet].map(d => d.split(/[:#/]/).pop()).join(', ')}`);
+
+    // Check 20: Unknown XACML elements (in XACML namespace, not in known set)
+    const unknownEls = new Set();
+    for (const el of allEls) {
+      const elNs = el.namespaceURI || '';
+      if ((elNs.includes('xacml') || elNs === ns) && !_XACML_ELEMENTS.has(el.localName)) {
+        unknownEls.add(el.localName);
+      }
+    }
+    if (unknownEls.size) warnings.push(`Unbekannte XACML-Elemente: ${[...unknownEls].join(', ')}`);
+
+    // Check 21: Excessively deep PolicySet nesting
+    const maxDepth = _getPolicyNestingDepth(root, root.localName === 'PolicySet' ? 1 : 0);
+    if (maxDepth > 3) warnings.push(`PolicySet-Verschachtelung zu tief (${maxDepth} Ebenen) \u2014 kann PDP-Performance beeintr\u00e4chtigen`);
+
+    // Check 22: Missing PolicyId
+    const noPolicyId = policyEls.filter(p => !p.getAttribute('PolicyId'));
+    if (noPolicyId.length) warnings.push(`${noPolicyId.length} Policy/PolicySet-Element(e) ohne PolicyId`);
+
+    // Check 23: Missing RuleId
+    const noRuleId = ruleEls.filter(r => !r.getAttribute('RuleId'));
+    if (noRuleId.length) warnings.push(`${noRuleId.length} Rule(s) ohne RuleId`);
+
+    // Check 24: Large Policy
+    const LARGE_RULE_THRESHOLD = 20;
+    if (ruleEls.length > LARGE_RULE_THRESHOLD) {
+      warnings.push(`Policy sehr groß (${ruleEls.length} Rules) \u2014 kann Wartung und PDP-Performance erschweren`);
+    }
+
+    // ── Build checks array (core structural, checks 1–9) ──
     const checks = [
-      { label: 'XML wohlgeformt',               ok: true,              detail: '' },
-      { label: `XACML-Namespace${info.version ? ` (${info.version})` : ''}`, ok: nsOk, detail: nsOk ? '' : `Unbekannt: ${ns}` },
-      { label: `Wurzelelement (${info.rootElement || rootName})`, ok: rootOk, detail: '' },
-      { label: 'Rules haben Effect',            ok: !badEffect.length, detail: badEffect.length ? `${badEffect.length} Rule(s) betroffen` : '' },
-      { label: 'Policies haben CombiningAlgId', ok: !missingAlg.length,detail: '' },
-      { label: 'Designatoren vollst\u00e4ndig', ok: !desigNames.size,  detail: '' },
+      { label: 'XML ist syntaktisch korrekt',
+        ok: true, detail: '' },
+      { label: `G\u00fcltiger XACML Namespace${info.version ? ` (${info.version})` : ' (2.0 oder 3.0)'}`,
+        ok: nsOk, detail: nsOk ? '' : `Unbekannt: ${ns}` },
+      { label: `Wurzelelement ist Policy oder PolicySet${rootOk ? ` (${info.rootElement})` : ''}`,
+        ok: rootOk, detail: '' },
+      { label: 'Alle Rules besitzen ein Effect (Permit/Deny)',
+        ok: !badEffect.length, detail: badEffect.length ? `${badEffect.length} Rule(s) betroffen` : '' },
+      { label: 'Policies besitzen einen Combining Algorithm',
+        ok: !missingAlg.length, detail: missingAlg.length ? `${missingAlg.length} Policy(s) betroffen` : '' },
+      { label: 'Designatoren enthalten AttributeId und DataType',
+        ok: !desigNames.size, detail: desigNames.size ? [...desigNames].join(', ') : '' },
+      { label: 'Policy oder Rules definieren ein Target',
+        ok: hasTargets, detail: hasTargets ? '' : 'Keine Targets definiert' },
+      { label: 'Policies enthalten Rules',
+        ok: !emptyPolicies.length, detail: emptyPolicies.length ? emptyPolicies.join(', ') : '' },
+      { label: 'Policy- und Rule-IDs sind eindeutig',
+        ok: !duplicateIds.length, detail: duplicateIds.length ? duplicateIds.map(i => i.split(':').pop()).join(', ') : '' },
     ];
 
     return {
