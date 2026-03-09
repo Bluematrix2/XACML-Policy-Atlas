@@ -55,7 +55,6 @@
 
 <div class="tab-nav">
   <button class="tab-btn active" id="tab-viz" onclick="App.switchTab('viz')">&#x1F4CA; Visualisierung</button>
-  <button class="tab-btn" id="tab-val" onclick="App.switchTab('val')">&#x1F50D; Schema-Pr&uuml;fung</button>
   <button class="tab-btn" id="tab-guide" onclick="App.switchTab('guide')">&#x1F4D6; XACML verstehen</button>
   <button class="tab-btn" id="tab-kb" onclick="App.switchTab('kb')">&#x1F4DA; Knowledge Base</button>
 </div>
@@ -111,26 +110,6 @@
 
 <div id="layout-guide" style="display:none" class="guide-layout"></div>
 <div id="layout-kb" style="display:none" class="guide-layout"></div>
-
-<div id="layout-val" style="display:none" class="validator-area">
-  <div class="val-container">
-    <div class="val-hdr">
-      <h2>&#x1F4CB; Schema-Pr&uuml;fung</h2>
-      <p>Strukturpr&uuml;fung einer XACML Policy-XML-Datei (keine vollst&auml;ndige XSD-Validierung)</p>
-    </div>
-    <div class="val-dropzone" id="val-drop"
-         ondragover="event.preventDefault();this.classList.add('drag-over')"
-         ondragleave="this.classList.remove('drag-over')"
-         ondrop="App.handleValDrop(event);this.classList.remove('drag-over')"
-         onclick="document.getElementById('val-input').click()">
-      <div class="val-drop-icon">&#x1F4CB;</div>
-      <p>XML-Datei hier ablegen oder klicken</p>
-      <button class="val-file-btn" onclick="event.stopPropagation();document.getElementById('val-input').click()">Datei ausw&auml;hlen</button>
-      <input type="file" id="val-input" accept=".xml" style="display:none" onchange="App.loadValFile(this)">
-    </div>
-    <div id="val-result"></div>
-  </div>
-</div>
 
 <!-- Mobile hint overlay (CSS-only, shown on narrow screens) -->
 <div class="mobile-hint" aria-hidden="true">

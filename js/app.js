@@ -6,7 +6,6 @@
 
 import { XACMLParser, esc } from './parser.js';
 import { CSVParser, LabelMapper, EnforcementMapper } from './mappers.js';
-import { XACMLValidator } from './validator.js';
 import { TreeRenderer } from './renderer.js';
 import { UIState } from './ui.js';
 import { XACMLGuide } from './guide.js';
@@ -55,26 +54,114 @@ const App = (() => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xmlString, 'application/xml');
     const parseError = doc.querySelector('parsererror');
+
     if (parseError) {
       const text = parseError.textContent;
       const lineMatch = text.match(/line[^\d]*(\d+)/i);
+      const msg = extractReadableError(text);
       return {
         valid: false,
-        errors: [{ line: lineMatch ? parseInt(lineMatch[1]) : null, message: extractReadableError(text) }]
+        errors: [{ line: lineMatch ? parseInt(lineMatch[1]) : null, message: msg }],
+        warnings: [],
+        checks: [
+          { label: 'XML wohlgeformt',              ok: false, detail: msg },
+          { label: 'XACML-Namespace',              ok: false, detail: '' },
+          { label: 'Wurzelelement (Policy)',        ok: false, detail: '' },
+          { label: 'Rules haben Effect',           ok: false, detail: '' },
+          { label: 'Policies haben CombiningAlgId',ok: false, detail: '' },
+          { label: 'Designatoren vollst\u00e4ndig',ok: false, detail: '' },
+        ],
+        info: {}
       };
     }
-    const ns = doc.documentElement.namespaceURI || '';
-    if (!_XACML_NAMESPACES.includes(ns)) {
-      return {
-        valid: false,
-        errors: [{ line: 1, message: `Unbekannter XACML-Namespace: \u201e${ns}\u201c. Erwartet: XACML 3.0 oder 2.0.` }]
-      };
+
+    const errors   = [];
+    const warnings = [];
+    const info     = {};
+    const root     = doc.documentElement;
+
+    // 2. XACML Namespace
+    const ns = root.namespaceURI || '';
+    const nsOk = _XACML_NAMESPACES.includes(ns);
+    if (nsOk) {
+      info.namespace = ns;
+      info.version   = ns.includes('3.0') ? 'XACML 3.0' : 'XACML 2.0';
+    } else {
+      errors.push({ line: 1, message: `Unbekannter XACML-Namespace: \u201e${ns}\u201c. Erwartet: XACML 3.0 oder 2.0.` });
     }
+
+    // 3. Root element
+    const rootName = root.localName;
+    const rootOk   = rootName === 'Policy' || rootName === 'PolicySet';
+    if (rootOk) {
+      info.rootElement = rootName;
+      info.policyId    = root.getAttribute('PolicyId') || '(keine ID)';
+    } else {
+      errors.push({ line: null, message: `Wurzelelement ist <${rootName}>, erwartet <Policy> oder <PolicySet>` });
+    }
+
+    // 4. CombiningAlgId
+    const allEls    = Array.from(doc.getElementsByTagName('*'));
+    const policyEls = allEls.filter(e => e.localName === 'Policy' || e.localName === 'PolicySet');
+    const missingAlg = [];
+    for (const p of policyEls) {
+      if (!p.getAttribute('RuleCombiningAlgId') && !p.getAttribute('PolicyCombiningAlgId')) {
+        missingAlg.push((p.getAttribute('PolicyId') || '(unbekannt)').split(':').pop());
+      }
+    }
+    if (missingAlg.length) errors.push({ line: null, message: `Kein CombiningAlgId bei: ${missingAlg.join(', ')}` });
+
+    // 5. Rules Effect
+    const ruleEls    = allEls.filter(e => e.localName === 'Rule');
+    info.ruleCount   = ruleEls.length;
+    info.permitCount = 0;
+    info.denyCount   = 0;
+    const badEffect  = [];
+    for (const r of ruleEls) {
+      const eff = r.getAttribute('Effect') || '';
+      if (eff === 'Permit') { info.permitCount++; }
+      else if (eff === 'Deny') { info.denyCount++; }
+      else { badEffect.push((r.getAttribute('RuleId') || '').split(':').pop() || '(unbekannt)'); }
+    }
+    if (badEffect.length) errors.push({ line: null, message: `Rule ohne g\u00fcltiges Effect: ${badEffect.join(', ')}` });
+
+    // 6. Warnings: Rules without Description
+    for (const r of ruleEls) {
+      if (!Array.from(r.children).some(c => c.localName === 'Description')) {
+        warnings.push(`Rule \u201e${(r.getAttribute('RuleId') || '').split(':').pop().slice(-20) || '?'}\u201c hat keine Description`);
+      }
+    }
+
+    // 7. Designators
+    let badDesig = 0;
+    const desigNames = new Set();
+    for (const el of allEls) {
+      if (el.localName.includes('Designator') && (!el.getAttribute('AttributeId') || !el.getAttribute('DataType'))) {
+        desigNames.add(el.localName);
+        if (++badDesig >= 3) break;
+      }
+    }
+    if (desigNames.size) errors.push({ line: null, message: `Designator ohne AttributeId/DataType: ${[...desigNames].join(', ')}` });
+
+    info.policyIds = policyEls.map(p => p.getAttribute('PolicyId')).filter(Boolean);
+
+    const checks = [
+      { label: 'XML wohlgeformt',               ok: true,              detail: '' },
+      { label: `XACML-Namespace${info.version ? ` (${info.version})` : ''}`, ok: nsOk, detail: nsOk ? '' : `Unbekannt: ${ns}` },
+      { label: `Wurzelelement (${info.rootElement || rootName})`, ok: rootOk, detail: '' },
+      { label: 'Rules haben Effect',            ok: !badEffect.length, detail: badEffect.length ? `${badEffect.length} Rule(s) betroffen` : '' },
+      { label: 'Policies haben CombiningAlgId', ok: !missingAlg.length,detail: '' },
+      { label: 'Designatoren vollst\u00e4ndig', ok: !desigNames.size,  detail: '' },
+    ];
+
     return {
-      valid: true,
-      errors: [],
-      namespace: ns,
-      version: ns.includes('3.0') ? 'XACML 3.0' : 'XACML 2.0'
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      checks,
+      info,
+      namespace: info.namespace,
+      version:   info.version
     };
   }
 
@@ -282,10 +369,7 @@ const App = (() => {
       + `<button class="filter-btn${_currentFilter==='deny'?' active':''}" id="f-deny" onclick="App.setFilter('deny')">&#x274C; Nur Deny</button>`
       + `</div>`;
 
-    document.getElementById('content').innerHTML =
-      searchBar
-      + (policy.rawXml ? '<div id="val-badge-area"></div>' : '')
-      + TreeRenderer.render(policy);
+    document.getElementById('content').innerHTML = searchBar + TreeRenderer.render(policy);
 
     if (policy.rawXml) renderValidationBadge(policy.filename);
 
@@ -295,45 +379,46 @@ const App = (() => {
   }
 
   function renderValidationBadge(policyId) {
-    const container = document.getElementById('val-badge-area');
-    if (!container) return;
+    const summaryBox = document.querySelector('.summary-box');
+    if (!summaryBox) return;
     const policy = UIState.getAll().find(p => p.filename === policyId);
     if (!policy || !policy.rawXml) return;
 
-    const result = getOrComputeValidation(policyId, policy.rawXml);
+    const result   = getOrComputeValidation(policyId, policy.rawXml);
     const hasError = !result.valid;
     const badgeLabel = hasError
       ? `\u274C ${result.errors.length} Fehler`
       : '\u2705 Valide';
 
-    let panelContent;
-    if (!hasError) {
-      const date = new Date(result.timestamp).toLocaleString('de-DE');
-      panelContent =
-        `<div class="val-panel-title">\u2705 Schema-Validierung erfolgreich</div>`
-        + `<table class="val-panel-table">`
-        + `<tr><td>Standard</td><td>${esc(result.version)}</td></tr>`
-        + `<tr><td>Namespace</td><td>${esc(result.namespace)}</td></tr>`
-        + `<tr><td>Gepr\u00fcft</td><td>XML-Wohlgeformtheit \u00b7 Namespace</td></tr>`
-        + `<tr><td>Zeitpunkt</td><td>${esc(date)}</td></tr>`
-        + `</table>`;
-    } else {
-      const pId = policyId.replace(/'/g, "\\'");
-      panelContent =
-        `<div class="val-panel-title">\u274C Schema-Validierung fehlgeschlagen (${result.errors.length} Fehler)</div>`
-        + result.errors.map((e, i) =>
-            `<div class="val-panel-error">#${i + 1}\u2002${e.line ? `Zeile ${e.line}: ` : ''}${esc(e.message)}</div>`
-          ).join('')
-        + `<button class="val-fix-btn" onclick="App.fixPolicyInEditor('${pId}')">Im Editor \u00f6ffnen und beheben \u2192</button>`;
-    }
+    const checks = (result.checks || []).map(c => {
+      const ico = c.ok ? '\u2705' : '\u274C';
+      return `<div class="val-check-row${c.ok ? '' : ' val-check-row--err'}">`
+        + `<span>${ico}</span>`
+        + `<span>${esc(c.label)}${c.detail ? ` \u2014 <em>${esc(c.detail)}</em>` : ''}</span>`
+        + `</div>`;
+    }).join('');
 
-    container.innerHTML =
-      `<div class="val-badge-bar">`
+    const warnings = (result.warnings || []).map(w =>
+      `<div class="val-check-row val-check-row--warn"><span>\u26A0\uFE0F</span><span>${esc(w)}</span></div>`
+    ).join('');
+
+    const pId = policyId.replace(/'/g, "\\'");
+    const fixBtn = hasError
+      ? `<button class="val-fix-btn" onclick="App.fixPolicyInEditor('${pId}')">Im Editor \u00f6ffnen und beheben \u2192</button>`
+      : '';
+
+    summaryBox.insertAdjacentHTML('beforeend',
+      `<div class="val-summary-wrap">`
+      + `<div class="summary-row">`
+      + `<span class="summary-label">Validierung</span>`
       + `<button class="val-badge${hasError ? ' val-badge--error' : ''}" id="val-badge-btn"`
       + ` onclick="App.toggleValidationPanel()" aria-expanded="false">`
       + badgeLabel + ` <span class="val-badge-chevron">\u25be</span>`
       + `</button></div>`
-      + `<div class="val-badge-panel" id="val-detail-panel" style="display:none">${panelContent}</div>`;
+      + `<div class="val-badge-panel" id="val-detail-panel" style="display:none">`
+      + checks + warnings + fixBtn
+      + `</div></div>`
+    );
   }
 
   function toggleValidationPanel() {
@@ -544,11 +629,9 @@ const App = (() => {
   function switchTab(tab) {
     _activeTab = tab;
     document.getElementById('layout-viz').style.display   = tab === 'viz'   ? 'flex'  : 'none';
-    document.getElementById('layout-val').style.display   = tab === 'val'   ? 'flex'  : 'none';
     document.getElementById('layout-guide').style.display = tab === 'guide' ? 'block' : 'none';
     document.getElementById('layout-kb').style.display    = tab === 'kb'    ? 'block' : 'none';
     document.getElementById('tab-viz').classList.toggle('active',   tab === 'viz');
-    document.getElementById('tab-val').classList.toggle('active',   tab === 'val');
     document.getElementById('tab-guide').classList.toggle('active', tab === 'guide');
     document.getElementById('tab-kb').classList.toggle('active',    tab === 'kb');
     if (tab === 'guide') return XACMLGuide.init();
@@ -662,137 +745,6 @@ const App = (() => {
     if (!xacmlUri) return '—';
     const e = LabelMapper.lookup(xacmlUri);
     return e ? e.label : xacmlUri;
-  }
-
-  // ── Schema Validator ──
-
-  let _valFileText = '';
-  let _valFileName = '';
-
-  function triggerValFile() { document.getElementById('val-input').click(); }
-
-  async function loadValFile(input) {
-    const file = input.files[0];
-    if (!file) return;
-    if (!_checkFile(file, ALLOWED_XML_EXT, MAX_XML_SIZE)) { input.value = ''; return; }
-    _valFileName = file.name;
-    _valFileText = await file.text();
-    _runValidator();
-    input.value = '';
-  }
-
-  function handleValDrop(event) {
-    event.preventDefault();
-    const file = event.dataTransfer.files[0];
-    if (!file) return;
-    if (!_checkFile(file, ALLOWED_XML_EXT, MAX_XML_SIZE)) return;
-    _valFileName = file.name;
-    file.text().then(text => { _valFileText = text; _runValidator(); });
-  }
-
-  function _runValidator() {
-    const result = XACMLValidator.validate(_valFileText, _valFileName);
-    document.getElementById('val-result').innerHTML = _buildValidatorReport(result);
-    // Hide dropzone while showing result, allow re-upload
-    document.getElementById('val-drop').style.display = 'none';
-  }
-
-  function resetValidator() {
-    _valFileText = '';
-    _valFileName = '';
-    document.getElementById('val-drop').style.display = '';
-    document.getElementById('val-result').innerHTML = '';
-  }
-
-  function visualizeFromValidator() {
-    if (!_valFileText) return;
-    try {
-      const policy = XACMLParser.parse(_valFileText, _valFileName);
-      const idx    = UIState.addOrReplace(policy);
-      switchTab('viz');
-      activatePolicy(idx);
-    } catch (e) {
-      alert('Fehler beim Laden: ' + e.message);
-    }
-  }
-
-  function _buildValidatorReport(result) {
-    const { errors, warnings, info } = result;
-    const hasErrors   = errors.length > 0;
-    const hasWarnings = warnings.length > 0;
-
-    let html = `<div class="val-result">`;
-
-    // Banner
-    if (hasErrors) {
-      html += `<div class="val-banner error"><span class="val-banner-ico">&#x274C;</span>`;
-      html += `<span>${errors.length} Fehler gefunden &mdash; Policy ist nicht valide</span></div>`;
-    } else if (hasWarnings) {
-      html += `<div class="val-banner warn"><span class="val-banner-ico">&#x26A0;&#xFE0F;</span>`;
-      html += `<span>Valide mit ${warnings.length} Warnung${warnings.length > 1 ? 'en' : ''}</span></div>`;
-    } else {
-      html += `<div class="val-banner ok"><span class="val-banner-ico">&#x2705;</span>`;
-      html += `<span>Valide &mdash; keine Fehler gefunden</span></div>`;
-    }
-
-    // Prüfungen section
-    const checks = [
-      { label: 'XML wohlgeformt',             ok: !hasErrors || errors.every(e => !e.includes('valides XML')), detail: '' },
-      { label: `XACML-Namespace ${info.version ? '(' + info.version + ')' : ''}`, ok: !!info.version, detail: !info.version ? 'Kein XACML-Namespace erkannt' : '' },
-      { label: `Wurzelelement (${info.rootElement || '?'})`, ok: !!info.rootElement, detail: '' },
-      { label: 'Rules haben Effect',          ok: !errors.some(e => e.includes('Effect')), detail: errors.filter(e => e.includes('Effect')).join('; ') },
-      { label: 'Policies haben CombiningAlgId', ok: !errors.some(e => e.includes('CombiningAlgId')), detail: '' },
-      { label: 'Designatoren vollständig',    ok: !errors.some(e => e.includes('Designator')), detail: '' },
-    ];
-
-    html += `<div class="val-section">`;
-    html += `<div class="val-section-title">&#x1F50D; Pr&uuml;fergebnisse</div>`;
-    for (const c of checks) {
-      const cls = c.ok ? 'ok' : 'err';
-      html += `<div class="val-check ${cls}"><span class="val-check-ico"></span>`;
-      html += `<span>${esc(c.label)}${c.detail ? ` &mdash; <em>${esc(c.detail)}</em>` : ''}</span></div>`;
-    }
-    // Warnings
-    for (const w of warnings) {
-      html += `<div class="val-check warn"><span class="val-check-ico"></span><span>${esc(w)}</span></div>`;
-    }
-    // Extra errors not mapped above
-    for (const e of errors) {
-      if (!checks.some(c => !c.ok && c.detail && e.includes(c.detail))) {
-        html += `<div class="val-check err"><span class="val-check-ico"></span><span>${esc(e)}</span></div>`;
-      }
-    }
-    html += `</div>`;
-
-    // Strukturübersicht
-    if (info.ruleCount !== undefined) {
-      html += `<div class="val-section">`;
-      html += `<div class="val-section-title">&#x1F4CA; Struktur&uuml;bersicht</div>`;
-      html += `<div class="val-info-grid">`;
-      html += `<div class="val-info-cell"><div class="val-info-key">Datei</div><div class="val-info-val" style="font-size:12px">${esc(info.filename || '')}</div></div>`;
-      html += `<div class="val-info-cell"><div class="val-info-key">XACML-Version</div><div class="val-info-val">${esc(info.version || '?')}</div></div>`;
-      html += `<div class="val-info-cell"><div class="val-info-key">Regeln gesamt</div><div class="val-info-val">${info.ruleCount}</div></div>`;
-      html += `<div class="val-info-cell"><div class="val-info-key">Permit / Deny</div><div class="val-info-val" style="color:#2e7d32">${info.permitCount}P <span style="color:#c62828">/ ${info.denyCount}D</span></div></div>`;
-      html += `</div>`;
-      if ((info.policyIds || []).length > 0) {
-        html += `<div class="val-section-label" style="margin-top:10px">PolicyIds</div>`;
-        html += `<div class="val-id-list">${info.policyIds.map(esc).join('<br>')}</div>`;
-      }
-      html += `</div>`;
-    }
-
-    // "Jetzt visualisieren" button
-    if (!hasErrors) {
-      html += `<button class="val-viz-btn" onclick="App.visualizeFromValidator()">`;
-      html += `&#x1F4CA; Policy jetzt visualisieren &rarr;</button>`;
-    }
-
-    // Re-upload button
-    html += `<button class="ctrl-btn" style="margin-top:10px;display:block" onclick="App.resetValidator()">`;
-    html += `&#x1F504; Neue Datei pr&uuml;fen</button>`;
-
-    html += `</div>`;
-    return html;
   }
 
   // ── Import Modal ──
@@ -1224,7 +1176,6 @@ const App = (() => {
     triggerCSV, loadCSV, activatePolicy, applySearch, clearSearch, setFilter,
     clearPolicies,
     triggerEnforcement, loadEnforcement, openEnfPanel, closeEnfPanel, switchTab,
-    loadValFile, handleValDrop, visualizeFromValidator, resetValidator,
     toggleTheme,
     openImportModal, closeImportModal, switchImportTab,
     importDragOver, importDragLeave, importDrop, importFromFiles, importFromPaste,
