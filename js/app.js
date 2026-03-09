@@ -284,7 +284,7 @@ const App = (() => {
     // Check 17: Missing Description (Rules)
     for (const r of ruleEls) {
       if (!Array.from(r.children).some(c => c.localName === 'Description')) {
-        const rid = (r.getAttribute('RuleId') || '').split(':').pop().slice(-20) || '?';
+        const rid = (r.getAttribute('RuleId') || '').split(':').pop() || '?';
         warnings.push(`Rule \u201e${rid}\u201c hat keine Description`);
       }
     }
