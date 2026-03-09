@@ -35,6 +35,63 @@ const App = (() => {
   let _currentFilter = 'all';
   let _currentSearch = '';
 
+  // ── Validation Engine (single interface for all XML/XACML validation) ──
+
+  const _XACML_NAMESPACES = [
+    'urn:oasis:names:tc:xacml:3.0:core:schema:wd-17',
+    'urn:oasis:names:tc:xacml:2.0:policy:schema:os'
+  ];
+
+  function extractReadableError(parserErrorText) {
+    return parserErrorText
+      .replace(/error on line \d+ at column \d+:/i, '')
+      .replace(/Below is a rendering of the page up to the first error\./i, '')
+      .trim()
+      .split('\n')[0]
+      .trim();
+  }
+
+  function validatePolicy(xmlString) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlString, 'application/xml');
+    const parseError = doc.querySelector('parsererror');
+    if (parseError) {
+      const text = parseError.textContent;
+      const lineMatch = text.match(/line[^\d]*(\d+)/i);
+      return {
+        valid: false,
+        errors: [{ line: lineMatch ? parseInt(lineMatch[1]) : null, message: extractReadableError(text) }]
+      };
+    }
+    const ns = doc.documentElement.namespaceURI || '';
+    if (!_XACML_NAMESPACES.includes(ns)) {
+      return {
+        valid: false,
+        errors: [{ line: 1, message: `Unbekannter XACML-Namespace: \u201e${ns}\u201c. Erwartet: XACML 3.0 oder 2.0.` }]
+      };
+    }
+    return {
+      valid: true,
+      errors: [],
+      namespace: ns,
+      version: ns.includes('3.0') ? 'XACML 3.0' : 'XACML 2.0'
+    };
+  }
+
+  const validationCache = new Map(); // policyId → { valid, errors, namespace, version, timestamp }
+
+  function getOrComputeValidation(policyId, xmlString) {
+    if (!validationCache.has(policyId)) {
+      const result = validatePolicy(xmlString);
+      validationCache.set(policyId, { ...result, timestamp: new Date().toISOString() });
+    }
+    return validationCache.get(policyId);
+  }
+
+  function invalidateValidationCache(policyId) {
+    validationCache.delete(policyId);
+  }
+
   function triggerCSV() { document.getElementById('csv-input').click(); }
 
   // ── Mapping Persistence ──
@@ -225,10 +282,85 @@ const App = (() => {
       + `<button class="filter-btn${_currentFilter==='deny'?' active':''}" id="f-deny" onclick="App.setFilter('deny')">&#x274C; Nur Deny</button>`
       + `</div>`;
 
-    document.getElementById('content').innerHTML = searchBar + TreeRenderer.render(policy);
+    document.getElementById('content').innerHTML =
+      searchBar
+      + (policy.rawXml ? '<div id="val-badge-area"></div>' : '')
+      + TreeRenderer.render(policy);
+
+    if (policy.rawXml) renderValidationBadge(policy.filename);
 
     if (_currentSearch || _currentFilter !== 'all') {
       _applyFiltersAndSearch();
+    }
+  }
+
+  function renderValidationBadge(policyId) {
+    const container = document.getElementById('val-badge-area');
+    if (!container) return;
+    const policy = UIState.getAll().find(p => p.filename === policyId);
+    if (!policy || !policy.rawXml) return;
+
+    const result = getOrComputeValidation(policyId, policy.rawXml);
+    const hasError = !result.valid;
+    const badgeLabel = hasError
+      ? `\u274C ${result.errors.length} Fehler`
+      : '\u2705 Valide';
+
+    let panelContent;
+    if (!hasError) {
+      const date = new Date(result.timestamp).toLocaleString('de-DE');
+      panelContent =
+        `<div class="val-panel-title">\u2705 Schema-Validierung erfolgreich</div>`
+        + `<table class="val-panel-table">`
+        + `<tr><td>Standard</td><td>${esc(result.version)}</td></tr>`
+        + `<tr><td>Namespace</td><td>${esc(result.namespace)}</td></tr>`
+        + `<tr><td>Gepr\u00fcft</td><td>XML-Wohlgeformtheit \u00b7 Namespace</td></tr>`
+        + `<tr><td>Zeitpunkt</td><td>${esc(date)}</td></tr>`
+        + `</table>`;
+    } else {
+      const pId = policyId.replace(/'/g, "\\'");
+      panelContent =
+        `<div class="val-panel-title">\u274C Schema-Validierung fehlgeschlagen (${result.errors.length} Fehler)</div>`
+        + result.errors.map((e, i) =>
+            `<div class="val-panel-error">#${i + 1}\u2002${e.line ? `Zeile ${e.line}: ` : ''}${esc(e.message)}</div>`
+          ).join('')
+        + `<button class="val-fix-btn" onclick="App.fixPolicyInEditor('${pId}')">Im Editor \u00f6ffnen und beheben \u2192</button>`;
+    }
+
+    container.innerHTML =
+      `<div class="val-badge-bar">`
+      + `<button class="val-badge${hasError ? ' val-badge--error' : ''}" id="val-badge-btn"`
+      + ` onclick="App.toggleValidationPanel()" aria-expanded="false">`
+      + badgeLabel + ` <span class="val-badge-chevron">\u25be</span>`
+      + `</button></div>`
+      + `<div class="val-badge-panel" id="val-detail-panel" style="display:none">${panelContent}</div>`;
+  }
+
+  function toggleValidationPanel() {
+    const panel = document.getElementById('val-detail-panel');
+    const btn   = document.getElementById('val-badge-btn');
+    if (!panel) return;
+    const open = panel.style.display !== 'none';
+    panel.style.display = open ? 'none' : 'block';
+    if (btn) {
+      btn.setAttribute('aria-expanded', String(!open));
+      const chevron = btn.querySelector('.val-badge-chevron');
+      if (chevron) chevron.textContent = open ? '\u25be' : '\u25b4';
+    }
+  }
+
+  function fixPolicyInEditor(policyId) {
+    const policies = UIState.getAll();
+    const idx = policies.findIndex(p => p.filename === policyId);
+    if (idx < 0) return;
+    const policy = policies[idx];
+    UIState.setActive(idx);
+    refreshSidebar();
+    loadPolicyIntoEditor(policyId, policy.rawXml);
+    const cached = validationCache.get(policyId);
+    if (cached && !cached.valid && cached.errors[0] && cached.errors[0].line) {
+      const line = cached.errors[0].line;
+      setTimeout(() => { if (editor) editor.scrollIntoView({ line: line - 1, ch: 0 }); }, 100);
     }
   }
 
@@ -666,16 +798,12 @@ const App = (() => {
   // ── Import Modal ──
 
   function parseAndValidateXml(xmlString, filename) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlString, 'application/xml');
-    const parseError = doc.querySelector('parsererror');
-    if (parseError) {
-      const text = parseError.textContent;
-      const lineMatch = text.match(/line[^\d]*(\d+)/i);
-      const line = lineMatch ? lineMatch[1] : '?';
-      return { success: false, error: `Zeile ${line}: XML ist fehlerhaft. Bitte Syntax pr\u00fcfen.` };
+    const result = validatePolicy(xmlString);
+    if (!result.valid) {
+      const e = result.errors[0];
+      return { success: false, error: `Zeile ${e.line || '?'}: XML ist fehlerhaft. Bitte Syntax pr\u00fcfen.` };
     }
-    return { success: true, doc, filename };
+    return { success: true, filename };
   }
 
   function _renderEmptyState() {
@@ -773,6 +901,8 @@ const App = (() => {
         if (!validation.success) { errors.push(`${file.name}: ${validation.error}`); continue; }
         const policy = XACMLParser.parse(text, file.name);
         policy.rawXml = text;
+        invalidateValidationCache(policy.filename);
+        getOrComputeValidation(policy.filename, text);
         const idx    = UIState.addOrReplace(policy);
         if (firstIdx < 0) firstIdx = idx;
         loadedCount++;
@@ -823,6 +953,8 @@ const App = (() => {
     try {
       const policy = XACMLParser.parse(text, 'paste.xml');
       policy.rawXml = text;
+      invalidateValidationCache(policy.filename);
+      getOrComputeValidation(policy.filename, text);
       const idx    = UIState.addOrReplace(policy);
       _closeModalInternal();
       textarea.value = '';
@@ -929,15 +1061,13 @@ const App = (() => {
     const statusEl = document.getElementById('editorValidationStatus');
     if (!statusEl) return;
     if (!xmlString.trim()) { statusEl.textContent = ''; return; }
-    const parser = new DOMParser();
-    const doc    = parser.parseFromString(xmlString, 'application/xml');
-    const err    = doc.querySelector('parsererror');
-    if (err) {
-      const line = (err.textContent.match(/line[^\d]*(\d+)/i) || [])[1] || '?';
-      statusEl.textContent = `\u274C Zeile ${line}: XML ist fehlerhaft`;
+    const result = validatePolicy(xmlString);
+    if (!result.valid) {
+      const e = result.errors[0];
+      statusEl.textContent = `\u274C ${e.line ? `Zeile ${e.line}: ` : ''}${e.message}`;
       statusEl.style.color = '#ef4444';
     } else {
-      statusEl.textContent = '\u2705 G\u00fcltiges XML';
+      statusEl.textContent = `\u2705 ${result.version || 'G\u00fcltiges XML'}`;
       statusEl.style.color = '#22c55e';
     }
   }
@@ -1029,6 +1159,8 @@ const App = (() => {
       const policy = XACMLParser.parse(xml, fname);
       policy.rawXml = xml;
       _dirtyEdits.delete(fname);
+      invalidateValidationCache(fname);
+      getOrComputeValidation(fname, xml);
       editorState.originalXml = xml;
       editorState.isDirty     = false;
       const idx    = UIState.addOrReplace(policy);
@@ -1099,7 +1231,8 @@ const App = (() => {
     switchContentTab, handleEditorUpdate, handleBeautify, handleDownload,
     handleReset, confirmReset, cancelReset, loadPolicyIntoEditor,
     handlePolicyEdit, handlePolicyDelete, confirmPolicyDelete, cancelPolicyDelete,
-    restoreMappingsOnStartup, clearAllMappings
+    restoreMappingsOnStartup, clearAllMappings,
+    toggleValidationPanel, fixPolicyInEditor
   };
 })();
 
