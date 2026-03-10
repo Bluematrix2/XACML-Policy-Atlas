@@ -201,10 +201,9 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; fo
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 1;
-  flex-wrap: wrap;
+  margin-top: 6px;
 }
-.sb-confirm-text { font-size: 12px; color: var(--text-primary); flex: 1; min-width: 0; }
+.sb-confirm-text { font-size: 12px; color: var(--text-muted); flex: 1; min-width: 0; }
 .sb-confirm-yes, .sb-confirm-no {
   border: none;
   border-radius: 4px;

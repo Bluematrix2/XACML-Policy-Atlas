@@ -782,11 +782,13 @@ const App = (() => {
 
       if (confirming) {
         return `<div class="sb-item${isActive ? ' active' : ''} confirming">`
+             + `<div class="sb-item-main">`
+             + `<div class="sb-name" title="${esc(p.filename)}">${esc(shortName)}</div>`
              + `<div class="sb-confirm">`
-             + `<span class="sb-confirm-text">${esc(shortName)} entfernen?</span>`
+             + `<span class="sb-confirm-text">Entfernen?</span>`
              + `<button class="sb-confirm-yes" onclick="event.stopPropagation();App.confirmPolicyDelete(${i})">Ja</button>`
              + `<button class="sb-confirm-no" onclick="event.stopPropagation();App.cancelPolicyDelete(${i})">Abbrechen</button>`
-             + `</div></div>`;
+             + `</div></div></div>`;
       }
 
       const hasDirty = _dirtyEdits.has(p.filename);
@@ -1432,7 +1434,7 @@ const App = (() => {
     hint.className = 'sb-drop-hint';
     hint.setAttribute('aria-hidden', 'true');
     hint.innerHTML = '<div class="sb-drop-hint-icon">\uD83D\uDCC2</div>'
-                   + '<div class="sb-drop-hint-text">XML-Policy hier ablegen</div>';
+                   + '<div class="sb-drop-hint-text">XACML-Policy hier ablegen</div>';
     sidebar.insertBefore(hint, sidebar.querySelector('.sb-import-wrap'));
 
     // Track drag-enter depth across all child elements
@@ -1460,7 +1462,8 @@ const App = (() => {
     // Prevent browser default on window dragover so drop fires
     document.addEventListener('dragover', e => e.preventDefault());
 
-    document.addEventListener('drop', () => {
+    document.addEventListener('drop', e => {
+      e.preventDefault(); // prevent browser from opening the dropped file
       _counter = 0;
       sidebar.classList.remove('sb-drop-active', 'sb-drop-hover');
     });
