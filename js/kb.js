@@ -113,11 +113,19 @@ const KnowledgeBase = (() => {
       _textCache[s.id] = (inner ? inner.textContent : '').toLowerCase();
     });
 
+    prefixHeadingIds(container);
     addAnchorButtons(container);
     setupAccordionClicks(container);
     setupTocLinks(container);
     setupSearch(container);
     setupObserver(container);
+  }
+
+  // Prefix all heading IDs inside KB sections with 'kb-' so deep-links
+  // can be distinguished from guide anchors in handleInitialHash.
+  function prefixHeadingIds(container) {
+    container.querySelectorAll('.guide-section-inner h1[id], .guide-section-inner h2[id], .guide-section-inner h3[id]')
+      .forEach(el => { el.id = 'kb-' + el.id; });
   }
 
   function setupAccordionClicks(container) {

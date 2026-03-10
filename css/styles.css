@@ -293,6 +293,24 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; fo
 }
 .algo-chip:hover .tooltip { display: block; }
 
+/* Algo-chip tooltip opens downward to avoid clipping by overflow-y:auto scroll container */
+.algo-chip .tooltip {
+  bottom: auto;
+  top: calc(100% + 7px);
+  left: auto;
+  right: 0;
+  min-width: 280px;
+  max-width: 420px;
+}
+.algo-chip .tooltip::after {
+  top: auto;
+  bottom: 100%;
+  left: auto;
+  right: 14px;
+  border-top-color: transparent;
+  border-bottom-color: var(--tooltip-bg);
+}
+
 /* ── Policy target section ── */
 .policy-target {
   background: var(--bg-secondary);

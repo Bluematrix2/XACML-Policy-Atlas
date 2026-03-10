@@ -637,7 +637,7 @@ const App = (() => {
       + ` onclick="App.toggleValidationPanel()" aria-expanded="false">`
       + badgeLabel + ` <span class="val-badge-chevron">\u25be</span>`
       + `</button>`
-      + `<button class="val-info-btn" onclick="App.openKbSection('kb-validation')" title="Validierungsregeln erklärt (Knowledge Base)" aria-label="Validierungsregeln erklärt">&#x2139;</button>`
+      + `<button class="val-info-btn" onclick="App.openKbSection('kb-validation')" title="Validierungsregeln (Knowledge Base)" aria-label="Validierungsregeln">&#x2139;</button>`
       + `</div>`
       + `<div class="val-badge-panel" id="val-detail-panel" style="display:none">`
       + checks + warnings + fixBtn
@@ -646,7 +646,20 @@ const App = (() => {
   }
 
   function openKbSection(id) {
-    switchTab('kb').then(() => KnowledgeBase.openSection(id, true));
+    switchTab('kb').then(() => {
+      // Try as a section wrapper first
+      const el = document.getElementById(id);
+      if (el && el.classList.contains('guide-acc')) {
+        KnowledgeBase.openSection(id, true);
+      } else if (el) {
+        // It's a heading inside a section — open the containing section, then scroll to heading
+        const section = el.closest('.guide-acc');
+        if (section) {
+          KnowledgeBase.openSection(section.id, false);
+          setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+        }
+      }
+    });
   }
 
   function toggleValidationPanel() {
