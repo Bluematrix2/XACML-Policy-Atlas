@@ -52,7 +52,7 @@ Das `namespaceURI` des Wurzelelements muss einem der beiden bekannten XACML-Name
 Das oberste Element des Dokuments muss entweder eine einzelne Policy oder ein Container für mehrere Policies sein.
 
 **Technisch:**
-`doc.documentElement.localName` muss `Policy` oder `PolicySet` sein. Andere Wurzelelemente (z. B. `<Request>` oder `<Response>`) sind zwar gültige XACML-Dokumente, aber keine auswertbaren Policies.
+Der Wert von `doc.documentElement.localName` muss `Policy` oder `PolicySet` sein. Andere Wurzelelemente (z. B. `<Request>` oder `<Response>`) sind zwar gültige XACML-Dokumente, aber keine auswertbaren Policies.
 
 **Referenz:** XACML 3.0 Core Spec, Abschnitt 5.1 (Element `<Policy>`) und 5.2 (Element `<PolicySet>`)
 
@@ -225,7 +225,7 @@ Im XACML-Namespace tauchen Elemente auf, die weder in XACML 2.0 noch in 3.0 defi
 
 ### Prüfung 21 — Zu tiefe PolicySet-Verschachtelung
 
-`<PolicySet>`-Elemente können beliebig tief ineinander verschachtelt werden. Mehr als 3 Ebenen erschweren die Lesbarkeit und können die Performance des PDP bei der Entscheidungsfindung beeinträchtigen.
+Das Element `<PolicySet>` kann beliebig tief ineinander verschachtelt werden. Mehr als 3 Ebenen erschweren die Lesbarkeit und können die Performance des PDP bei der Entscheidungsfindung beeinträchtigen.
 
 ---
 
