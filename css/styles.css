@@ -428,6 +428,7 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; fo
   max-width: 320px;
 }
 .chip .star { color: #f9a825; }
+.chip:hover { overflow: visible; }
 .chip:hover .tooltip { display: block; }
 
 /* ── FHIR clickable chip ── */
