@@ -77,6 +77,11 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; fo
   transition: background .15s;
 }
 .hbtn:hover { background: rgba(255,255,255,.22); }
+.hbtn-example {
+  background: rgba(34, 197, 94, .18);
+  border-color: rgba(34, 197, 94, .5);
+}
+.hbtn-example:hover { background: rgba(34, 197, 94, .32); }
 
 /* Dark mode toggle button (special styling in header) */
 .theme-toggle {

@@ -1,0 +1,210 @@
+<Policy PolicyId='urn:policyatlas:2024:policy:ExamplePhysicianAccess' RuleCombiningAlgId='urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides'
+    xmlns='urn:oasis:names:tc:xacml:2.0:policy:schema:os'
+    xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' Version='1'>
+    <Description>Treating physicians can read the patient record and read/write clinical data for patients under their care. Access to documents with very high confidentiality (VHL) is denied unless the physician is the treating practitioner of that record.</Description>
+    <Target>
+        <Subjects>
+            <Subject>
+                <SubjectMatch MatchId='urn:hl7-org:v3:function:CV-equal'>
+                    <AttributeValue DataType='urn:hl7-org:v3#CV'>
+                        <CodedValue xmlns='urn:hl7-org:v3' code='Physician' codeSystem='2.99.999' />
+                    </AttributeValue>
+                    <SubjectAttributeDesignator DataType='urn:hl7-org:v3#CV' AttributeId='urn:oasis:names:tc:xacml:2.0:subject:role'/>
+                </SubjectMatch>
+            </Subject>
+            <Subject>
+                <SubjectMatch MatchId='urn:hl7-org:v3:function:CV-equal'>
+                    <AttributeValue DataType='urn:hl7-org:v3#CV'>
+                        <CodedValue xmlns='urn:hl7-org:v3' code='GeneralPractitioner' codeSystem='2.99.999' />
+                    </AttributeValue>
+                    <SubjectAttributeDesignator DataType='urn:hl7-org:v3#CV' AttributeId='urn:oasis:names:tc:xacml:2.0:subject:role'/>
+                </SubjectMatch>
+            </Subject>
+        </Subjects>
+        <Resources>
+            <Resource>
+                <ResourceMatch MatchId='urn:hl7-org:v3:function:II-equal'>
+                    <AttributeValue DataType='urn:hl7-org:v3#II'>
+                        <InstanceIdentifier xmlns='urn:hl7-org:v3' xsi:type='II' root='*' />
+                    </AttributeValue>
+                    <ResourceAttributeDesignator DataType='urn:hl7-org:v3#II' AttributeId='urn:ihe:iti:ser:2026:patient-id' />
+                </ResourceMatch>
+            </Resource>
+        </Resources>
+    </Target>
+
+    <Rule Effect='Permit' RuleId='urn:policyatlas:2024:rule:physician-read-patient'>
+        <Description>READ-only access to the Patient resource — physicians must not modify the master patient record directly.</Description>
+        <Target>
+            <Resources>
+                <Resource>
+                    <ResourceMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>Patient</AttributeValue>
+                        <ResourceAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='http://hl7.org/fhir/resource-types' />
+                    </ResourceMatch>
+                </Resource>
+            </Resources>
+            <Actions>
+                <Action>
+                    <ActionMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:anyURI-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#anyURI'>urn:policyatlas:2026:record:view-all-response</AttributeValue>
+                        <ActionAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#anyURI' AttributeId='urn:oasis:names:tc:xacml:1.0:action:action-id'/>
+                    </ActionMatch>
+                </Action>
+            </Actions>
+        </Target>
+        <Condition>
+            <Apply FunctionId='urn:oasis:names:tc:xacml:1.0:function:any-of-any'>
+                <Function FunctionId='urn:hl7-org:v3:function:II-equal' />
+                <SubjectAttributeDesignator DataType='urn:hl7-org:v3#II' AttributeId='urn:policyatlas:2026:subject:patient-id' />
+                <ResourceAttributeDesignator DataType='urn:hl7-org:v3#II' AttributeId='urn:ihe:iti:ser:2026:patient-id' />
+            </Apply>
+        </Condition>
+    </Rule>
+
+    <Rule Effect='Permit' RuleId='urn:policyatlas:2024:rule:physician-crud-clinical'>
+        <Description>READ and WRITE access to core clinical FHIR resources for the patient under care.</Description>
+        <Target>
+            <Resources>
+                <Resource>
+                    <ResourceMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>AllergyIntolerance</AttributeValue>
+                        <ResourceAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='http://hl7.org/fhir/resource-types' />
+                    </ResourceMatch>
+                </Resource>
+                <Resource>
+                    <ResourceMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>Condition</AttributeValue>
+                        <ResourceAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='http://hl7.org/fhir/resource-types' />
+                    </ResourceMatch>
+                </Resource>
+                <Resource>
+                    <ResourceMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>Observation</AttributeValue>
+                        <ResourceAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='http://hl7.org/fhir/resource-types' />
+                    </ResourceMatch>
+                </Resource>
+                <Resource>
+                    <ResourceMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>Procedure</AttributeValue>
+                        <ResourceAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='http://hl7.org/fhir/resource-types' />
+                    </ResourceMatch>
+                </Resource>
+                <Resource>
+                    <ResourceMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>DiagnosticReport</AttributeValue>
+                        <ResourceAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='http://hl7.org/fhir/resource-types' />
+                    </ResourceMatch>
+                </Resource>
+                <Resource>
+                    <ResourceMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>Encounter</AttributeValue>
+                        <ResourceAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='http://hl7.org/fhir/resource-types' />
+                    </ResourceMatch>
+                </Resource>
+            </Resources>
+            <Actions>
+                <Action>
+                    <ActionMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:anyURI-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#anyURI'>urn:policyatlas:2026:record:view-all-response</AttributeValue>
+                        <ActionAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#anyURI' AttributeId='urn:oasis:names:tc:xacml:1.0:action:action-id'/>
+                    </ActionMatch>
+                </Action>
+                <Action>
+                    <!-- Generic WRITE action — covers CREATE, UPDATE, DELETE -->
+                    <ActionMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:anyURI-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#anyURI'>urn:policyatlas:2026:record:add-clinical-statement</AttributeValue>
+                        <ActionAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#anyURI' AttributeId='urn:oasis:names:tc:xacml:1.0:action:action-id'/>
+                    </ActionMatch>
+                </Action>
+            </Actions>
+        </Target>
+        <Condition>
+            <Apply FunctionId='urn:oasis:names:tc:xacml:1.0:function:any-of-any'>
+                <Function FunctionId='urn:hl7-org:v3:function:II-equal' />
+                <SubjectAttributeDesignator DataType='urn:hl7-org:v3#II' AttributeId='urn:policyatlas:2026:subject:patient-id' />
+                <ResourceAttributeDesignator DataType='urn:hl7-org:v3#II' AttributeId='urn:ihe:iti:ser:2026:patient-id' />
+            </Apply>
+        </Condition>
+    </Rule>
+
+    <Rule Effect='Permit' RuleId='urn:policyatlas:2024:rule:physician-crud-medication'>
+        <Description>READ and WRITE access to medication-related FHIR resources for the patient under care.</Description>
+        <Target>
+            <Resources>
+                <Resource>
+                    <ResourceMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>MedicationRequest</AttributeValue>
+                        <ResourceAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='http://hl7.org/fhir/resource-types' />
+                    </ResourceMatch>
+                </Resource>
+                <Resource>
+                    <ResourceMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>MedicationStatement</AttributeValue>
+                        <ResourceAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='http://hl7.org/fhir/resource-types' />
+                    </ResourceMatch>
+                </Resource>
+                <Resource>
+                    <ResourceMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>MedicationAdministration</AttributeValue>
+                        <ResourceAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='http://hl7.org/fhir/resource-types' />
+                    </ResourceMatch>
+                </Resource>
+                <Resource>
+                    <ResourceMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:string-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#string'>Immunization</AttributeValue>
+                        <ResourceAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#string' AttributeId='http://hl7.org/fhir/resource-types' />
+                    </ResourceMatch>
+                </Resource>
+            </Resources>
+            <Actions>
+                <Action>
+                    <ActionMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:anyURI-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#anyURI'>urn:policyatlas:2026:record:view-all-response</AttributeValue>
+                        <ActionAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#anyURI' AttributeId='urn:oasis:names:tc:xacml:1.0:action:action-id'/>
+                    </ActionMatch>
+                </Action>
+                <Action>
+                    <!-- Generic WRITE action — covers CREATE, UPDATE, DELETE -->
+                    <ActionMatch MatchId='urn:oasis:names:tc:xacml:1.0:function:anyURI-equal'>
+                        <AttributeValue DataType='http://www.w3.org/2001/XMLSchema#anyURI'>urn:policyatlas:2026:record:add-clinical-statement</AttributeValue>
+                        <ActionAttributeDesignator DataType='http://www.w3.org/2001/XMLSchema#anyURI' AttributeId='urn:oasis:names:tc:xacml:1.0:action:action-id'/>
+                    </ActionMatch>
+                </Action>
+            </Actions>
+        </Target>
+        <Condition>
+            <Apply FunctionId='urn:oasis:names:tc:xacml:1.0:function:any-of-any'>
+                <Function FunctionId='urn:hl7-org:v3:function:II-equal' />
+                <SubjectAttributeDesignator DataType='urn:hl7-org:v3#II' AttributeId='urn:policyatlas:2026:subject:patient-id' />
+                <ResourceAttributeDesignator DataType='urn:hl7-org:v3#II' AttributeId='urn:ihe:iti:ser:2026:patient-id' />
+            </Apply>
+        </Condition>
+    </Rule>
+
+    <Rule RuleId='urn:policyatlas:2024:rule:physician-deny-vhl' Effect='Deny'>
+        <Description>Deny access to documents flagged as very high confidentiality (VHL) unless the physician is the treating practitioner of that specific patient record.</Description>
+        <Target>
+            <Resources>
+                <Resource>
+                    <ResourceMatch MatchId='urn:hl7-org:v3:function:CV-equal'>
+                        <AttributeValue DataType='urn:hl7-org:v3#CV'>
+                            <ns3:CodedValue xmlns:ns3='urn:hl7-org:v3' code='VHL' codeSystem='1.3.6.1.4.1.19376.3.276.1.5.10'/>
+                        </AttributeValue>
+                        <ResourceAttributeDesignator AttributeId='urn:ihe:iti:xds-b:2007:confidentiality-code' DataType='urn:hl7-org:v3#CV'/>
+                    </ResourceMatch>
+                </Resource>
+            </Resources>
+        </Target>
+        <Condition>
+            <!-- Deny if the subject's patient-id does NOT match the resource patient-id, i.e. not the treating physician's own patient -->
+            <Apply FunctionId='urn:oasis:names:tc:xacml:1.0:function:not'>
+                <Apply FunctionId='urn:oasis:names:tc:xacml:1.0:function:any-of-any'>
+                    <Function FunctionId='urn:hl7-org:v3:function:II-equal' />
+                    <SubjectAttributeDesignator DataType='urn:hl7-org:v3#II' AttributeId='urn:policyatlas:2026:subject:patient-id' />
+                    <ResourceAttributeDesignator DataType='urn:hl7-org:v3#II' AttributeId='urn:ihe:iti:ser:2026:patient-id' />
+                </Apply>
+            </Apply>
+        </Condition>
+    </Rule>
+</Policy>

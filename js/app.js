@@ -495,6 +495,27 @@ const App = (() => {
     _renderEmptyState();
   }
 
+  async function loadExample() {
+    const EXAMPLE_FILE = 'sample/ExamplePhysicianAccess.xml';
+    const EXAMPLE_NAME = 'ExamplePhysicianAccess.xml';
+    try {
+      const r = await fetch(EXAMPLE_FILE);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const text   = await r.text();
+      const policy = XACMLParser.parse(text, EXAMPLE_NAME);
+      policy.rawXml = text;
+      invalidateValidationCache(EXAMPLE_NAME);
+      getOrComputeValidation(EXAMPLE_NAME, text);
+      const idx = UIState.addOrReplace(policy);
+      await switchTab('viz');
+      refreshSidebar();
+      activatePolicy(idx);
+      _showToast('Beispiel-Policy geladen.');
+    } catch (e) {
+      alert('Beispiel konnte nicht geladen werden: ' + e.message);
+    }
+  }
+
   async function loadCSV(input) {
     const file = input.files[0];
     if (!file) return;
@@ -1399,7 +1420,7 @@ const App = (() => {
     handlePolicyEdit, handlePolicyDelete, confirmPolicyDelete, cancelPolicyDelete,
     restoreMappingsOnStartup, clearAllMappings,
     toggleValidationPanel, fixPolicyInEditor,
-    openKbSection
+    openKbSection, loadExample
   };
 })();
 

@@ -8,7 +8,7 @@ testdata/
 *.log
 # *.md
 *.csv
-*.xml
+#*.xml
 *.af
 
 # Ignoriere lokale Konfigurationsdateien
