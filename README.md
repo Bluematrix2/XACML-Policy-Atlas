@@ -40,3 +40,5 @@ Avoid uploading sensitive policies on shared or untrusted devices.
 See also: SECURITY.md
  | PRIVACY.md
  | DISCLAIMER.md
+
+<img width="3810" height="1903" alt="G_XACML-Policy-Atlas" src="https://github.com/Bluematrix2/XACML-Policy-Atlas/blob/main/XACML-Policy-Atlas.png" />
