@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Point crawlers to the sitemap
+Sitemap: https://policyatlas.puschmann.io/sitemap.xml
+
+# Exclude test data and build artefacts from indexing
+Disallow: /sample/
+Disallow: /data/

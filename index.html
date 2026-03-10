@@ -13,7 +13,63 @@
 
   <link rel="icon" type="image/svg+xml" sizes="32x32" href="favicon.svg">
   <link rel="apple-touch-icon" sizes="180x180" href="favicon.svg">
-  <title>XACML Policy Atlas</title>
+  <link rel="canonical" href="https://policyatlas.puschmann.io/">
+
+  <title>XACML Policy Atlas – Viewer, Validator &amp; Editor</title>
+  <meta name="description" content="XACML-Policies endlich verständlich: Der Policy Atlas visualisiert komplexe Zugriffsregeln übersichtlich, für Entwickler und Nicht-Techniker. Kostenlos & Open Source.">
+  <meta name="keywords" content="XACML, XACML Policy, XACML Viewer, XACML Editor, XACML Validator, Zugriffskontrolle, Policy Visualisierung, ABAC, Policy Decision Point, PDP, OASIS XACML, XACML 3.0, XACML 2.0, XML Policy, FHIR Zugriffskontrolle">
+  <meta name="author" content="Florian Puschmann">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://policyatlas.puschmann.io/">
+  <meta property="og:title" content="XACML Policy Atlas – Viewer, Validator &amp; Editor">
+  <meta property="og:description" content="XACML-Policies endlich verständlich: Der Policy Atlas visualisiert komplexe Zugriffsregeln übersichtlich, für Entwickler und Nicht-Techniker. Kostenlos & Open Source.">
+  <meta property="og:image" content="https://policyatlas.puschmann.io/XACML-Policy-Atlas.png">
+  <meta property="og:locale" content="de_DE">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:site_name" content="XACML Policy Atlas">
+
+  <!-- Twitter / X Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://policyatlas.puschmann.io/">
+  <meta name="twitter:title" content="XACML Policy Atlas – Viewer, Validator &amp; Editor">
+  <meta name="twitter:description" content="XACML-Policies endlich verständlich: Der Policy Atlas visualisiert komplexe Zugriffsregeln übersichtlich, für Entwickler und Nicht-Techniker. Kostenlos & Open Source.">
+  <meta name="twitter:image" content="https://policyatlas.puschmann.io/XACML-Policy-Atlas.png">
+
+  <!-- Structured Data: SoftwareApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "XACML Policy Atlas",
+    "url": "https://policyatlas.puschmann.io/",
+    "description": "XACML-Policies endlich verständlich: Der Policy Atlas visualisiert komplexe Zugriffsregeln übersichtlich, für Entwickler und Nicht-Techniker. Kostenlos & Open Source.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+    "author": {
+      "@type": "Person",
+      "name": "Florian Puschmann",
+      "url": "https://florian-puschmann.de"
+    },
+    "keywords": "XACML, access control policy, ABAC, policy validator, XACML editor, XACML viewer",
+    "inLanguage": ["de", "en"],
+    "isAccessibleForFree": true,
+    "license": "https://github.com/Bluematrix2/XACML-Policy-Atlas/blob/main/LICENSE",
+    "codeRepository": "https://github.com/Bluematrix2/XACML-Policy-Atlas",
+    "featureList": [
+      "XACML 2.0 and 3.0 policy visualization",
+      "Structural validation with 24 checks",
+      "Built-in XACML XML editor with syntax highlighting",
+      "CSV-based label and color mapping",
+      "FHIR resource enforcement mapping",
+      "Dark and light mode",
+      "100% local processing – no data upload"
+    ]
+  }
+  </script>
   <script>
     window.APP_VERSION = '__APP_VERSION__';
     // Lokaler Fallback: Platzhalter wird nur durch GitHub Actions ersetzt.
@@ -40,7 +96,7 @@
 <body>
 
 <header>
-  <h1><a href="/" onclick="event.preventDefault();App.switchTab('viz')" class="header-title-link">&#x1F510; XACML Policy Atlas</a></h1>
+  <h1><a href="/" onclick="event.preventDefault();App.switchTab('viz')" class="header-title-link">&#x1F510; XACML Policy Atlas – Viewer, Validator &amp; Editor</a></h1>
     <div class="header-notices">
     <span class="header-notice">&#x26A0;&#xFE0F; For educational purposes only. Use at your own risk.</span>
     <span class="header-notice">&#x1F512; All data is processed locally in your browser and is never uploaded.</span>
