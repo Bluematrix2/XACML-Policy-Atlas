@@ -88,12 +88,14 @@ Patient@2.99.999
 
 ```
 type;id;label;description;color
-algorithm;urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides;Deny hat Vorrang;Wenn eine Regel verweigert, gilt das immer;#607D8B
-function;urn:hl7-org:v3:function:CV-equal;Code-Vergleich;Prüft ob zwei codierte Werte identisch sind;
-role;Patient@2.99.999;Patient;Der Benutzer ist als Patient angemeldet;#2196F3
-attribute;urn:oasis:names:tc:xacml:2.0:subject:role;Benutzerrolle;Die Rolle des angemeldeten Benutzers;#2196F3
-attribute;urn:ihe:iti:ser:2016:patient-id;Patienten-ID (Akte);ID des Patienten, dem die Akte gehört;#4CAF50
-action;urn:fp:2013:record:view-all-response;Lesen (READ);Daten anzeigen und abrufen;#4CAF50
+codesystem;2.99.999;Policy-Atlas Rollen-Codesystem;Beispiel-Codesystem für Benutzerrollen in Policy-Atlas-Demo-Szenarien;
+role;Physician@2.99.999;Arzt;Behandelnder Arzt – hat Lese- und Schreibzugriff auf klinische Daten seiner Patienten;#1565C0
+role;GeneralPractitioner@2.99.999;Hausarzt;Niedergelassener Allgemeinmediziner – gleichgestellte Zugriffsrechte wie Facharzt in diesem Szenario;#1976D2
+role;VHL@1.3.6.1.4.1.19376.3.276.1.5.10;Sehr hohe Vertraulichkeit (VHL);Dokumente mit sehr hoher Vertraulichkeitsstufe – Zugriff nur für behandelnden Arzt des jeweiligen Patienten;#B71C1C
+attribute;urn:policyatlas:2026:subject:patient-id;Patienten-ID (Subject-Kontext);Die Patienten-ID aus dem Authentifizierungskontext des eingeloggten Benutzers;#66BB6A
+attribute;urn:ihe:iti:ser:2026:patient-id;Patienten-ID (Ressource 2026);Die ID des Patienten, dem die angefragte Ressource zugeordnet ist (IHE SER 2026);#4CAF50
+action;urn:policyatlas:2026:record:view-all-response;Lesen (READ);Daten anzeigen und abrufen – keine Veränderung der Ressource;#4CAF50
+action;urn:policyatlas:2026:record:add-clinical-statement;Schreiben (WRITE);Klinische Daten erstellen, aktualisieren oder löschen (CREATE / UPDATE / DELETE);#FF9800
 ```
 
 ---
