@@ -633,11 +633,12 @@ const App = (() => {
       `<div class="val-summary-wrap">`
       + `<div class="summary-row">`
       + `<span class="summary-label">Validierung</span>`
-      + `<button class="val-info-btn" onclick="App.openKbSection('kb-validation')" title="Validierungsregeln erklärt (Knowledge Base)" aria-label="Validierungsregeln erklärt">&#x2139;</button>`
       + `<button class="val-badge${hasError ? ' val-badge--error' : ''}" id="val-badge-btn"`
       + ` onclick="App.toggleValidationPanel()" aria-expanded="false">`
       + badgeLabel + ` <span class="val-badge-chevron">\u25be</span>`
-      + `</button></div>`
+      + `</button>`
+      + `<button class="val-info-btn" onclick="App.openKbSection('kb-validation')" title="Validierungsregeln erklärt (Knowledge Base)" aria-label="Validierungsregeln erklärt">&#x2139;</button>`
+      + `</div>`
       + `<div class="val-badge-panel" id="val-detail-panel" style="display:none">`
       + checks + warnings + fixBtn
       + `</div></div>`
@@ -1428,15 +1429,20 @@ const App = (() => {
 window.App = App;
 window.TreeRenderer = TreeRenderer;
 
-// ── Handle URL hash on initial load (e.g. shared guide anchor links) ──
+// ── Handle URL hash on initial load (e.g. shared guide/kb anchor links) ──
 (function handleInitialHash() {
   const hash = location.hash.slice(1);
   if (!hash) return;
-  // Switch to guide tab, wait for markdown to load, then scroll to anchor
-  App.switchTab('guide').then(() => {
-    setTimeout(() => {
-      const el = document.getElementById(hash);
-      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
-    }, 100);
-  });
+  if (hash.startsWith('kb-')) {
+    // KB section IDs all start with 'kb-'
+    App.openKbSection(hash);
+  } else {
+    // Default: guide tab — switch and scroll to element
+    App.switchTab('guide').then(() => {
+      setTimeout(() => {
+        const el = document.getElementById(hash);
+        if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+      }, 100);
+    });
+  }
 })();

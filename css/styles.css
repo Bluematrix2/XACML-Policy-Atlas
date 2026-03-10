@@ -1330,18 +1330,25 @@ footer a:hover { opacity: 1; text-decoration: none; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: none;
-  border: none;
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent, #3b82f6);
+  border-radius: 50%;
   cursor: pointer;
-  color: var(--text-muted);
-  font-size: 14px;
-  padding: 0 2px;
+  color: var(--accent, #3b82f6);
+  font-size: 12px;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  padding: 0;
   line-height: 1;
-  opacity: 0.7;
-  transition: opacity 0.15s, color 0.15s;
   flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+  margin-left: 5px;
 }
-.val-info-btn:hover { opacity: 1; color: var(--accent); }
+.val-info-btn:hover {
+  background: var(--accent, #3b82f6);
+  color: #fff;
+}
 
 .val-summary-wrap { border-top: 1px solid var(--border-subtle); margin-top: 6px; padding-top: 4px; }
 .val-badge-panel {
