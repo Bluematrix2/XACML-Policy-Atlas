@@ -189,6 +189,8 @@ export function parseMarkdown(text) {
     }
     if (paraLines.length > 0) {
       result.push(`<p class="md-p">${inlineMarkdown(paraLines.join(' '))}</p>`);
+    } else {
+      i++; // safety: skip unhandled line to prevent infinite loop
     }
   }
 
