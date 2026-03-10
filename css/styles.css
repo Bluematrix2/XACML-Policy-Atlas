@@ -300,7 +300,7 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; fo
   left: auto;
   right: 0;
   min-width: 280px;
-  max-width: 420px;
+  max-width: 440px;
 }
 .algo-chip .tooltip::after {
   top: auto;
@@ -448,15 +448,16 @@ a.chip.fhir-chip:hover {
   left: 0;
   background: var(--tooltip-bg);
   color: #eceff1;
-  padding: 7px 11px;
+  padding: 8px 12px;
   border-radius: 5px;
   font-size: 12px;
   z-index: 200;
   pointer-events: none;
-  min-width: 180px;
-  max-width: 360px;
+  width: max-content;
+  min-width: 200px;
+  max-width: 440px;
   white-space: normal;
-  line-height: 1.45;
+  line-height: 1.5;
   box-shadow: 0 3px 10px rgba(0,0,0,.3);
   overflow-wrap: break-word;
   word-break: normal;
@@ -470,12 +471,13 @@ a.chip.fhir-chip:hover {
   border-top-color: var(--tooltip-bg);
 }
 .tooltip-uri {
-  font-family: 'Raleway', sans-serif;
+  font-family: monospace;
   font-size: 11px;
   color: #80cbc4;
   display: block;
   margin-top: 3px;
-  word-break: break-all;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 .tooltip-attr {
   font-size: 12px;
