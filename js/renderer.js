@@ -129,7 +129,7 @@ const TreeRenderer = (() => {
 
   // ── Match group rendering (outer=ODER, inner=UND) ──
 
-  function renderMatchGroups(groups, groupLabel) {
+  function renderMatchGroups(groups, groupLabel, showRawValue = false) {
     if (!groups || groups.length === 0) return '';
 
     const groupsHtml = groups.map(group => {
@@ -143,7 +143,15 @@ const TreeRenderer = (() => {
         const attrHint  = attrId
           ? `${attrDesc ? esc(attrDesc) + '<br>' : ''}${esc(attrLabel)} &mdash; <span class="tooltip-uri">${esc(attrId)}</span>`
           : '';
-        return valueChip(match.value, attrId, attrHint);
+        let hint = attrHint;
+        if (showRawValue) {
+          const raw = (match.value.value || '').trim();
+          if (raw) {
+            const rawLine = `<span class="tooltip-raw-value">AttributeValue &mdash; <span class="tooltip-uri">${esc(raw)}</span></span>`;
+            hint = rawLine + (hint ? '<br>' + hint : '');
+          }
+        }
+        return valueChip(match.value, attrId, hint);
       });
 
       return parts.join(undChip());
@@ -251,7 +259,7 @@ const TreeRenderer = (() => {
     let html = '';
     if (subjects.length)  html += renderMatchGroups(subjects,  '&#x1F464; Wer (Subject)');
     if (resources.length) html += renderMatchGroups(resources, '&#x1F4E6; Ressourcen');
-    if (actions.length)   html += renderMatchGroups(actions,   '&#x26A1; Action');
+    if (actions.length)   html += renderMatchGroups(actions,   '&#x26A1; Action', true);
     return html;
   }
 

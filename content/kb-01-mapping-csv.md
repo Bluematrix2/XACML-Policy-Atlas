@@ -17,7 +17,7 @@ type;id;label;description;color
 
 <div class="kb-download-box">
   <span class="kb-download-label">Vollständige Referenzdatei herunterladen:</span>
-  <a class="kb-download-btn" href="sample/ExamplePhysicianAccess-mapping.csv" download="mapping.csv">⬇ mapping.csv</a>
+  <a class="kb-download-btn" href="sample/ExamplePhysicianAccess-mapping.csv" download="XACML-Policy-Atlas-mapping.csv">⬇ XACML-Policy-Atlas-mapping.csv</a>
 </div>
 
 ---
