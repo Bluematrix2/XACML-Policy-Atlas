@@ -103,6 +103,9 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; fo
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
+  min-height: 0; /* allow flex shrinking so import button stays sticky */
+  position: relative;
+  transition: border-color 0.2s, background 0.2s;
 }
 .sidebar-head {
   display: flex;
@@ -128,7 +131,7 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; fo
   transition: color 0.15s, background 0.15s;
 }
 .sb-clear-btn:hover { color: var(--deny-border); background: var(--deny-bg); }
-.sidebar-list { flex: 1; overflow-y: auto; }
+.sidebar-list { flex: 1; overflow-y: auto; min-height: 0; }
 .sb-item {
   padding: 9px 12px 8px;
   cursor: pointer;
@@ -1438,6 +1441,42 @@ footer a:hover { opacity: 1; text-decoration: none; }
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* ── Sidebar drag-and-drop ── */
+.sb-drop-hint {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--accent-subtle);
+  border: 2px dashed var(--accent);
+  border-radius: 4px;
+  pointer-events: none;
+  animation: sb-drop-pulse 1.4s ease-in-out infinite;
+}
+.sidebar.sb-drop-active .sb-drop-hint { display: flex; }
+.sidebar.sb-drop-hover .sb-drop-hint {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-style: solid;
+  animation: none;
+}
+.sb-drop-hint-icon { font-size: 32px; line-height: 1; }
+.sb-drop-hint-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  text-align: center;
+  padding: 0 12px;
+}
+@keyframes sb-drop-pulse {
+  0%, 100% { opacity: 0.75; }
+  50%       { opacity: 1; }
+}
+.sidebar.sb-drop-active { border-right-color: var(--accent); }
 
 /* ── Modal overlay ── */
 .modal-overlay {

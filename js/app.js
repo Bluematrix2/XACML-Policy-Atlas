@@ -1422,6 +1422,72 @@ const App = (() => {
     _applyTheme(saved || (prefersDark ? 'dark' : 'light'));
   })();
 
+  // Sidebar drag-and-drop
+  (function setupSidebarDrop() {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    // Inject drop-hint overlay
+    const hint = document.createElement('div');
+    hint.className = 'sb-drop-hint';
+    hint.setAttribute('aria-hidden', 'true');
+    hint.innerHTML = '<div class="sb-drop-hint-icon">\uD83D\uDCC2</div>'
+                   + '<div class="sb-drop-hint-text">XML-Policy hier ablegen</div>';
+    sidebar.insertBefore(hint, sidebar.querySelector('.sb-import-wrap'));
+
+    // Track drag-enter depth across all child elements
+    let _counter = 0;
+
+    function _hasFiles(e) {
+      return e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
+    }
+
+    // Window-level: detect any file drag entering the browser
+    document.addEventListener('dragenter', e => {
+      if (!_hasFiles(e)) return;
+      _counter++;
+      sidebar.classList.add('sb-drop-active');
+    });
+
+    document.addEventListener('dragleave', () => {
+      _counter--;
+      if (_counter <= 0) {
+        _counter = 0;
+        sidebar.classList.remove('sb-drop-active', 'sb-drop-hover');
+      }
+    });
+
+    // Prevent browser default on window dragover so drop fires
+    document.addEventListener('dragover', e => e.preventDefault());
+
+    document.addEventListener('drop', () => {
+      _counter = 0;
+      sidebar.classList.remove('sb-drop-active', 'sb-drop-hover');
+    });
+
+    // Sidebar-specific: highlight stronger when hovering directly over it
+    sidebar.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+      sidebar.classList.add('sb-drop-hover');
+    });
+
+    sidebar.addEventListener('dragleave', e => {
+      if (!sidebar.contains(e.relatedTarget)) {
+        sidebar.classList.remove('sb-drop-hover');
+      }
+    });
+
+    sidebar.addEventListener('drop', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      _counter = 0;
+      sidebar.classList.remove('sb-drop-active', 'sb-drop-hover');
+      _importFiles(Array.from(e.dataTransfer.files));
+    });
+  })();
+
   return {
     triggerCSV, loadCSV, activatePolicy, applySearch, clearSearch, setFilter,
     clearPolicies,
