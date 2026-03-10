@@ -7,7 +7,7 @@ testdata/
 # Ignoriere Dateien
 *.log
 # *.md
-*.csv
+#*.csv
 #*.xml
 *.af
 

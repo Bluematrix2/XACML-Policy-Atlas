@@ -496,16 +496,22 @@ const App = (() => {
   }
 
   async function loadExample() {
-    const EXAMPLE_FILE = 'sample/ExamplePhysicianAccess.xml';
-    const EXAMPLE_NAME = 'ExamplePhysicianAccess.xml';
+    const EXAMPLE_FILE   = 'sample/ExamplePhysicianAccess.xml';
+    const EXAMPLE_NAME   = 'ExamplePhysicianAccess.xml';
+    const EXAMPLE_CSV    = 'sample/ExamplePhysicianAccess-mapping.csv';
+    const EXAMPLE_CSV_NAME = 'ExamplePhysicianAccess-mapping.csv';
     try {
-      const r = await fetch(EXAMPLE_FILE);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const text   = await r.text();
+      const [rXml, rCsv] = await Promise.all([fetch(EXAMPLE_FILE), fetch(EXAMPLE_CSV)]);
+      if (!rXml.ok) throw new Error(`HTTP ${rXml.status}`);
+      const text   = await rXml.text();
       const policy = XACMLParser.parse(text, EXAMPLE_NAME);
       policy.rawXml = text;
       invalidateValidationCache(EXAMPLE_NAME);
       getOrComputeValidation(EXAMPLE_NAME, text);
+      if (rCsv.ok) {
+        const csvText = await rCsv.text();
+        loadMappingIntoApp(EXAMPLE_CSV_NAME, csvText);
+      }
       const idx = UIState.addOrReplace(policy);
       await switchTab('viz');
       refreshSidebar();

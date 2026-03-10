@@ -15,6 +15,11 @@ Die **Mapping-CSV** übersetzt technische XACML-URIs in lesbare Labels, Beschrei
 type;id;label;description;color
 ```
 
+<div class="kb-download-box">
+  <span class="kb-download-label">Vollständige Referenzdatei herunterladen:</span>
+  <a class="kb-download-btn" href="data/mapping.csv" download="mapping.csv">⬇ mapping.csv</a>
+</div>
+
 ---
 
 ## Spalten

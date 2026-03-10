@@ -1077,6 +1077,37 @@ footer a:hover { opacity: 1; text-decoration: none; }
 .guide-acc-body { border-top: 1px solid var(--border); }
 .guide-section-inner { padding: 24px 32px 32px; }
 
+/* ── KB download button ── */
+.kb-download-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.kb-download-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.kb-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.kb-download-btn:hover { opacity: 0.85; }
+
 /* ── Guide back-to-top ── */
 .guide-back-top {
   position: fixed;
