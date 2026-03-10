@@ -612,6 +612,7 @@ const App = (() => {
       `<div class="val-summary-wrap">`
       + `<div class="summary-row">`
       + `<span class="summary-label">Validierung</span>`
+      + `<button class="val-info-btn" onclick="App.openKbSection('kb-validation')" title="Validierungsregeln erklärt (Knowledge Base)" aria-label="Validierungsregeln erklärt">&#x2139;</button>`
       + `<button class="val-badge${hasError ? ' val-badge--error' : ''}" id="val-badge-btn"`
       + ` onclick="App.toggleValidationPanel()" aria-expanded="false">`
       + badgeLabel + ` <span class="val-badge-chevron">\u25be</span>`
@@ -620,6 +621,10 @@ const App = (() => {
       + checks + warnings + fixBtn
       + `</div></div>`
     );
+  }
+
+  function openKbSection(id) {
+    switchTab('kb').then(() => KnowledgeBase.openSection(id, true));
   }
 
   function toggleValidationPanel() {
@@ -1212,8 +1217,13 @@ const App = (() => {
 
   function validateXmlInline(xmlString) {
     const statusEl = document.getElementById('editorValidationStatus');
+    const infoBtn  = document.getElementById('editorValidationInfoBtn');
     if (!statusEl) return;
-    if (!xmlString.trim()) { statusEl.textContent = ''; return; }
+    if (!xmlString.trim()) {
+      statusEl.textContent = '';
+      if (infoBtn) infoBtn.style.display = 'none';
+      return;
+    }
     const result = validatePolicy(xmlString);
     if (!result.valid) {
       const e = result.errors[0];
@@ -1223,6 +1233,7 @@ const App = (() => {
       statusEl.textContent = `\u2705 ${result.version || 'G\u00fcltiges XML'}`;
       statusEl.style.color = '#22c55e';
     }
+    if (infoBtn) infoBtn.style.display = 'inline-flex';
   }
 
   function showEditorError(msg) {
@@ -1387,7 +1398,8 @@ const App = (() => {
     handleReset, confirmReset, cancelReset, loadPolicyIntoEditor,
     handlePolicyEdit, handlePolicyDelete, confirmPolicyDelete, cancelPolicyDelete,
     restoreMappingsOnStartup, clearAllMappings,
-    toggleValidationPanel, fixPolicyInEditor
+    toggleValidationPanel, fixPolicyInEditor,
+    openKbSection
   };
 })();
 

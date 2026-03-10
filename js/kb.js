@@ -5,6 +5,7 @@ import { parseMarkdown } from './markdown.js';
 const SECTIONS = [
   { id: 'kb-mapping-csv',     title: '1. Mapping-CSV',     file: 'content/kb-01-mapping-csv.md' },
   { id: 'kb-enforcement-csv', title: '2. Enforcement-CSV', file: 'content/kb-02-enforcement-csv.md' },
+  { id: 'kb-validation',      title: '3. Validierungsregeln', file: 'content/kb-03-validation.md' },
 ];
 
 const KnowledgeBase = (() => {
