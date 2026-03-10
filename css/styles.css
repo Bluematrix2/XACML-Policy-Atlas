@@ -1756,18 +1756,89 @@ footer a:hover { opacity: 1; text-decoration: none; }
   transition: background 0.1s;
 }
 .editor-confirm-no:hover { background: var(--acc-hdr-hover); }
-.editor-status-bar {
+/* Validation status inline in toolbar */
+.editor-val-status {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-left: 2px;
+}
+
+/* Error bar (only visible on parse/operation errors) */
+.editor-error-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 12px 6px;
-  font-size: 12px;
-  flex-wrap: wrap;
-  min-height: 24px;
+  gap: 8px;
+  padding: 4px 12px 5px;
+  border-top: 1px solid rgba(239,68,68,.3);
+  background: rgba(239,68,68,.06);
 }
 .editor-error-msg {
   color: #ef4444;
   font-size: 12px;
+}
+
+/* ── Editor search bar ── */
+.editor-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.editor-search-icon {
+  color: var(--text-muted);
+  font-size: 15px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.editor-search-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.editor-search-input:focus { border-color: var(--accent); }
+.editor-search-input::-webkit-search-cancel-button { display: none; }
+.editor-search-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 56px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.editor-search-count--none { color: #ef4444; }
+.editor-search-nav {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  flex-shrink: 0;
+}
+.editor-search-nav:hover { background: var(--acc-hdr-hover); border-color: var(--accent); color: var(--accent); }
+.editor-search-nav:disabled { opacity: 0.35; cursor: default; }
+
+/* CodeMirror search match highlight */
+.cm-search-match {
+  background: rgba(251, 191, 36, 0.35);
+  border-radius: 2px;
+}
+[data-theme="dark"] .cm-search-match {
+  background: rgba(251, 191, 36, 0.25);
 }
 
 /* ── CodeMirror container ── */

@@ -90,6 +90,8 @@
           <button class="editor-btn" onclick="App.handleBeautify()">&#x2728; Beautify</button>
           <button class="editor-btn" onclick="App.handleDownload()">&#x2B07; Als XML herunterladen</button>
           <button class="editor-btn editor-btn-reset" onclick="App.handleReset()">&#x21BA; Zur&#252;cksetzen</button>
+          <span id="editorValidationStatus" class="editor-val-status"></span>
+          <button class="val-info-btn" id="editorValidationInfoBtn" style="display:none" onclick="App.openKbSection('kb-validation')" title="Validierungsregeln erkl&#228;rt (Knowledge Base)" aria-label="Validierungsregeln erkl&#228;rt">&#x2139;</button>
           <span id="editorDirtyIndicator" class="editor-dirty" style="display:none">&#x25CF; Ungespeicherte &#196;nderungen</span>
         </div>
         <div class="editor-reset-confirm" id="editorResetConfirm" style="display:none">
@@ -97,11 +99,17 @@
           <button class="editor-confirm-yes" onclick="App.confirmReset()">Ja</button>
           <button class="editor-confirm-no" onclick="App.cancelReset()">Abbrechen</button>
         </div>
-        <div class="editor-status-bar">
-          <span id="editorValidationStatus"></span>
-          <button class="val-info-btn" id="editorValidationInfoBtn" style="display:none" onclick="App.openKbSection('kb-validation')" title="Validierungsregeln erklärt (Knowledge Base)" aria-label="Validierungsregeln erklärt">&#x2139;</button>
-          <span id="editorErrorMsg" class="editor-error-msg" style="display:none"></span>
+        <div class="editor-error-bar" id="editor-error-bar" style="display:none">
+          <span id="editorErrorMsg" class="editor-error-msg"></span>
         </div>
+      </div>
+      <div class="editor-search-bar" id="editor-search-bar">
+        <span class="editor-search-icon">&#x2315;</span>
+        <input type="search" id="editor-search-input" class="editor-search-input"
+               placeholder="Im Editor suchen&#x2026;" autocomplete="off" spellcheck="false">
+        <span class="editor-search-count" id="editor-search-count"></span>
+        <button class="editor-search-nav" id="editor-search-prev" title="Vorheriges Ergebnis" aria-label="Vorheriges Ergebnis">&#x2191;</button>
+        <button class="editor-search-nav" id="editor-search-next" title="N&#228;chstes Ergebnis" aria-label="N&#228;chstes Ergebnis">&#x2193;</button>
       </div>
       <div class="editor-cm-wrap">
         <textarea id="xmlEditorTextarea"></textarea>
@@ -142,6 +150,8 @@
   <a href="https://florian-puschmann.de?utm_source=policy_atlas&utm_medium=footer" target="_blank" rel="noopener noreferrer">&#x1F310; Crafted by Florian Puschmann</a>
   <span class="footer-sep">•</span>
   <a href="https://florian-puschmann.de/impressum?utm_source=policy_atlas&utm_medium=footer" target="_blank" rel="noopener noreferrer">&#x2696;&#xFE0F; Impressum</a>
+  <span class="footer-sep">•</span>
+  <a href="https://florian-puschmann.de/datenschutzerklaerung-eu/?utm_source=policy_atlas&utm_medium=footer" target="_blank" rel="noopener noreferrer">&#x2696;&#xFE0F; Datenschutz</a>
   <span class="footer-sep">•</span>
   <a href="https://github.com/Bluematrix2/XACML-Policy-Atlas" target="_blank" rel="noopener noreferrer">
     <svg class="footer-icon" viewBox="0 0 16 16" aria-hidden="true">

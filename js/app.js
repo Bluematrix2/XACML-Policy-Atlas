@@ -1173,6 +1173,76 @@ const App = (() => {
   let editor = null;
   let _editorInitialized = false;
 
+  // ── Editor search state ──
+  const _search = { query: '', marks: [], results: [], index: -1 };
+
+  function _searchClear() {
+    _search.marks.forEach(m => m.clear());
+    _search.marks = [];
+    _search.results = [];
+    _search.index = -1;
+    const countEl = document.getElementById('editor-search-count');
+    if (countEl) { countEl.textContent = ''; countEl.className = 'editor-search-count'; }
+    _searchUpdateNav();
+  }
+
+  function _searchRun(query) {
+    _searchClear();
+    _search.query = query;
+    if (!query || !editor) return;
+
+    const content = editor.getValue();
+    const lower   = content.toLowerCase();
+    const lq      = query.toLowerCase();
+    let pos = 0;
+
+    while (true) {
+      const idx = lower.indexOf(lq, pos);
+      if (idx === -1) break;
+      _search.results.push({
+        from: editor.posFromIndex(idx),
+        to:   editor.posFromIndex(idx + query.length)
+      });
+      pos = idx + query.length;
+    }
+
+    _search.marks = _search.results.map(({ from, to }) =>
+      editor.markText(from, to, { className: 'cm-search-match' })
+    );
+
+    if (_search.results.length > 0) { _search.index = 0; _searchScrollTo(0); }
+    _searchUpdateCount();
+    _searchUpdateNav();
+  }
+
+  function _searchScrollTo(idx) {
+    if (!_search.results.length || !editor) return;
+    _search.index = ((idx % _search.results.length) + _search.results.length) % _search.results.length;
+    const { from, to } = _search.results[_search.index];
+    editor.setSelection(from, to);
+    editor.scrollIntoView({ from, to }, 80);
+    _searchUpdateCount();
+    _searchUpdateNav();
+  }
+
+  function _searchUpdateCount() {
+    const countEl = document.getElementById('editor-search-count');
+    if (!countEl) return;
+    const n = _search.results.length;
+    const i = _search.index;
+    if (!_search.query)         { countEl.textContent = ''; countEl.className = 'editor-search-count'; }
+    else if (n === 0)           { countEl.textContent = '0 Treffer'; countEl.className = 'editor-search-count editor-search-count--none'; }
+    else                        { countEl.textContent = `${i + 1} / ${n}`; countEl.className = 'editor-search-count'; }
+  }
+
+  function _searchUpdateNav() {
+    const prev = document.getElementById('editor-search-prev');
+    const next = document.getElementById('editor-search-next');
+    const off  = _search.results.length === 0;
+    if (prev) prev.disabled = off;
+    if (next) next.disabled = off;
+  }
+
   function debounce(fn, delay) {
     let timer;
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
@@ -1208,7 +1278,32 @@ const App = (() => {
       updateDirtyIndicator();
       validateXmlInline(current);
       refreshSidebar();
+      // Re-run search to keep highlights in sync with changed content
+      if (_search.query) _searchRun(_search.query);
     }, 500));
+
+    // Ctrl+F / Cmd+F: focus search bar
+    editor.addKeyMap({
+      'Ctrl-F': () => { const inp = document.getElementById('editor-search-input'); if (inp) { inp.focus(); inp.select(); } },
+      'Cmd-F':  () => { const inp = document.getElementById('editor-search-input'); if (inp) { inp.focus(); inp.select(); } },
+    });
+
+    // Search bar event wiring
+    const searchInput = document.getElementById('editor-search-input');
+    const searchPrev  = document.getElementById('editor-search-prev');
+    const searchNext  = document.getElementById('editor-search-next');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', () => _searchRun(searchInput.value));
+      searchInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); _searchScrollTo(_search.index + (e.shiftKey ? -1 : 1)); }
+        if (e.key === 'Escape') { editor.focus(); }
+      });
+    }
+    if (searchPrev) searchPrev.addEventListener('click', () => _searchScrollTo(_search.index - 1));
+    if (searchNext) searchNext.addEventListener('click', () => _searchScrollTo(_search.index + 1));
+
+    _searchUpdateNav();
   }
 
   function switchContentTab(tab) {
@@ -1270,13 +1365,17 @@ const App = (() => {
   }
 
   function showEditorError(msg) {
-    const el = document.getElementById('editorErrorMsg');
-    if (el) { el.textContent = msg; el.style.display = 'inline'; }
+    const el  = document.getElementById('editorErrorMsg');
+    const bar = document.getElementById('editor-error-bar');
+    if (el)  { el.textContent = msg; }
+    if (bar) { bar.style.display = 'flex'; }
   }
 
   function hideEditorError() {
-    const el = document.getElementById('editorErrorMsg');
-    if (el) { el.style.display = 'none'; el.textContent = ''; }
+    const el  = document.getElementById('editorErrorMsg');
+    const bar = document.getElementById('editor-error-bar');
+    if (el)  { el.textContent = ''; }
+    if (bar) { bar.style.display = 'none'; }
   }
 
   function beautifyXml(xmlString) {
@@ -1380,10 +1479,14 @@ const App = (() => {
     switchContentTab('xml-editor');
     const contentToLoad = savedDirty || xmlContent;
     setTimeout(() => {
+      _searchClear();
       editorSetValue(contentToLoad);
       updateDirtyIndicator();
       validateXmlInline(contentToLoad);
       editor && editor.refresh();
+      // Re-apply active search query to new content
+      const inp = document.getElementById('editor-search-input');
+      if (inp && inp.value) _searchRun(inp.value);
     }, 0);
   }
 
