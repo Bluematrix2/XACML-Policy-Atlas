@@ -176,10 +176,16 @@
       <button class="modal-close" onclick="App.closeImportModal()" aria-label="Dialog schlie&szlig;en">&#x2715;</button>
     </div>
     <div class="modal-tabs">
-      <button class="modal-tab active" id="mtab-file" onclick="App.switchImportTab('file')">&#x1F4C1; Datei hochladen</button>
-      <button class="modal-tab" id="mtab-paste" onclick="App.switchImportTab('paste')">&#x1F4CB; XML einf&uuml;gen</button>
+      <button class="modal-tab active" id="mtab-paste" onclick="App.switchImportTab('paste')">&#x1F4CB; XML einf&uuml;gen</button>
+      <button class="modal-tab" id="mtab-file" onclick="App.switchImportTab('file')">&#x1F4C1; Datei hochladen</button>
     </div>
-    <div id="mtab-file-body" class="modal-tab-body">
+    <div id="mtab-paste-body" class="modal-tab-body">
+      <textarea class="import-textarea" id="import-textarea" rows="18"
+        placeholder="XACML-Policy hier einf&#252;gen...&#10;&#10;Beispiel:&#10;&lt;PolicySet xmlns=&quot;urn:oasis:names:tc:xacml:3.0:core:schema:wd-17&quot; ...&gt;&#10;  ...&#10;&lt;/PolicySet&gt;"></textarea>
+      <div class="import-error" id="import-paste-error" style="display:none"></div>
+      <button class="import-load-btn" onclick="App.importFromPaste()">&#x1F4E5; Laden</button>
+    </div>
+    <div id="mtab-file-body" class="modal-tab-body" style="display:none">
       <div class="import-dropzone" id="import-drop"
            ondragover="App.importDragOver(event)"
            ondragleave="App.importDragLeave(event)"
@@ -191,12 +197,6 @@
         <input type="file" id="import-file-input" accept="application/xml,text/xml,.xml" multiple style="display:none" onchange="App.importFromFiles(this)">
       </div>
       <div class="import-error" id="import-file-error" style="display:none"></div>
-    </div>
-    <div id="mtab-paste-body" class="modal-tab-body" style="display:none">
-      <textarea class="import-textarea" id="import-textarea" rows="18"
-        placeholder="XACML-Policy hier einf&#252;gen...&#10;&#10;Beispiel:&#10;&lt;PolicySet xmlns=&quot;urn:oasis:names:tc:xacml:3.0:core:schema:wd-17&quot; ...&gt;&#10;  ...&#10;&lt;/PolicySet&gt;"></textarea>
-      <div class="import-error" id="import-paste-error" style="display:none"></div>
-      <button class="import-load-btn" onclick="App.importFromPaste()">&#x1F4E5; Laden</button>
     </div>
   </div>
 </div>
