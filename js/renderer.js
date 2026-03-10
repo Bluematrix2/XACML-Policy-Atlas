@@ -353,7 +353,7 @@ const TreeRenderer = (() => {
       html += visible.map(renderResChip).join('');
 
       if (hidden.length > 0) {
-        html += `<span class="summary-chip" id="${togId}" style="cursor:pointer;color:#3949ab;border-color:#9fa8da"`
+        html += `<span class="summary-chip summary-chip--more" id="${togId}"`
               + ` onclick="document.querySelectorAll('.${togId}').forEach(e=>e.style.display='inline-flex');document.getElementById('${togId}').style.display='none'"`
               + `>+${hidden.length} weitere</span>`;
         html += hidden.map(e => {

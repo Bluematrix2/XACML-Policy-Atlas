@@ -165,8 +165,6 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; fo
   display: flex;
   overflow: hidden;
 }
-.sb-permit { background: #4CAF50; }
-.sb-deny   { background: #F44336; }
 .sb-empty  { padding: 16px 12px; font-size: 13px; color: var(--text-muted); }
 .sb-dirty-dot { color: #ef4444; font-size: 10px; vertical-align: middle; margin-left: 4px; }
 
@@ -547,6 +545,17 @@ a.chip.fhir-chip:hover {
   padding: 2px 9px;
   font-size: 13px;
   color: var(--text-primary);
+}
+.summary-chip--more {
+  cursor: pointer;
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  font-weight: 600;
+}
+.summary-chip--more:hover {
+  background: var(--accent);
+  color: #fff;
 }
 .star-hint {
   background: var(--condition-bg);

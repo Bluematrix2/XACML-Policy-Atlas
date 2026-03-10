@@ -776,7 +776,6 @@ const App = (() => {
       const denyCount   = p.rules.filter(r => r.effect === 'Deny').length;
       const total       = p.rules.length;
       const pPct        = total > 0 ? (permitCount / total * 100).toFixed(1) : 0;
-      const dPct        = total > 0 ? (denyCount   / total * 100).toFixed(1) : 0;
       const shortName   = p.filename.replace(/\.xml$/i, '');
       const confirming  = _confirmingDelete.has(i);
 
@@ -800,10 +799,7 @@ const App = (() => {
            + (hasDirty ? `<span class="sb-dirty-dot" title="Ungespeicherte \u00c4nderungen">\u25CF</span>` : '')
            + `</div>`
            + `<div class="sb-meta">${total} Regel${total !== 1 ? 'n' : ''} &middot; ${permitCount}P&thinsp;/&thinsp;${denyCount}D</div>`
-           + `<div class="sb-bar">`
-           + `<div class="sb-permit" style="width:${pPct}%"></div>`
-           + `<div class="sb-deny" style="width:${dPct}%"></div>`
-           + `</div></div>`
+           + `<div class="sb-bar" style="background:linear-gradient(to right,#4CAF50 ${pPct}%,#F44336 ${pPct}%)"></div></div>`
            + `<div class="policy-actions">`
            + `<button class="sb-action-btn" onclick="event.stopPropagation();App.handlePolicyEdit(${i})" title="Bearbeiten" aria-label="Bearbeiten">&#x270F;&#xFE0F;</button>`
            + `<button class="sb-action-btn sb-action-delete" onclick="event.stopPropagation();App.handlePolicyDelete(${i})" title="Entfernen" aria-label="Entfernen">&#x1F5D1;</button>`
