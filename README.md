@@ -10,13 +10,15 @@ A **web-based tool** to visualize and explore **XACML policies**.
 
 ## Features
 
-- Visualize XACML **rules, policies, and effects** directly in your browser.  
-- Interactive: **hover nodes** to see conditions and effects.  
-- Supports **multiple policy files**.  
-- Includes a **XACML explanation/info page** to help understand policies.  
-- Clean, modern, **developer-friendly UI**.
-- Multiple **Validation Checks**.
-- XACML **Editor** with Beautify and **Validation**.
+- Visualize XACML **rules, policies, and effects** directly in your browser
+- Interactive: **hover nodes** to see conditions and effects
+- Supports **multiple policy files**
+- Includes a **XACML explanation/info page** to help understand policies
+- Clean, modern, **developer-friendly UI**
+- 24 **Validation Checks**
+- XACML **Editor** with Beautify and **Validation**
+- 100% local processing – no data upload
+- Dark and light mode
 
 ---
 
