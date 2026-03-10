@@ -1290,14 +1290,26 @@ const App = (() => {
 
     // Search bar event wiring
     const searchInput = document.getElementById('editor-search-input');
+    const searchClear = document.getElementById('editor-search-clear');
     const searchPrev  = document.getElementById('editor-search-prev');
     const searchNext  = document.getElementById('editor-search-next');
 
     if (searchInput) {
-      searchInput.addEventListener('input', () => _searchRun(searchInput.value));
+      searchInput.addEventListener('input', () => {
+        _searchRun(searchInput.value);
+        if (searchClear) searchClear.style.display = searchInput.value ? 'flex' : 'none';
+      });
       searchInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); _searchScrollTo(_search.index + (e.shiftKey ? -1 : 1)); }
         if (e.key === 'Escape') { editor.focus(); }
+      });
+    }
+    if (searchClear) {
+      searchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        searchClear.style.display = 'none';
+        _searchClear();
+        searchInput.focus();
       });
     }
     if (searchPrev) searchPrev.addEventListener('click', () => _searchScrollTo(_search.index - 1));
@@ -1480,6 +1492,8 @@ const App = (() => {
     const contentToLoad = savedDirty || xmlContent;
     setTimeout(() => {
       _searchClear();
+      const clr = document.getElementById('editor-search-clear');
+      if (clr) clr.style.display = 'none';
       editorSetValue(contentToLoad);
       updateDirtyIndicator();
       validateXmlInline(contentToLoad);

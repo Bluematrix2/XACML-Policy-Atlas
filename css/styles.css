@@ -1778,41 +1778,22 @@ footer a:hover { opacity: 1; text-decoration: none; }
   font-size: 12px;
 }
 
-/* ── Editor search bar ── */
+/* ── Editor search bar (matches visualizer search bar design) ── */
 .editor-search-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  background: var(--bg-secondary);
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.editor-search-icon {
-  color: var(--text-muted);
-  font-size: 15px;
-  flex-shrink: 0;
-  line-height: 1;
-}
-.editor-search-input {
-  flex: 1;
-  min-width: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 13px;
-  color: var(--text-primary);
-  outline: none;
-  transition: border-color 0.15s;
-}
-.editor-search-input:focus { border-color: var(--accent); }
-.editor-search-input::-webkit-search-cancel-button { display: none; }
+/* .search-input-wrap / .search-input / .search-clear-btn are reused from the visualizer */
 .editor-search-count {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   white-space: nowrap;
-  min-width: 56px;
+  min-width: 58px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -1821,7 +1802,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 3px 8px;
+  padding: 6px 11px;
   cursor: pointer;
   font-size: 13px;
   color: var(--text-secondary);

@@ -104,9 +104,13 @@
         </div>
       </div>
       <div class="editor-search-bar" id="editor-search-bar">
-        <span class="editor-search-icon">&#x2315;</span>
-        <input type="search" id="editor-search-input" class="editor-search-input"
-               placeholder="Im Editor suchen&#x2026;" autocomplete="off" spellcheck="false">
+        <div class="search-input-wrap">
+          <input class="search-input" id="editor-search-input"
+                 type="text" placeholder="&#x1F50D; Im Editor suchen&#x2026;"
+                 autocomplete="off" spellcheck="false">
+          <button class="search-clear-btn" id="editor-search-clear"
+                  style="display:none" title="Suche leeren" aria-label="Suche leeren">&#x2715;</button>
+        </div>
         <span class="editor-search-count" id="editor-search-count"></span>
         <button class="editor-search-nav" id="editor-search-prev" title="Vorheriges Ergebnis" aria-label="Vorheriges Ergebnis">&#x2191;</button>
         <button class="editor-search-nav" id="editor-search-next" title="N&#228;chstes Ergebnis" aria-label="N&#228;chstes Ergebnis">&#x2193;</button>
