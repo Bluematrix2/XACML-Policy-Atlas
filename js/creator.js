@@ -125,8 +125,20 @@ const PolicyCreator = (() => {
     container.innerHTML = `
       <div class="creator-wrap">
         <div class="creator-header">
-          <h2 class="creator-title">&#x1F6E0;&#xFE0F; Policy Creator <span class="alpha-badge">ALPHA</span></h2>
+          <div class="creator-header-row">
+            <h2 class="creator-title">&#x1F6E0;&#xFE0F; Policy Creator <span class="alpha-badge">ALPHA</span></h2>
+            <button class="creator-reset-btn" id="creator-reset-btn"
+                    title="Alles zur&#252;cksetzen und neu beginnen"
+                    aria-label="Creator zur&#252;cksetzen">
+              &#x21BA; Zur&#252;cksetzen
+            </button>
+          </div>
           <p class="creator-subtitle">Erstelle eine XACML-Policy Schritt f&#252;r Schritt &#8212; ohne XML-Kenntnisse.</p>
+          <div class="creator-reset-confirm" id="creator-reset-confirm" style="display:none">
+            <span class="creator-reset-confirm-text">Alle Eingaben verwerfen und neu beginnen?</span>
+            <button class="creator-confirm-yes" id="creator-reset-yes">Ja, zur&#252;cksetzen</button>
+            <button class="creator-confirm-no"  id="creator-reset-no">Abbrechen</button>
+          </div>
         </div>
         <div class="creator-main">
           <div class="creator-left">
@@ -448,6 +460,10 @@ const PolicyCreator = (() => {
       return;
     }
 
+    if (t.id === 'creator-reset-btn' || t.closest('#creator-reset-btn')) { _showResetConfirm(); return; }
+    if (t.id === 'creator-reset-yes' || t.closest('#creator-reset-yes')) { _doReset(); return; }
+    if (t.id === 'creator-reset-no'  || t.closest('#creator-reset-no'))  { _hideResetConfirm(); return; }
+
     if (t.id === 'creator-validate' || t.closest('#creator-validate')) { _doValidate(); return; }
     if (t.id === 'creator-viz'      || t.closest('#creator-viz'))      { _loadIntoVisualizer(); return; }
     if (t.id === 'creator-editor'   || t.closest('#creator-editor'))   { _openInEditor(); return; }
@@ -607,6 +623,27 @@ const PolicyCreator = (() => {
     a.download = name;
     a.click();
     URL.revokeObjectURL(a.href);
+  }
+
+  function _showResetConfirm() {
+    const confirmEl = document.getElementById('creator-reset-confirm');
+    const resetBtn  = document.getElementById('creator-reset-btn');
+    if (confirmEl) confirmEl.style.display = '';
+    if (resetBtn)  resetBtn.style.display  = 'none';
+  }
+
+  function _hideResetConfirm() {
+    const confirmEl = document.getElementById('creator-reset-confirm');
+    const resetBtn  = document.getElementById('creator-reset-btn');
+    if (confirmEl) confirmEl.style.display = 'none';
+    if (resetBtn)  resetBtn.style.display  = '';
+  }
+
+  function _doReset() {
+    _state = _defaultState();
+    _saveState();
+    _hideResetConfirm();
+    _refresh();
   }
 
   function _generateUuid() {
