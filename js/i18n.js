@@ -278,7 +278,7 @@ const TRANSLATIONS = {
     'kb.s3.title': '3. Validierungsregeln',
 
     // ── Creator tab ──
-    'tab.creator': '🛠️ Creator',
+    'tab.creator': '🛠️ Creator <span class="alpha-badge">ALPHA</span>',
 
     // ── Creator — shell ──
     'creator.subtitle':       'Erstelle eine XACML-Policy Schritt für Schritt — ohne XML-Kenntnisse.',
