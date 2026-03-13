@@ -55,28 +55,41 @@ const PolicyCreator = (() => {
 
   // ── State ──────────────────────────────────────────────────────────────
 
+  function _defaultMatchRow(cat) {
+    return { cat: cat || 'subject', attributeId: ATTR_ID_OPTIONS[cat || 'subject'][0].value, value: '' };
+  }
+
   function _defaultTarget() {
     return {
-      combineOp: 'AND',
-      matches: [
-        { cat: 'subject',  attributeId: ATTR_ID_OPTIONS.subject[0].value,  value: '' },
-        { cat: 'resource', attributeId: ATTR_ID_OPTIONS.resource[0].value, value: '' },
-        { cat: 'action',   attributeId: ATTR_ID_OPTIONS.action[0].value,   value: '' },
-      ],
+      groups: [{
+        matches: [
+          _defaultMatchRow('subject'),
+          _defaultMatchRow('resource'),
+          _defaultMatchRow('action'),
+        ],
+      }],
     };
   }
 
   function _migrateTarget(t) {
     if (!t) return _defaultTarget();
-    if (Array.isArray(t.matches)) return t; // already new format
-    // Old format: { subject: {value, attributeId}, resource: {}, action: {} }
+    if (Array.isArray(t.groups)) return t; // already new format
+    if (Array.isArray(t.matches)) {
+      // Previous format: { combineOp, matches[] }
+      if (t.combineOp === 'OR') {
+        return { groups: t.matches.map(m => ({ matches: [m] })) };
+      }
+      return { groups: [{ matches: t.matches }] };
+    }
+    // Original flat format: { subject: {}, resource: {}, action: {} }
     return {
-      combineOp: 'AND',
-      matches: ['subject', 'resource', 'action'].map(cat => ({
-        cat,
-        attributeId: (t[cat] && t[cat].attributeId) || ATTR_ID_OPTIONS[cat][0].value,
-        value:       (t[cat] && t[cat].value)        || '',
-      })),
+      groups: [{
+        matches: ['subject', 'resource', 'action'].map(cat => ({
+          cat,
+          attributeId: (t[cat] && t[cat].attributeId) || ATTR_ID_OPTIONS[cat][0].value,
+          value:       (t[cat] && t[cat].value)        || '',
+        })),
+      }],
     };
   }
 
@@ -166,10 +179,10 @@ const PolicyCreator = (() => {
   }
 
   function _targetXml20(target, ind) {
-    if (!target || !target.matches) return '';
-    const active = target.matches.filter(m => m.value.trim());
-    if (!active.length) return '';
-    const op = target.combineOp || 'AND';
+    if (!target || !Array.isArray(target.groups)) return '';
+    // Flatten all matches from all groups for XACML 2.0 (each match = separate element = OR within cat)
+    const allMatches = target.groups.flatMap(g => g.matches.filter(m => m.value.trim()));
+    if (!allMatches.length) return '';
     const i1 = ind, i2 = ind + '  ', i3 = ind + '    ', i4 = ind + '      ';
     const CAT_META = {
       subject:  { wrap: 'Subjects',  inner: 'Subject',  match: 'SubjectMatch',  des: 'SubjectAttributeDesignator' },
@@ -177,33 +190,21 @@ const PolicyCreator = (() => {
       action:   { wrap: 'Actions',   inner: 'Action',   match: 'ActionMatch',   des: 'ActionAttributeDesignator' },
     };
     const bycat = { subject: [], resource: [], action: [] };
-    for (const m of active) if (bycat[m.cat]) bycat[m.cat].push(m);
+    for (const m of allMatches) if (bycat[m.cat]) bycat[m.cat].push(m);
     const catParts = [];
     for (const cat of ['subject', 'resource', 'action']) {
       const ms = bycat[cat];
       if (!ms.length) continue;
       const meta = CAT_META[cat];
-      let innerHtml;
-      if (op === 'AND') {
-        const matchLines = ms.map(m => {
-          const aid = _escXml(m.attributeId || DEFAULT_ATTR_IDS[cat]);
-          return `${i3}<${meta.match} MatchId="${MATCH_ID_STR_EQ}">\n` +
-                 `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(m.value.trim())}</AttributeValue>\n` +
-                 `${i4}<${meta.des} AttributeId="${aid}" DataType="${DATA_TYPE_STRING}"/>\n` +
-                 `${i3}</${meta.match}>`;
-        }).join('\n');
-        innerHtml = `${i2}<${meta.inner}>\n${matchLines}\n${i2}</${meta.inner}>`;
-      } else {
-        innerHtml = ms.map(m => {
-          const aid = _escXml(m.attributeId || DEFAULT_ATTR_IDS[cat]);
-          return `${i2}<${meta.inner}>\n` +
-                 `${i3}<${meta.match} MatchId="${MATCH_ID_STR_EQ}">\n` +
-                 `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(m.value.trim())}</AttributeValue>\n` +
-                 `${i4}<${meta.des} AttributeId="${aid}" DataType="${DATA_TYPE_STRING}"/>\n` +
-                 `${i3}</${meta.match}>\n` +
-                 `${i2}</${meta.inner}>`;
-        }).join('\n');
-      }
+      const innerHtml = ms.map(m => {
+        const aid = _escXml(m.attributeId || DEFAULT_ATTR_IDS[cat]);
+        return `${i2}<${meta.inner}>\n` +
+               `${i3}<${meta.match} MatchId="${MATCH_ID_STR_EQ}">\n` +
+               `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(m.value.trim())}</AttributeValue>\n` +
+               `${i4}<${meta.des} AttributeId="${aid}" DataType="${DATA_TYPE_STRING}"/>\n` +
+               `${i3}</${meta.match}>\n` +
+               `${i2}</${meta.inner}>`;
+      }).join('\n');
       catParts.push(`${i1}<${meta.wrap}>\n${innerHtml}\n${i1}</${meta.wrap}>`);
     }
     if (!catParts.length) return '';
@@ -211,10 +212,9 @@ const PolicyCreator = (() => {
   }
 
   function _targetXml30(target, ind) {
-    if (!target || !target.matches) return '';
-    const active = target.matches.filter(m => m.value.trim());
-    if (!active.length) return '';
-    const op = target.combineOp || 'AND';
+    if (!target || !Array.isArray(target.groups)) return '';
+    const activeGroups = target.groups.filter(g => g.matches.some(m => m.value.trim()));
+    if (!activeGroups.length) return '';
     const i1 = ind + '  ', i2 = ind + '    ', i3 = ind + '      ', i4 = ind + '        ';
     const CAT_URI = {
       subject:  'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
@@ -229,13 +229,12 @@ const PolicyCreator = (() => {
              `${i4}<AttributeDesignator Category="${catU}" AttributeId="${aid}" DataType="${DATA_TYPE_STRING}" MustBePresent="false"/>\n` +
              `${i3}</Match>`;
     };
-    let allOfsHtml;
-    if (op === 'AND') {
-      allOfsHtml = `${i2}<AllOf>\n${active.map(matchXml).join('\n')}\n${i2}</AllOf>`;
-    } else {
-      allOfsHtml = active.map(m => `${i2}<AllOf>\n${matchXml(m)}\n${i2}</AllOf>`).join('\n');
-    }
-    return `${ind}<Target>\n${i1}<AnyOf>\n${allOfsHtml}\n${i1}</AnyOf>\n${ind}</Target>`;
+    // Each group → one <AllOf> (AND within group), all AllOf inside one <AnyOf> (OR between groups)
+    const allOfs = activeGroups.map(g => {
+      const lines = g.matches.filter(m => m.value.trim()).map(matchXml).join('\n');
+      return `${i2}<AllOf>\n${lines}\n${i2}</AllOf>`;
+    }).join('\n');
+    return `${ind}<Target>\n${i1}<AnyOf>\n${allOfs}\n${i1}</AnyOf>\n${ind}</Target>`;
   }
 
   function _ruleTargetXml20(target)   { return _targetXml20(target, '    '); }
@@ -524,9 +523,27 @@ const PolicyCreator = (() => {
       </div>`;
   }
 
+  function _targetMatchRowHtml(m, mi, gi, sa) {
+    const catOpts = ['subject', 'resource', 'action'].map(c =>
+      `<option value="${c}"${m.cat === c ? ' selected' : ''}>${esc(I18n.t(`creator.target.${c}`))}</option>`
+    ).join('');
+    const attrOpts = (ATTR_ID_OPTIONS[m.cat] || ATTR_ID_OPTIONS.subject).map(o =>
+      `<option value="${esc(o.value)}"${m.attributeId === o.value ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
+    ).join('');
+    return `<div class="creator-target-row" data-match-idx="${mi}">
+        <select class="creator-select creator-cat-select" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="cat">${catOpts}</select>
+        <select class="creator-select creator-attrId-select" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="attributeId">${attrOpts}</select>
+        <input class="creator-input" type="text" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="value"
+               placeholder="${esc(I18n.t(`creator.target.value.ph.${m.cat}`))}"
+               value="${esc(m.value)}" autocomplete="off">
+        <button class="creator-match-del-btn" data-action="del-match" ${sa} data-group-idx="${gi}" data-match-idx="${mi}"
+                title="${esc(I18n.t('creator.target.match.del.title'))}"
+                aria-label="${esc(I18n.t('creator.target.match.del.aria'))}">&#x2715;</button>
+      </div>`;
+  }
+
   function _targetSectionHtml(target, scope, ruleIdx) {
     const t  = target || _defaultTarget();
-    const op = t.combineOp || 'AND';
     const ri = ruleIdx !== undefined ? ruleIdx : '';
     const sa = scope === 'rule'
       ? `data-target-scope="rule" data-target-rule-idx="${ri}"`
@@ -534,23 +551,22 @@ const PolicyCreator = (() => {
     const labelKey = scope === 'policy' ? 'creator.ptarget.section' : 'creator.target.section';
     const hintKey  = scope === 'policy' ? 'creator.ptarget.hint'    : 'creator.target.hint';
 
-    const rowsHtml = t.matches.map((m, mi) => {
-      const catOpts = ['subject', 'resource', 'action'].map(c =>
-        `<option value="${c}"${m.cat === c ? ' selected' : ''}>${esc(I18n.t(`creator.target.${c}`))}</option>`
-      ).join('');
-      const attrOpts = (ATTR_ID_OPTIONS[m.cat] || ATTR_ID_OPTIONS.subject).map(o =>
-        `<option value="${esc(o.value)}"${m.attributeId === o.value ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
-      ).join('');
-      return `<div class="creator-target-row" data-match-idx="${mi}">
-          <select class="creator-select creator-cat-select" ${sa} data-match-idx="${mi}" data-match-prop="cat">${catOpts}</select>
-          <select class="creator-select creator-attrId-select" ${sa} data-match-idx="${mi}" data-match-prop="attributeId">${attrOpts}</select>
-          <input class="creator-input" type="text" ${sa} data-match-idx="${mi}" data-match-prop="value"
-                 placeholder="${esc(I18n.t(`creator.target.value.ph.${m.cat}`))}"
-                 value="${esc(m.value)}" autocomplete="off">
-          <button class="creator-match-del-btn" data-action="del-match" ${sa} data-match-idx="${mi}"
-                  title="${esc(I18n.t('creator.target.match.del.title'))}"
-                  aria-label="${esc(I18n.t('creator.target.match.del.aria'))}">&#x2715;</button>
-        </div>`;
+    const groups = t.groups || [];
+    const groupsHtml = groups.map((g, gi) => {
+      const rowsHtml = g.matches.map((m, mi) => _targetMatchRowHtml(m, mi, gi, sa)).join('');
+      const orSep = gi < groups.length - 1
+        ? `<div class="creator-target-or-sep">${esc(I18n.t('creator.target.op.or'))}</div>`
+        : '';
+      return `<div class="creator-target-group" data-group-idx="${gi}">
+          <div class="creator-target-group-hdr">
+            <span class="creator-target-group-num">${esc(I18n.t('creator.target.group.num', { n: gi + 1 }))}</span>
+            <button class="creator-match-del-btn" data-action="del-group" ${sa} data-group-idx="${gi}"
+                    title="${esc(I18n.t('creator.target.group.del.title'))}"
+                    aria-label="${esc(I18n.t('creator.target.group.del.aria'))}">&#x2715;</button>
+          </div>
+          <div class="creator-target-matches">${rowsHtml}</div>
+          <button class="creator-add-match-btn" data-action="add-match" ${sa} data-group-idx="${gi}">${esc(I18n.t('creator.target.match.add'))}</button>
+        </div>${orSep}`;
     }).join('');
 
     return `
@@ -559,15 +575,8 @@ const PolicyCreator = (() => {
             <span class="creator-target-hdr-label">&#x1F3AF; ${esc(I18n.t(labelKey))}</span>
             <span class="creator-hint">${esc(I18n.t(hintKey))}</span>
           </div>
-          <div class="creator-target-op-row">
-            <span class="creator-target-op-label">${esc(I18n.t('creator.target.op.label'))}</span>
-            <div class="creator-op-toggle">
-              <button class="creator-op-btn${op === 'AND' ? ' active' : ''}" data-action="target-op" ${sa} data-op="AND">${esc(I18n.t('creator.target.op.and'))}</button>
-              <button class="creator-op-btn${op === 'OR'  ? ' active' : ''}" data-action="target-op" ${sa} data-op="OR">${esc(I18n.t('creator.target.op.or'))}</button>
-            </div>
-          </div>
-          <div class="creator-target-matches">${rowsHtml}</div>
-          <button class="creator-add-match-btn" data-action="add-match" ${sa}>${esc(I18n.t('creator.target.match.add'))}</button>
+          <div class="creator-target-groups">${groupsHtml}</div>
+          <button class="creator-add-group-btn" data-action="add-group" ${sa}>${esc(I18n.t('creator.target.group.add'))}</button>
         </div>`;
   }
 
@@ -633,10 +642,13 @@ const PolicyCreator = (() => {
 
     const ruleRows = p.rules.map(r => {
       const targetParts = [];
-      if (r.target && Array.isArray(r.target.matches)) {
-        r.target.matches.filter(m => m.value.trim()).forEach(m =>
-          targetParts.push(`${I18n.t(`creator.target.${m.cat}`)}: ${m.value.trim()}`)
-        );
+      if (r.target && Array.isArray(r.target.groups)) {
+        r.target.groups.forEach((g, gi) => {
+          const active = g.matches.filter(m => m.value.trim());
+          if (!active.length) return;
+          const parts = active.map(m => `${I18n.t(`creator.target.${m.cat}`)}: ${m.value.trim()}`).join(' & ');
+          targetParts.push(gi > 0 ? `${I18n.t('creator.target.op.or')} ${parts}` : parts);
+        });
       }
       return `<tr>
         <td>${esc(r.id)}</td>
@@ -672,14 +684,14 @@ const PolicyCreator = (() => {
             </div>
             ${(() => {
               const pt = p.target;
-              if (!pt || !Array.isArray(pt.matches)) return '';
-              const active = pt.matches.filter(m => m.value.trim());
-              if (!active.length) return '';
-              const parts = active.map(m => `${I18n.t(`creator.target.${m.cat}`)}: ${m.value.trim()}`);
-              const opLabel = pt.combineOp === 'OR' ? ` [${I18n.t('creator.target.op.or')}]` : ` [${I18n.t('creator.target.op.and')}]`;
+              if (!pt || !Array.isArray(pt.groups)) return '';
+              const groupParts = pt.groups.map(g =>
+                g.matches.filter(m => m.value.trim()).map(m => `${I18n.t(`creator.target.${m.cat}`)}: ${m.value.trim()}`).join(' & ')
+              ).filter(s => s);
+              if (!groupParts.length) return '';
               return `<div class="creator-summary-row">
               <span class="creator-summary-key">${esc(I18n.t('creator.summary.ptarget'))}</span>
-              <span class="creator-summary-val">${esc(parts.join(' · '))}${esc(opLabel)}</span>
+              <span class="creator-summary-val">${esc(groupParts.join(` ${I18n.t('creator.target.op.or')} `))}</span>
             </div>`;
             })()}
           </div>
@@ -736,7 +748,7 @@ const PolicyCreator = (() => {
     if (addMatchBtn) {
       const scope = addMatchBtn.dataset.targetScope;
       const rIdx  = scope === 'rule' ? parseInt(addMatchBtn.dataset.targetRuleIdx, 10) : undefined;
-      _addMatch(scope, rIdx);
+      _addMatch(scope, rIdx, parseInt(addMatchBtn.dataset.groupIdx, 10));
       return;
     }
 
@@ -744,15 +756,23 @@ const PolicyCreator = (() => {
     if (delMatchBtn) {
       const scope = delMatchBtn.dataset.targetScope;
       const rIdx  = scope === 'rule' ? parseInt(delMatchBtn.dataset.targetRuleIdx, 10) : undefined;
-      _deleteMatch(scope, rIdx, parseInt(delMatchBtn.dataset.matchIdx, 10));
+      _deleteMatch(scope, rIdx, parseInt(delMatchBtn.dataset.groupIdx, 10), parseInt(delMatchBtn.dataset.matchIdx, 10));
       return;
     }
 
-    const opBtn = t.closest('[data-action="target-op"]');
-    if (opBtn) {
-      const scope = opBtn.dataset.targetScope;
-      const rIdx  = scope === 'rule' ? parseInt(opBtn.dataset.targetRuleIdx, 10) : undefined;
-      _setTargetOp(scope, rIdx, opBtn.dataset.op);
+    const addGroupBtn = t.closest('[data-action="add-group"]');
+    if (addGroupBtn) {
+      const scope = addGroupBtn.dataset.targetScope;
+      const rIdx  = scope === 'rule' ? parseInt(addGroupBtn.dataset.targetRuleIdx, 10) : undefined;
+      _addGroup(scope, rIdx);
+      return;
+    }
+
+    const delGroupBtn = t.closest('[data-action="del-group"]');
+    if (delGroupBtn) {
+      const scope = delGroupBtn.dataset.targetScope;
+      const rIdx  = scope === 'rule' ? parseInt(delGroupBtn.dataset.targetRuleIdx, 10) : undefined;
+      _deleteGroup(scope, rIdx, parseInt(delGroupBtn.dataset.groupIdx, 10));
       return;
     }
 
@@ -773,37 +793,38 @@ const PolicyCreator = (() => {
     return null;
   }
 
-  function _addMatch(scope, ruleIdx) {
+  function _addMatch(scope, ruleIdx, groupIdx) {
     const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
-    if (!target) return;
-    target.matches.push({ cat: 'subject', attributeId: ATTR_ID_OPTIONS.subject[0].value, value: '' });
+    if (!target || !target.groups[groupIdx]) return;
+    target.groups[groupIdx].matches.push(_defaultMatchRow('subject'));
     _saveState(); _schedulePreview();
     _reRenderTargetSection(scope, ruleIdx);
   }
 
-  function _deleteMatch(scope, ruleIdx, matchIdx) {
+  function _deleteMatch(scope, ruleIdx, groupIdx, matchIdx) {
     const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
-    if (!target || target.matches.length <= 1) return; // keep at least 1 row
-    target.matches.splice(matchIdx, 1);
+    if (!target || !target.groups[groupIdx]) return;
+    const g = target.groups[groupIdx];
+    if (g.matches.length <= 1) return; // keep at least 1 row per group
+    g.matches.splice(matchIdx, 1);
     _saveState(); _schedulePreview();
     _reRenderTargetSection(scope, ruleIdx);
   }
 
-  function _setTargetOp(scope, ruleIdx, op) {
+  function _addGroup(scope, ruleIdx) {
     const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
     if (!target) return;
-    target.combineOp = op;
+    target.groups.push({ matches: [_defaultMatchRow('subject')] });
     _saveState(); _schedulePreview();
-    // Update button active state in-place
-    const sa = scope === 'policy'
-      ? '[data-target-scope="policy"]'
-      : `[data-target-scope="rule"][data-target-rule-idx="${ruleIdx}"]`;
-    const section = document.querySelector(`.creator-target-section:has(${sa})`);
-    if (section) {
-      section.querySelectorAll('.creator-op-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.op === op);
-      });
-    }
+    _reRenderTargetSection(scope, ruleIdx);
+  }
+
+  function _deleteGroup(scope, ruleIdx, groupIdx) {
+    const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
+    if (!target || target.groups.length <= 1) return; // keep at least 1 group
+    target.groups.splice(groupIdx, 1);
+    _saveState(); _schedulePreview();
+    _reRenderTargetSection(scope, ruleIdx);
   }
 
   function _reRenderTargetSection(scope, ruleIdx) {
@@ -838,9 +859,10 @@ const PolicyCreator = (() => {
     }
     if (t.dataset.matchProp === 'value') {
       const target = _targetFromEl(t);
+      const gi = parseInt(t.dataset.groupIdx, 10);
       const mi = parseInt(t.dataset.matchIdx, 10);
-      if (target && target.matches[mi]) {
-        target.matches[mi].value = t.value;
+      if (target && target.groups[gi] && target.groups[gi].matches[mi]) {
+        target.groups[gi].matches[mi].value = t.value;
         _saveState(); _schedulePreview();
       }
     }
@@ -864,12 +886,12 @@ const PolicyCreator = (() => {
     const matchProp = t.dataset.matchProp;
     if (matchProp !== undefined) {
       const target = _targetFromEl(t);
+      const gi = parseInt(t.dataset.groupIdx, 10);
       const mi = parseInt(t.dataset.matchIdx, 10);
-      if (target && target.matches[mi]) {
-        target.matches[mi][matchProp] = t.value;
+      if (target && target.groups[gi] && target.groups[gi].matches[mi]) {
+        target.groups[gi].matches[mi][matchProp] = t.value;
         if (matchProp === 'cat') {
-          target.matches[mi].attributeId = ATTR_ID_OPTIONS[t.value][0].value;
-          // Update attrId select options in-place
+          target.groups[gi].matches[mi].attributeId = ATTR_ID_OPTIONS[t.value][0].value;
           const row = t.closest('.creator-target-row');
           if (row) {
             const attrSel = row.querySelector('.creator-attrId-select');

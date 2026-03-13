@@ -379,6 +379,10 @@ const TRANSLATIONS = {
     'creator.target.match.add':         '+ Bedingung hinzufügen',
     'creator.target.match.del.title':   'Bedingung entfernen',
     'creator.target.match.del.aria':    'Bedingung entfernen',
+    'creator.target.group.num':         'Gruppe {n}',
+    'creator.target.group.add':         '+ Gruppe hinzufügen (ODER)',
+    'creator.target.group.del.title':   'Gruppe entfernen',
+    'creator.target.group.del.aria':    'Gruppe entfernen',
 
     // ── Creator — nav & actions ──
     'creator.nav.back':          '← Zurück',
@@ -769,6 +773,10 @@ const TRANSLATIONS = {
     'creator.target.match.add':         '+ Add condition',
     'creator.target.match.del.title':   'Remove condition',
     'creator.target.match.del.aria':    'Remove condition',
+    'creator.target.group.num':         'Group {n}',
+    'creator.target.group.add':         '+ Add group (OR)',
+    'creator.target.group.del.title':   'Remove group',
+    'creator.target.group.del.aria':    'Remove group',
 
     // ── Creator — nav & actions ──
     'creator.nav.back':          '← Back',

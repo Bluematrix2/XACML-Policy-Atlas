@@ -2506,39 +2506,72 @@ footer a:hover { opacity: 1; text-decoration: none; }
   font-weight: 700;
   color: var(--text-secondary);
 }
-.creator-target-op-row {
+.creator-target-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.creator-target-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.creator-target-group-hdr {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
+  justify-content: space-between;
+  background: var(--acc-hdr-bg);
+  padding: 0.4rem var(--sp-3);
+  border-bottom: 1px solid var(--border);
 }
-.creator-target-op-label {
+.creator-target-group-num {
   font-size: 0.8125rem;
+  font-weight: 700;
   color: var(--text-secondary);
-  white-space: nowrap;
 }
-.creator-op-toggle {
-  display: flex;
+.creator-target-group .creator-target-matches {
+  padding: var(--sp-2) var(--sp-3);
+}
+.creator-target-group .creator-add-match-btn {
+  display: block;
+  margin: 0 var(--sp-3) var(--sp-2);
+}
+.creator-target-or-sep {
+  text-align: center;
+  padding: 0.4rem 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  position: relative;
+}
+.creator-target-or-sep::before,
+.creator-target-or-sep::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 2rem);
+  height: 1px;
+  background: var(--border);
+}
+.creator-target-or-sep::before { left: 0; }
+.creator-target-or-sep::after  { right: 0; }
+.creator-add-group-btn {
+  margin-top: var(--sp-2);
+  background: none;
+  border: 1px dashed var(--border);
   border-radius: var(--radius-pill);
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-.creator-op-btn {
-  background: var(--bg-card);
-  border: none;
-  border-right: 1px solid var(--border);
-  padding: 0.2rem 0.75rem;
+  padding: 0.3rem 0.9rem;
   font-size: 0.8125rem;
-  cursor: pointer;
   color: var(--text-secondary);
+  cursor: pointer;
   font-family: inherit;
-  line-height: 1.6;
-  transition: background 0.15s, color 0.15s;
+  transition: border-color 0.15s, color 0.15s;
 }
-.creator-op-btn:last-child { border-right: none; }
-.creator-op-btn.active {
-  background: var(--primary);
-  color: #fff;
-  font-weight: 600;
+.creator-add-group-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .creator-target-matches {
   display: flex;
