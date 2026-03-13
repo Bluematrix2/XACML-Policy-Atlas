@@ -2506,23 +2506,92 @@ footer a:hover { opacity: 1; text-decoration: none; }
   font-weight: 700;
   color: var(--text-secondary);
 }
-.creator-target-grid {
+.creator-target-op-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.creator-target-op-label {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.creator-op-toggle {
+  display: flex;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.creator-op-btn {
+  background: var(--bg-card);
+  border: none;
+  border-right: 1px solid var(--border);
+  padding: 0.2rem 0.75rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-family: inherit;
+  line-height: 1.6;
+  transition: background 0.15s, color 0.15s;
+}
+.creator-op-btn:last-child { border-right: none; }
+.creator-op-btn.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+.creator-target-matches {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.creator-target-row {
   display: grid;
-  grid-template-columns: 5.5rem 1fr 1.6fr;
+  grid-template-columns: 5.5rem 1fr 1.6fr 1.75rem;
   gap: var(--sp-1) var(--sp-2);
   align-items: center;
 }
-.creator-target-cat {
-  font-size: 0.8125rem;
-  font-weight: 600;
+.creator-match-del-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   color: var(--text-secondary);
-  white-space: nowrap;
+  font-size: 0.875rem;
+  padding: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+.creator-match-del-btn:hover {
+  color: var(--deny-border);
+  border-color: var(--deny-border);
+}
+.creator-add-match-btn {
+  align-self: flex-start;
+  margin-top: var(--sp-1);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-pill);
+  padding: 0.3rem 0.9rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+.creator-add-match-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
 }
 .creator-attrId-select {
   font-size: 0.8rem;
 }
 @media (max-width: 960px) {
-  .creator-target-grid { grid-template-columns: 5rem 1fr; }
+  .creator-target-row { grid-template-columns: 5rem 1fr 1.75rem; }
   .creator-attrId-select { grid-column: 2; }
 }
 

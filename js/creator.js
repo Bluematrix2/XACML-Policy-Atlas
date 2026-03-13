@@ -57,9 +57,26 @@ const PolicyCreator = (() => {
 
   function _defaultTarget() {
     return {
-      subject:  { value: '', attributeId: ATTR_ID_OPTIONS.subject[0].value },
-      resource: { value: '', attributeId: ATTR_ID_OPTIONS.resource[0].value },
-      action:   { value: '', attributeId: ATTR_ID_OPTIONS.action[0].value },
+      combineOp: 'AND',
+      matches: [
+        { cat: 'subject',  attributeId: ATTR_ID_OPTIONS.subject[0].value,  value: '' },
+        { cat: 'resource', attributeId: ATTR_ID_OPTIONS.resource[0].value, value: '' },
+        { cat: 'action',   attributeId: ATTR_ID_OPTIONS.action[0].value,   value: '' },
+      ],
+    };
+  }
+
+  function _migrateTarget(t) {
+    if (!t) return _defaultTarget();
+    if (Array.isArray(t.matches)) return t; // already new format
+    // Old format: { subject: {value, attributeId}, resource: {}, action: {} }
+    return {
+      combineOp: 'AND',
+      matches: ['subject', 'resource', 'action'].map(cat => ({
+        cat,
+        attributeId: (t[cat] && t[cat].attributeId) || ATTR_ID_OPTIONS[cat][0].value,
+        value:       (t[cat] && t[cat].value)        || '',
+      })),
     };
   }
 
@@ -84,21 +101,12 @@ const PolicyCreator = (() => {
       const raw = sessionStorage.getItem(SESSION_KEY);
       if (raw) {
         const s = JSON.parse(raw);
-        // Migration: ensure policy has a target object
-        if (s.policy && !s.policy.target) s.policy.target = _defaultTarget();
-        // Phase 2 migration: ensure all rules have a target object
-        if (s.policy && Array.isArray(s.policy.rules)) {
-          s.policy.rules.forEach(r => {
-            if (!r.target) {
-              r.target = _defaultTarget();
-            } else {
-              for (const cat of ['subject', 'resource', 'action']) {
-                if (!r.target[cat].attributeId) {
-                  r.target[cat].attributeId = ATTR_ID_OPTIONS[cat][0].value;
-                }
-              }
-            }
-          });
+        // Migrate targets to new multi-match format
+        if (s.policy) {
+          s.policy.target = _migrateTarget(s.policy.target);
+          if (Array.isArray(s.policy.rules)) {
+            s.policy.rules.forEach(r => { r.target = _migrateTarget(r.target); });
+          }
         }
         return s;
       }
@@ -158,69 +166,76 @@ const PolicyCreator = (() => {
   }
 
   function _targetXml20(target, ind) {
-    if (!target) return '';
-    const i1 = ind;
-    const i2 = ind + '  ';
-    const i3 = ind + '    ';
-    const i4 = ind + '      ';
-    const cats = [
-      { key: 'subject',  wrap: 'Subjects',  inner: 'Subject',  match: 'SubjectMatch',  des: 'SubjectAttributeDesignator' },
-      { key: 'resource', wrap: 'Resources', inner: 'Resource', match: 'ResourceMatch', des: 'ResourceAttributeDesignator' },
-      { key: 'action',   wrap: 'Actions',   inner: 'Action',   match: 'ActionMatch',   des: 'ActionAttributeDesignator' },
-    ];
-    const parts = [];
-    for (const c of cats) {
-      const t = target[c.key];
-      if (!t || !t.value.trim()) continue;
-      const aid = _escXml(t.attributeId.trim() || DEFAULT_ATTR_IDS[c.key]);
-      parts.push(
-        `${i1}<${c.wrap}>\n` +
-        `${i2}<${c.inner}>\n` +
-        `${i3}<${c.match} MatchId="${MATCH_ID_STR_EQ}">\n` +
-        `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(t.value.trim())}</AttributeValue>\n` +
-        `${i4}<${c.des} AttributeId="${aid}" DataType="${DATA_TYPE_STRING}"/>\n` +
-        `${i3}</${c.match}>\n` +
-        `${i2}</${c.inner}>\n` +
-        `${i1}</${c.wrap}>`
-      );
+    if (!target || !target.matches) return '';
+    const active = target.matches.filter(m => m.value.trim());
+    if (!active.length) return '';
+    const op = target.combineOp || 'AND';
+    const i1 = ind, i2 = ind + '  ', i3 = ind + '    ', i4 = ind + '      ';
+    const CAT_META = {
+      subject:  { wrap: 'Subjects',  inner: 'Subject',  match: 'SubjectMatch',  des: 'SubjectAttributeDesignator' },
+      resource: { wrap: 'Resources', inner: 'Resource', match: 'ResourceMatch', des: 'ResourceAttributeDesignator' },
+      action:   { wrap: 'Actions',   inner: 'Action',   match: 'ActionMatch',   des: 'ActionAttributeDesignator' },
+    };
+    const bycat = { subject: [], resource: [], action: [] };
+    for (const m of active) if (bycat[m.cat]) bycat[m.cat].push(m);
+    const catParts = [];
+    for (const cat of ['subject', 'resource', 'action']) {
+      const ms = bycat[cat];
+      if (!ms.length) continue;
+      const meta = CAT_META[cat];
+      let innerHtml;
+      if (op === 'AND') {
+        const matchLines = ms.map(m => {
+          const aid = _escXml(m.attributeId || DEFAULT_ATTR_IDS[cat]);
+          return `${i3}<${meta.match} MatchId="${MATCH_ID_STR_EQ}">\n` +
+                 `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(m.value.trim())}</AttributeValue>\n` +
+                 `${i4}<${meta.des} AttributeId="${aid}" DataType="${DATA_TYPE_STRING}"/>\n` +
+                 `${i3}</${meta.match}>`;
+        }).join('\n');
+        innerHtml = `${i2}<${meta.inner}>\n${matchLines}\n${i2}</${meta.inner}>`;
+      } else {
+        innerHtml = ms.map(m => {
+          const aid = _escXml(m.attributeId || DEFAULT_ATTR_IDS[cat]);
+          return `${i2}<${meta.inner}>\n` +
+                 `${i3}<${meta.match} MatchId="${MATCH_ID_STR_EQ}">\n` +
+                 `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(m.value.trim())}</AttributeValue>\n` +
+                 `${i4}<${meta.des} AttributeId="${aid}" DataType="${DATA_TYPE_STRING}"/>\n` +
+                 `${i3}</${meta.match}>\n` +
+                 `${i2}</${meta.inner}>`;
+        }).join('\n');
+      }
+      catParts.push(`${i1}<${meta.wrap}>\n${innerHtml}\n${i1}</${meta.wrap}>`);
     }
-    if (parts.length === 0) return '';
-    return `${ind}<Target>\n${parts.join('\n')}\n${ind}</Target>`;
+    if (!catParts.length) return '';
+    return `${ind}<Target>\n${catParts.join('\n')}\n${ind}</Target>`;
   }
 
   function _targetXml30(target, ind) {
-    if (!target) return '';
-    const i1 = ind + '  ';
-    const i2 = ind + '    ';
-    const i3 = ind + '      ';
-    const i4 = ind + '        ';
-    const cats = [
-      { key: 'subject',  cat: 'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject' },
-      { key: 'resource', cat: 'urn:oasis:names:tc:xacml:3.0:attribute-category:resource' },
-      { key: 'action',   cat: 'urn:oasis:names:tc:xacml:3.0:attribute-category:action' },
-    ];
-    const matches = [];
-    for (const c of cats) {
-      const t = target[c.key];
-      if (!t || !t.value.trim()) continue;
-      const aid = _escXml(t.attributeId.trim() || DEFAULT_ATTR_IDS[c.key]);
-      matches.push(
-        `${i3}<Match MatchId="${MATCH_ID_STR_EQ}">\n` +
-        `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(t.value.trim())}</AttributeValue>\n` +
-        `${i4}<AttributeDesignator Category="${c.cat}" AttributeId="${aid}" DataType="${DATA_TYPE_STRING}" MustBePresent="false"/>\n` +
-        `${i3}</Match>`
-      );
+    if (!target || !target.matches) return '';
+    const active = target.matches.filter(m => m.value.trim());
+    if (!active.length) return '';
+    const op = target.combineOp || 'AND';
+    const i1 = ind + '  ', i2 = ind + '    ', i3 = ind + '      ', i4 = ind + '        ';
+    const CAT_URI = {
+      subject:  'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
+      resource: 'urn:oasis:names:tc:xacml:3.0:attribute-category:resource',
+      action:   'urn:oasis:names:tc:xacml:3.0:attribute-category:action',
+    };
+    const matchXml = m => {
+      const aid  = _escXml(m.attributeId || DEFAULT_ATTR_IDS[m.cat]);
+      const catU = _escXml(CAT_URI[m.cat] || CAT_URI.subject);
+      return `${i3}<Match MatchId="${MATCH_ID_STR_EQ}">\n` +
+             `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(m.value.trim())}</AttributeValue>\n` +
+             `${i4}<AttributeDesignator Category="${catU}" AttributeId="${aid}" DataType="${DATA_TYPE_STRING}" MustBePresent="false"/>\n` +
+             `${i3}</Match>`;
+    };
+    let allOfsHtml;
+    if (op === 'AND') {
+      allOfsHtml = `${i2}<AllOf>\n${active.map(matchXml).join('\n')}\n${i2}</AllOf>`;
+    } else {
+      allOfsHtml = active.map(m => `${i2}<AllOf>\n${matchXml(m)}\n${i2}</AllOf>`).join('\n');
     }
-    if (matches.length === 0) return '';
-    return (
-      `${ind}<Target>\n` +
-      `${i1}<AnyOf>\n` +
-      `${i2}<AllOf>\n` +
-      matches.join('\n') + '\n' +
-      `${i2}</AllOf>\n` +
-      `${i1}</AnyOf>\n` +
-      `${ind}</Target>`
-    );
+    return `${ind}<Target>\n${i1}<AnyOf>\n${allOfsHtml}\n${i1}</AnyOf>\n${ind}</Target>`;
   }
 
   function _ruleTargetXml20(target)   { return _targetXml20(target, '    '); }
@@ -481,24 +496,7 @@ const PolicyCreator = (() => {
   }
 
   function _policyTargetSectionHtml() {
-    const t = _state.policy.target || _defaultTarget();
-    const cats = ['subject', 'resource', 'action'];
-    const rows = cats.map(cat => `
-              <span class="creator-target-cat">${esc(I18n.t(`creator.target.${cat}`))}</span>
-              ${_attrIdSelectHtml(cat, 'p', t[cat].attributeId, true)}
-              <input class="creator-input" type="text"
-                     data-policy-target-cat="${cat}" data-policy-target-prop="value"
-                     placeholder="${esc(I18n.t(`creator.target.value.ph.${cat}`))}"
-                     value="${esc(t[cat].value)}" autocomplete="off">`).join('');
-    return `
-          <div class="creator-target-section">
-            <div class="creator-target-hdr">
-              <span class="creator-target-hdr-label">&#x1F3AF; ${esc(I18n.t('creator.ptarget.section'))}</span>
-              <span class="creator-hint">${esc(I18n.t('creator.ptarget.hint'))}</span>
-            </div>
-            <div class="creator-target-grid">${rows}
-            </div>
-          </div>`;
+    return _targetSectionHtml(_state.policy.target, 'policy');
   }
 
   // ── Step 3: Regeln ─────────────────────────────────────────────────────
@@ -526,18 +524,51 @@ const PolicyCreator = (() => {
       </div>`;
   }
 
-  function _attrIdSelectHtml(cat, ruleIdx, currentVal, policyLevel = false) {
-    const opts = ATTR_ID_OPTIONS[cat];
-    const sel  = currentVal || opts[0].value;
-    const options = opts.map(o =>
-      `<option value="${esc(o.value)}"${sel === o.value ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
-    ).join('');
-    const dataAttrs = policyLevel
-      ? `data-policy-target-cat="${cat}" data-policy-target-prop="attributeId"`
-      : `data-rule-idx="${ruleIdx}" data-target-cat="${cat}" data-target-prop="attributeId"`;
-    return `<select class="creator-select creator-attrId-select" ${dataAttrs}>
-              ${options}
-            </select>`;
+  function _targetSectionHtml(target, scope, ruleIdx) {
+    const t  = target || _defaultTarget();
+    const op = t.combineOp || 'AND';
+    const ri = ruleIdx !== undefined ? ruleIdx : '';
+    const sa = scope === 'rule'
+      ? `data-target-scope="rule" data-target-rule-idx="${ri}"`
+      : `data-target-scope="policy"`;
+    const labelKey = scope === 'policy' ? 'creator.ptarget.section' : 'creator.target.section';
+    const hintKey  = scope === 'policy' ? 'creator.ptarget.hint'    : 'creator.target.hint';
+
+    const rowsHtml = t.matches.map((m, mi) => {
+      const catOpts = ['subject', 'resource', 'action'].map(c =>
+        `<option value="${c}"${m.cat === c ? ' selected' : ''}>${esc(I18n.t(`creator.target.${c}`))}</option>`
+      ).join('');
+      const attrOpts = (ATTR_ID_OPTIONS[m.cat] || ATTR_ID_OPTIONS.subject).map(o =>
+        `<option value="${esc(o.value)}"${m.attributeId === o.value ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
+      ).join('');
+      return `<div class="creator-target-row" data-match-idx="${mi}">
+          <select class="creator-select creator-cat-select" ${sa} data-match-idx="${mi}" data-match-prop="cat">${catOpts}</select>
+          <select class="creator-select creator-attrId-select" ${sa} data-match-idx="${mi}" data-match-prop="attributeId">${attrOpts}</select>
+          <input class="creator-input" type="text" ${sa} data-match-idx="${mi}" data-match-prop="value"
+                 placeholder="${esc(I18n.t(`creator.target.value.ph.${m.cat}`))}"
+                 value="${esc(m.value)}" autocomplete="off">
+          <button class="creator-match-del-btn" data-action="del-match" ${sa} data-match-idx="${mi}"
+                  title="${esc(I18n.t('creator.target.match.del.title'))}"
+                  aria-label="${esc(I18n.t('creator.target.match.del.aria'))}">&#x2715;</button>
+        </div>`;
+    }).join('');
+
+    return `
+        <div class="creator-target-section">
+          <div class="creator-target-hdr">
+            <span class="creator-target-hdr-label">&#x1F3AF; ${esc(I18n.t(labelKey))}</span>
+            <span class="creator-hint">${esc(I18n.t(hintKey))}</span>
+          </div>
+          <div class="creator-target-op-row">
+            <span class="creator-target-op-label">${esc(I18n.t('creator.target.op.label'))}</span>
+            <div class="creator-op-toggle">
+              <button class="creator-op-btn${op === 'AND' ? ' active' : ''}" data-action="target-op" ${sa} data-op="AND">${esc(I18n.t('creator.target.op.and'))}</button>
+              <button class="creator-op-btn${op === 'OR'  ? ' active' : ''}" data-action="target-op" ${sa} data-op="OR">${esc(I18n.t('creator.target.op.or'))}</button>
+            </div>
+          </div>
+          <div class="creator-target-matches">${rowsHtml}</div>
+          <button class="creator-add-match-btn" data-action="add-match" ${sa}>${esc(I18n.t('creator.target.match.add'))}</button>
+        </div>`;
   }
 
   function _ruleCardHtml(r, i) {
@@ -588,34 +619,7 @@ const PolicyCreator = (() => {
                    placeholder="${esc(I18n.t('creator.rule.desc.ph'))}"
                    value="${esc(r.description)}" autocomplete="off">
           </div>
-          <div class="creator-target-section">
-            <div class="creator-target-hdr">
-              <span class="creator-target-hdr-label">&#x1F3AF; ${esc(I18n.t('creator.target.section'))}</span>
-              <span class="creator-hint">${esc(I18n.t('creator.target.hint'))}</span>
-            </div>
-            <div class="creator-target-grid">
-              <span class="creator-target-cat">${esc(I18n.t('creator.target.subject'))}</span>
-              ${_attrIdSelectHtml('subject', i, r.target ? r.target.subject.attributeId : '')}
-              <input class="creator-input" type="text"
-                     data-rule-idx="${i}" data-target-cat="subject" data-target-prop="value"
-                     placeholder="${esc(I18n.t('creator.target.value.ph.subject'))}"
-                     value="${esc(r.target ? r.target.subject.value : '')}" autocomplete="off">
-
-              <span class="creator-target-cat">${esc(I18n.t('creator.target.resource'))}</span>
-              ${_attrIdSelectHtml('resource', i, r.target ? r.target.resource.attributeId : '')}
-              <input class="creator-input" type="text"
-                     data-rule-idx="${i}" data-target-cat="resource" data-target-prop="value"
-                     placeholder="${esc(I18n.t('creator.target.value.ph.resource'))}"
-                     value="${esc(r.target ? r.target.resource.value : '')}" autocomplete="off">
-
-              <span class="creator-target-cat">${esc(I18n.t('creator.target.action'))}</span>
-              ${_attrIdSelectHtml('action', i, r.target ? r.target.action.attributeId : '')}
-              <input class="creator-input" type="text"
-                     data-rule-idx="${i}" data-target-cat="action" data-target-prop="value"
-                     placeholder="${esc(I18n.t('creator.target.value.ph.action'))}"
-                     value="${esc(r.target ? r.target.action.value : '')}" autocomplete="off">
-            </div>
-          </div>
+          ${_targetSectionHtml(r.target, 'rule', i)}
         </div>
       </div>`;
   }
@@ -629,10 +633,10 @@ const PolicyCreator = (() => {
 
     const ruleRows = p.rules.map(r => {
       const targetParts = [];
-      if (r.target) {
-        if (r.target.subject.value.trim())  targetParts.push(`${I18n.t('creator.target.subject')}: ${r.target.subject.value.trim()}`);
-        if (r.target.resource.value.trim()) targetParts.push(`${I18n.t('creator.target.resource')}: ${r.target.resource.value.trim()}`);
-        if (r.target.action.value.trim())   targetParts.push(`${I18n.t('creator.target.action')}: ${r.target.action.value.trim()}`);
+      if (r.target && Array.isArray(r.target.matches)) {
+        r.target.matches.filter(m => m.value.trim()).forEach(m =>
+          targetParts.push(`${I18n.t(`creator.target.${m.cat}`)}: ${m.value.trim()}`)
+        );
       }
       return `<tr>
         <td>${esc(r.id)}</td>
@@ -668,15 +672,14 @@ const PolicyCreator = (() => {
             </div>
             ${(() => {
               const pt = p.target;
-              if (!pt) return '';
-              const parts = [];
-              if (pt.subject.value.trim())  parts.push(`${I18n.t('creator.target.subject')}: ${pt.subject.value.trim()}`);
-              if (pt.resource.value.trim()) parts.push(`${I18n.t('creator.target.resource')}: ${pt.resource.value.trim()}`);
-              if (pt.action.value.trim())   parts.push(`${I18n.t('creator.target.action')}: ${pt.action.value.trim()}`);
-              if (!parts.length) return '';
+              if (!pt || !Array.isArray(pt.matches)) return '';
+              const active = pt.matches.filter(m => m.value.trim());
+              if (!active.length) return '';
+              const parts = active.map(m => `${I18n.t(`creator.target.${m.cat}`)}: ${m.value.trim()}`);
+              const opLabel = pt.combineOp === 'OR' ? ` [${I18n.t('creator.target.op.or')}]` : ` [${I18n.t('creator.target.op.and')}]`;
               return `<div class="creator-summary-row">
               <span class="creator-summary-key">${esc(I18n.t('creator.summary.ptarget'))}</span>
-              <span class="creator-summary-val">${esc(parts.join(' · '))}</span>
+              <span class="creator-summary-val">${esc(parts.join(' · '))}${esc(opLabel)}</span>
             </div>`;
             })()}
           </div>
@@ -729,9 +732,93 @@ const PolicyCreator = (() => {
     const deleteBtn   = t.closest('[data-action="delete-rule"]');
     if (deleteBtn) { _deleteRule(parseInt(deleteBtn.dataset.idx, 10)); return; }
 
+    const addMatchBtn = t.closest('[data-action="add-match"]');
+    if (addMatchBtn) {
+      const scope = addMatchBtn.dataset.targetScope;
+      const rIdx  = scope === 'rule' ? parseInt(addMatchBtn.dataset.targetRuleIdx, 10) : undefined;
+      _addMatch(scope, rIdx);
+      return;
+    }
+
+    const delMatchBtn = t.closest('[data-action="del-match"]');
+    if (delMatchBtn) {
+      const scope = delMatchBtn.dataset.targetScope;
+      const rIdx  = scope === 'rule' ? parseInt(delMatchBtn.dataset.targetRuleIdx, 10) : undefined;
+      _deleteMatch(scope, rIdx, parseInt(delMatchBtn.dataset.matchIdx, 10));
+      return;
+    }
+
+    const opBtn = t.closest('[data-action="target-op"]');
+    if (opBtn) {
+      const scope = opBtn.dataset.targetScope;
+      const rIdx  = scope === 'rule' ? parseInt(opBtn.dataset.targetRuleIdx, 10) : undefined;
+      _setTargetOp(scope, rIdx, opBtn.dataset.op);
+      return;
+    }
+
     if (t.closest('[data-action="gen-uuid"]'))       { _generateUuid(); return; }
     const ruleUuidBtn = t.closest('[data-action="gen-rule-uuid"]');
     if (ruleUuidBtn) { _generateRuleUuid(parseInt(ruleUuidBtn.dataset.idx, 10)); return; }
+  }
+
+  // ── Target helpers ─────────────────────────────────────────────────────
+
+  function _targetFromEl(el) {
+    const scope = el.dataset.targetScope;
+    if (scope === 'policy') return _state.policy.target;
+    if (scope === 'rule') {
+      const idx = parseInt(el.dataset.targetRuleIdx, 10);
+      return _state.policy.rules[idx] ? _state.policy.rules[idx].target : null;
+    }
+    return null;
+  }
+
+  function _addMatch(scope, ruleIdx) {
+    const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
+    if (!target) return;
+    target.matches.push({ cat: 'subject', attributeId: ATTR_ID_OPTIONS.subject[0].value, value: '' });
+    _saveState(); _schedulePreview();
+    _reRenderTargetSection(scope, ruleIdx);
+  }
+
+  function _deleteMatch(scope, ruleIdx, matchIdx) {
+    const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
+    if (!target || target.matches.length <= 1) return; // keep at least 1 row
+    target.matches.splice(matchIdx, 1);
+    _saveState(); _schedulePreview();
+    _reRenderTargetSection(scope, ruleIdx);
+  }
+
+  function _setTargetOp(scope, ruleIdx, op) {
+    const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
+    if (!target) return;
+    target.combineOp = op;
+    _saveState(); _schedulePreview();
+    // Update button active state in-place
+    const sa = scope === 'policy'
+      ? '[data-target-scope="policy"]'
+      : `[data-target-scope="rule"][data-target-rule-idx="${ruleIdx}"]`;
+    const section = document.querySelector(`.creator-target-section:has(${sa})`);
+    if (section) {
+      section.querySelectorAll('.creator-op-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.op === op);
+      });
+    }
+  }
+
+  function _reRenderTargetSection(scope, ruleIdx) {
+    let section;
+    if (scope === 'policy') {
+      section = document.querySelector('#creator-form-area .creator-target-section');
+    } else {
+      const card = document.querySelector(`.creator-rule-card[data-rule-idx="${ruleIdx}"]`);
+      if (card) section = card.querySelector('.creator-target-section');
+    }
+    if (!section) return;
+    const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = _targetSectionHtml(target, scope, ruleIdx);
+    section.replaceWith(tmp.firstElementChild);
   }
 
   function _handleInput(e) {
@@ -747,23 +834,13 @@ const PolicyCreator = (() => {
         _state.policy.rules[idx][t.dataset.ruleField] = t.value;
         _saveState(); _schedulePreview(); _updateNextBtn();
       }
-    }
-    const pCat = t.dataset.policyTargetCat;
-    const pProp = t.dataset.policyTargetProp;
-    if (pCat !== undefined && pProp !== undefined) {
-      if (!_state.policy.target) _state.policy.target = _defaultTarget();
-      if (_state.policy.target[pCat]) _state.policy.target[pCat][pProp] = t.value;
-      _saveState(); _schedulePreview();
       return;
     }
-    const cat = t.dataset.targetCat;
-    const prop = t.dataset.targetProp;
-    if (cat !== undefined && prop !== undefined) {
-      const idx = parseInt(t.dataset.ruleIdx, 10);
-      const r = _state.policy.rules[idx];
-      if (r) {
-        if (!r.target) r.target = _defaultTarget();
-        if (r.target[cat]) r.target[cat][prop] = t.value;
+    if (t.dataset.matchProp === 'value') {
+      const target = _targetFromEl(t);
+      const mi = parseInt(t.dataset.matchIdx, 10);
+      if (target && target.matches[mi]) {
+        target.matches[mi].value = t.value;
         _saveState(); _schedulePreview();
       }
     }
@@ -784,22 +861,27 @@ const PolicyCreator = (() => {
       }
       return;
     }
-    const pCat2 = t.dataset.policyTargetCat;
-    const pProp2 = t.dataset.policyTargetProp;
-    if (pCat2 !== undefined && pProp2 !== undefined) {
-      if (!_state.policy.target) _state.policy.target = _defaultTarget();
-      if (_state.policy.target[pCat2]) _state.policy.target[pCat2][pProp2] = t.value;
-      _saveState(); _schedulePreview();
-      return;
-    }
-    const cat  = t.dataset.targetCat;
-    const prop = t.dataset.targetProp;
-    if (cat !== undefined && prop !== undefined) {
-      const idx = parseInt(t.dataset.ruleIdx, 10);
-      const r   = _state.policy.rules[idx];
-      if (r) {
-        if (!r.target) r.target = _defaultTarget();
-        if (r.target[cat]) r.target[cat][prop] = t.value;
+    const matchProp = t.dataset.matchProp;
+    if (matchProp !== undefined) {
+      const target = _targetFromEl(t);
+      const mi = parseInt(t.dataset.matchIdx, 10);
+      if (target && target.matches[mi]) {
+        target.matches[mi][matchProp] = t.value;
+        if (matchProp === 'cat') {
+          target.matches[mi].attributeId = ATTR_ID_OPTIONS[t.value][0].value;
+          // Update attrId select options in-place
+          const row = t.closest('.creator-target-row');
+          if (row) {
+            const attrSel = row.querySelector('.creator-attrId-select');
+            if (attrSel) {
+              attrSel.innerHTML = ATTR_ID_OPTIONS[t.value].map((o, oi) =>
+                `<option value="${esc(o.value)}"${oi === 0 ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
+              ).join('');
+            }
+            const valInput = row.querySelector('input[data-match-prop="value"]');
+            if (valInput) valInput.placeholder = I18n.t(`creator.target.value.ph.${t.value}`);
+          }
+        }
         _saveState(); _schedulePreview();
       }
     }

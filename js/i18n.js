@@ -373,6 +373,12 @@ const TRANSLATIONS = {
     'creator.ptarget.section':   'Policy-Target (optional)',
     'creator.ptarget.hint':      'Schränkt die gesamte Policy auf bestimmte Anfragen ein. Leer = keine Einschränkung.',
     'creator.summary.ptarget':   'Policy-Target',
+    'creator.target.op.label':          'Verknüpfung:',
+    'creator.target.op.and':            'UND',
+    'creator.target.op.or':             'ODER',
+    'creator.target.match.add':         '+ Bedingung hinzufügen',
+    'creator.target.match.del.title':   'Bedingung entfernen',
+    'creator.target.match.del.aria':    'Bedingung entfernen',
 
     // ── Creator — nav & actions ──
     'creator.nav.back':          '← Zurück',
@@ -757,6 +763,12 @@ const TRANSLATIONS = {
     'creator.ptarget.section':   'Policy-Level Target (optional)',
     'creator.ptarget.hint':      'Restricts the entire policy to specific requests. Empty = no restriction.',
     'creator.summary.ptarget':   'Policy Target',
+    'creator.target.op.label':          'Combine with:',
+    'creator.target.op.and':            'AND',
+    'creator.target.op.or':             'OR',
+    'creator.target.match.add':         '+ Add condition',
+    'creator.target.match.del.title':   'Remove condition',
+    'creator.target.match.del.aria':    'Remove condition',
 
     // ── Creator — nav & actions ──
     'creator.nav.back':          '← Back',
