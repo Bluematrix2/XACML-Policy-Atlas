@@ -108,7 +108,7 @@ const PolicyCreator = (() => {
       xml += `\n  <!-- ${I18n.t('creator.rules.empty').replace(/[<>]/g, '')} -->\n`;
     } else {
       for (const r of p.rules) {
-        xml += `\n  <Rule RuleId="${_escXml(r.id)}" Effect="${r.effect}">\n`;
+        xml += `\n  <Rule Effect="${r.effect}" RuleId="${_escXml(r.id)}">\n`;
         if (r.description.trim()) {
           xml += `    <Description>${_escXml(r.description)}</Description>\n`;
         }
