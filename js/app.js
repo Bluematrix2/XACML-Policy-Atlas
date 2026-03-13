@@ -881,9 +881,11 @@ const App = (() => {
     document.getElementById('layout-viz').style.display   = tab === 'viz'   ? 'flex'  : 'none';
     document.getElementById('layout-guide').style.display = tab === 'guide' ? 'block' : 'none';
     document.getElementById('layout-kb').style.display    = tab === 'kb'    ? 'block' : 'none';
-    document.getElementById('tab-viz').classList.toggle('active',   tab === 'viz');
-    document.getElementById('tab-guide').classList.toggle('active', tab === 'guide');
-    document.getElementById('tab-kb').classList.toggle('active',    tab === 'kb');
+    ['viz', 'guide', 'kb'].forEach(t => {
+      const btn = document.getElementById('tab-' + t);
+      btn.classList.toggle('active', t === tab);
+      btn.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+    });
     if (tab === 'guide') return XACMLGuide.init();
     if (tab === 'kb')    return KnowledgeBase.init();
     return Promise.resolve();

@@ -7,13 +7,13 @@
 :root {
   /* Backgrounds */
   --bg-primary:    #FFFFFF;
-  --bg-secondary:  #F5F7FA;
+  --bg-secondary:  #F8FAFC;
   --bg-card:       #FFFFFF;
 
   /* Text */
   --text-primary:   #1A1A2E;
   --text-secondary: #4A5568;
-  --text-muted:     #718096;
+  --text-muted:     #64748B;  /* darkened for WCAG AA ≥4.5:1 on bg-secondary */
 
   /* Borders */
   --border:        #E2E8F0;
@@ -61,6 +61,30 @@
   /* Footer */
   --footer-bg:   #1E293B;
   --footer-link: #5EEAD4;
+
+  /* ── Design Tokens ── */
+
+  /* Shadows */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
+
+  /* Border radius */
+  --radius-sm:   0.25rem;  /* 4px */
+  --radius:      0.5rem;   /* 8px */
+  --radius-lg:   0.75rem;  /* 12px */
+  --radius-pill: 1.25rem;  /* 20px */
+
+  /* Spacing (8px grid) */
+  --sp-1:  0.25rem;  /* 4px  */
+  --sp-2:  0.5rem;   /* 8px  */
+  --sp-3:  0.75rem;  /* 12px */
+  --sp-4:  1rem;     /* 16px */
+  --sp-5:  1.25rem;  /* 20px */
+  --sp-6:  1.5rem;   /* 24px */
+  --sp-8:  2rem;     /* 32px */
+  --sp-10: 2.5rem;   /* 40px */
+  --sp-12: 3rem;     /* 48px */
 }
 
 /* ── Dark Mode ── */
@@ -121,6 +145,11 @@
   /* Footer */
   --footer-bg:   #0F172A;
   --footer-link: #5EEAD4;
+
+  /* Shadows (darker bg → lighter shadows less visible, use same values) */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.40), 0 2px 6px rgba(0,0,0,0.25);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.50), 0 4px 12px rgba(0,0,0,0.30);
 }
 
 /* ── System preference: auto-dark when no explicit toggle ── */
@@ -166,5 +195,9 @@
 
     --footer-bg:   #0F172A;
     --footer-link: #5EEAD4;
+
+    --shadow-sm:  0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
+    --shadow-md:  0 4px 12px rgba(0,0,0,0.40), 0 2px 6px rgba(0,0,0,0.25);
+    --shadow-lg:  0 8px 32px rgba(0,0,0,0.50), 0 4px 12px rgba(0,0,0,0.30);
   }
 }

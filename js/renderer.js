@@ -17,13 +17,15 @@ const TreeRenderer = (() => {
   // ── Logic chips ──
 
   function oderChip() {
-    return `<span class="logic-chip oder">${esc(I18n.t('renderer.oder.label'))}`
+    return `<span class="logic-chip oder" tabindex="0" role="img" aria-label="${esc(I18n.t('renderer.oder.label'))}: ${esc(I18n.t('renderer.oder.tooltip'))}">`
+         + esc(I18n.t('renderer.oder.label'))
          + `<span class="tooltip" style="min-width:210px">${esc(I18n.t('renderer.oder.tooltip'))}</span>`
          + `</span>`;
   }
 
   function undChip() {
-    return `<span class="logic-chip und">${esc(I18n.t('renderer.und.label'))}`
+    return `<span class="logic-chip und" tabindex="0" role="img" aria-label="${esc(I18n.t('renderer.und.label'))}: ${esc(I18n.t('renderer.und.tooltip'))}">`
+         + esc(I18n.t('renderer.und.label'))
          + `<span class="tooltip" style="min-width:210px">${esc(I18n.t('renderer.und.tooltip'))}</span>`
          + `</span>`;
   }
@@ -39,7 +41,7 @@ const TreeRenderer = (() => {
     if (uri)         tooltipParts.push(`<span class="tooltip-uri">${esc(uri)}</span>`);
     const tooltip = tooltipParts.length
       ? `<span class="tooltip">${tooltipParts.join('<br>')}</span>` : '';
-    return `<span class="chip" style="background:${bg};color:${fg};border-color:${bg}">`
+    return `<span class="chip" tabindex="0" style="background:${bg};color:${fg};border-color:${bg}">`
          + (prefix || '')
          + esc(label)
          + tooltip
@@ -51,7 +53,7 @@ const TreeRenderer = (() => {
     if (attrHint) parts.push(`<span class="tooltip-attr">${attrHint}</span>`);
     if (LabelMapper.isLoaded()) parts.push(I18n.t('renderer.fallback.tooltip'));
     parts.push(`<span class="tooltip-uri">${esc(uri)}</span>`);
-    return `<span class="chip fallback">${esc(uri)}<span class="tooltip">${parts.join('<br>')}</span></span>`;
+    return `<span class="chip fallback" tabindex="0">${esc(uri)}<span class="tooltip">${parts.join('<br>')}</span></span>`;
   }
 
   // Returns chip HTML + optional FHIR link for a match value
@@ -71,7 +73,7 @@ const TreeRenderer = (() => {
         if (attrHint) wParts.push(`<span class="tooltip-attr">${attrHint}</span>`);
         wParts.push(esc(I18n.t('renderer.wildcard.tooltip')));
         wParts.push(`<span class="tooltip-uri">root=&apos;*&apos;</span>`);
-        return `<span class="chip" style="background:#fff8e1;color:#f57f17;border-color:#ffe082">`
+        return `<span class="chip" tabindex="0" style="background:#fff8e1;color:#f57f17;border-color:#ffe082">`
              + `<span class="star">&#x2B50;</span>${esc(I18n.t('renderer.wildcard.label'))}`
              + `<span class="tooltip">${wParts.join('<br>')}</span></span>`;
       }
@@ -277,7 +279,7 @@ const TreeRenderer = (() => {
     const label = e ? e.label : lastSegment(algoUri);
     const desc  = e ? e.description : '';
     const tip   = `${desc ? esc(desc) + '<br>' : ''}<span class="tooltip-uri">${esc(algoUri)}</span>`;
-    return `<span class="algo-chip">&#x2699;&#xFE0F; ${esc(label)}`
+    return `<span class="algo-chip" tabindex="0">&#x2699;&#xFE0F; ${esc(label)}`
          + `<span class="tooltip">${tip}</span></span>`;
   }
 
@@ -433,7 +435,7 @@ const TreeRenderer = (() => {
     const bodyId = `rb_${index}_${Math.random().toString(36).slice(2, 7)}`;
 
     return `<div class="rule-card ${cls}" data-effect="${cls}" data-search="${esc(searchText)}">`
-         + `<div class="rule-hdr" onclick="TreeRenderer.toggleRule('${bodyId}',this)">`
+         + `<div class="rule-hdr" role="button" tabindex="0" aria-expanded="false" aria-controls="${bodyId}" onclick="TreeRenderer.toggleRule('${bodyId}',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TreeRenderer.toggleRule('${bodyId}',this)}">`
          + `<span class="effect-badge">${badge}</span>`
          + `<span class="rule-title">${titleText}</span>`
          + (body ? `<span class="rule-toggle">&#x25B6;</span>` : '')
@@ -485,7 +487,7 @@ const TreeRenderer = (() => {
 
     // Accordion header
     let html = `<div class="acc-panel">`;
-    html += `<div class="acc-hdr is-open" onclick="TreeRenderer.toggleAccordion('${bodyId}',this)">`;
+    html += `<div class="acc-hdr is-open" role="button" tabindex="0" aria-expanded="true" aria-controls="${bodyId}" onclick="TreeRenderer.toggleAccordion('${bodyId}',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TreeRenderer.toggleAccordion('${bodyId}',this)}">`;
     html += `<span class="acc-hdr-icon">&#x1F4CB;</span>`;
     html += `<div class="acc-hdr-info">`;
     html += `<div class="acc-hdr-title">${esc(shortId)}</div>`;
@@ -552,12 +554,14 @@ const TreeRenderer = (() => {
     const chevron = hdrEl.querySelector('.acc-chevron');
     if (chevron) chevron.classList.toggle('open', open);
     hdrEl.classList.toggle('is-open', open);
+    hdrEl.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
   function toggleRule(bodyId, headerEl) {
     const body = document.getElementById(bodyId);
     if (!body) return;
     const open = body.classList.toggle('open');
+    headerEl.setAttribute('aria-expanded', open ? 'true' : 'false');
     const toggle = headerEl.querySelector('.rule-toggle');
     if (toggle) toggle.classList.toggle('open', open);
   }

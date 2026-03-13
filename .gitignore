@@ -10,10 +10,12 @@ testdata/
 #*.csv
 #*.xml
 *.af
+*.local.json
 
 # Ignoriere lokale Konfigurationsdateien
-.env
-config.json
+*.env
+*.config.json
+*.local.json
 
 # Ignoriere temporäre Systemdateien
 .DS_Store

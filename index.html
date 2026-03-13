@@ -125,13 +125,13 @@
 
 </header>
 
-<div class="tab-nav">
-  <button class="tab-btn active" id="tab-viz" onclick="App.switchTab('viz')" data-i18n="tab.viz">&#x1F4CA; Visualisierung</button>
-  <button class="tab-btn" id="tab-guide" onclick="App.switchTab('guide')" data-i18n="tab.guide">&#x1F4D6; XACML verstehen</button>
-  <button class="tab-btn" id="tab-kb" onclick="App.switchTab('kb')" data-i18n="tab.kb">&#x1F4DA; Knowledge Base</button>
+<div class="tab-nav" role="tablist">
+  <button class="tab-btn active" id="tab-viz" role="tab" aria-selected="true" aria-controls="layout-viz" onclick="App.switchTab('viz')" data-i18n="tab.viz">&#x1F4CA; Visualisierung</button>
+  <button class="tab-btn" id="tab-guide" role="tab" aria-selected="false" aria-controls="layout-guide" onclick="App.switchTab('guide')" data-i18n="tab.guide">&#x1F4D6; XACML verstehen</button>
+  <button class="tab-btn" id="tab-kb" role="tab" aria-selected="false" aria-controls="layout-kb" onclick="App.switchTab('kb')" data-i18n="tab.kb">&#x1F4DA; Knowledge Base</button>
 </div>
 
-<div class="layout" id="layout-viz">
+<div class="layout" id="layout-viz" role="tabpanel" aria-labelledby="tab-viz">
   <nav class="sidebar">
     <div class="sidebar-head">
       <span>Policies</span>
@@ -142,7 +142,7 @@
     <div class="sb-import-wrap">
       <button class="sb-import-btn" onclick="App.openImportModal()" data-i18n="sidebar.importBtn">+ Policy importieren</button>
     </div>
-    <div class="sidebar-list" id="sidebar-list"></div>
+    <div class="sidebar-list" id="sidebar-list" role="list" aria-label="Geladene Policies"></div>
   </nav>
   <div class="content-area" id="content-area">
     <div class="content-tab-nav">
@@ -204,8 +204,8 @@
   </div>
 </div>
 
-<div id="layout-guide" style="display:none" class="guide-layout"></div>
-<div id="layout-kb" style="display:none" class="guide-layout"></div>
+<div id="layout-guide" style="display:none" class="guide-layout" role="tabpanel" aria-labelledby="tab-guide"></div>
+<div id="layout-kb" style="display:none" class="guide-layout" role="tabpanel" aria-labelledby="tab-kb"></div>
 
 <!-- Mobile hint overlay (CSS-only, shown on narrow screens) -->
 <div class="mobile-hint" aria-hidden="true">
