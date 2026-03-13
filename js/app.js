@@ -1620,6 +1620,9 @@ const App = (() => {
 
   // Re-render dynamic UI on language change
   document.addEventListener('i18n:change', () => {
+    // Validation check labels are translated at compute time — flush cache so they
+    // are recomputed in the new language when the policy is re-rendered below.
+    validationCache.clear();
     const policy = UIState.getActive();
     if (policy) {
       showPolicy(policy);
