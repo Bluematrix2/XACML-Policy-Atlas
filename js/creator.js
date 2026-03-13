@@ -34,6 +34,12 @@ const PolicyCreator = (() => {
   let _initialized  = false;
   let _previewTimer = null;
   let _previewMode  = 'visual'; // 'visual' | 'xml'
+  let _xmlCm        = null;     // CodeMirror read-only instance for XML tab
+  // Track accordion open/closed state across re-renders (by index, since IDs are random)
+  const _accState = {
+    closedPolicies: new Set(), // policy-panel indices that are closed
+    openRules:      new Map(), // policyIdx → Set<ruleIdx> of opened rule bodies
+  };
 
   // ── Attribute ID options per target category (Standard mode) ──────────
   const ATTR_ID_OPTIONS = {
@@ -300,7 +306,7 @@ const PolicyCreator = (() => {
                         title="${esc(I18n.t('creator.copy.title'))}">&#x1F4CB;</button>
               </div>
               <div class="creator-visual-pre" id="creator-visual-pre"></div>
-              <pre class="creator-xml-pre" id="creator-xml-pre"></pre>
+              <div class="creator-xml-pane" id="creator-xml-pre"></div>
             </div>
           </div>
         </div>
@@ -970,6 +976,38 @@ const PolicyCreator = (() => {
     _previewTimer = setTimeout(_updatePreview, 300);
   }
 
+  function _saveAccState(vizDiv) {
+    vizDiv.querySelectorAll('.acc-panel').forEach((panel, pi) => {
+      const accBody = panel.querySelector('.acc-body');
+      if (accBody && !accBody.classList.contains('open')) {
+        _accState.closedPolicies.add(pi);
+      } else {
+        _accState.closedPolicies.delete(pi);
+      }
+      const openRules = new Set();
+      panel.querySelectorAll('.rule-card').forEach((card, ri) => {
+        if (card.querySelector('.rule-body')?.classList.contains('open')) openRules.add(ri);
+      });
+      _accState.openRules.set(pi, openRules);
+    });
+  }
+
+  function _restoreAccState(vizDiv) {
+    vizDiv.querySelectorAll('.acc-panel').forEach((panel, pi) => {
+      if (_accState.closedPolicies.has(pi)) {
+        panel.querySelector('.acc-body')?.classList.remove('open');
+        panel.querySelector('.acc-hdr')?.classList.remove('is-open');
+      }
+      const openRules = _accState.openRules.get(pi) || new Set();
+      panel.querySelectorAll('.rule-card').forEach((card, ri) => {
+        if (!openRules.has(ri)) return;
+        card.querySelector('.rule-body')?.classList.add('open');
+        card.querySelector('.rule-toggle')?.classList.add('open');
+        card.querySelector('.rule-hdr')?.setAttribute('aria-expanded', 'true');
+      });
+    });
+  }
+
   function _updatePreview() {
     const xml    = _generateXml();
     const xmlPre = document.getElementById('creator-xml-pre');
@@ -977,19 +1015,35 @@ const PolicyCreator = (() => {
     if (!xmlPre || !vizDiv) return;
 
     if (_previewMode === 'xml') {
-      xmlPre.style.display = '';
       vizDiv.style.display = 'none';
-      xmlPre.textContent   = xml;
+      xmlPre.style.display = '';
+      // Lazy-init a read-only CodeMirror instance
+      if (!_xmlCm && window.CodeMirror) {
+        _xmlCm = window.CodeMirror(xmlPre, {
+          mode: 'xml', lineNumbers: true, readOnly: true,
+          lineWrapping: false, theme: 'default', tabSize: 2,
+        });
+        const cmEl = xmlPre.querySelector('.CodeMirror');
+        if (cmEl) { cmEl.style.height = 'auto'; cmEl.style.maxHeight = 'calc(100vh - 200px)'; }
+      }
+      if (_xmlCm) {
+        _xmlCm.setValue(xml);
+        _xmlCm.refresh();
+      } else {
+        xmlPre.textContent = xml;
+      }
     } else {
       xmlPre.style.display = 'none';
+      _saveAccState(vizDiv);
       vizDiv.style.display = '';
       try {
         const policy = XACMLParser.parse(xml, 'preview');
-        const TR = window.TreeRenderer;
-        vizDiv.innerHTML = TR ? TR.render(policy) : `<pre>${esc(xml)}</pre>`;
+        vizDiv.innerHTML = window.TreeRenderer ? window.TreeRenderer.render(policy) : `<pre>${esc(xml)}</pre>`;
       } catch {
-        vizDiv.innerHTML = `<pre class="creator-xml-pre">${esc(xml)}</pre>`;
+        vizDiv.innerHTML = `<pre style="padding:1rem;font-size:.8rem">${esc(xml)}</pre>`;
+        return;
       }
+      _restoreAccState(vizDiv);
     }
   }
 
