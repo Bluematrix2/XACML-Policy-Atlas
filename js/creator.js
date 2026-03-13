@@ -71,8 +71,7 @@ const PolicyCreator = (() => {
     const ns  = XACML_NS[ver];
     const alg = _escXml(p.combiningAlg || COMBINING_ALGS[0].value);
 
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<Policy xmlns="${ns}"\n`;
+    let xml = `<Policy xmlns="${ns}"\n`;
     xml += `        PolicyId="${pid}"\n`;
     xml += `        RuleCombiningAlgId="${alg}"\n`;
     xml += `        Version="1.0">\n`;
