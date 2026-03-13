@@ -10,6 +10,7 @@ import { TreeRenderer } from './renderer.js';
 import { UIState } from './ui.js';
 import { XACMLGuide } from './guide.js';
 import { KnowledgeBase } from './kb.js';
+import { PolicyCreator } from './creator.js';
 import { I18n } from './i18n.js';
 
 // ── Upload security constants ──
@@ -878,17 +879,49 @@ const App = (() => {
 
   function switchTab(tab) {
     _activeTab = tab;
-    document.getElementById('layout-viz').style.display   = tab === 'viz'   ? 'flex'  : 'none';
-    document.getElementById('layout-guide').style.display = tab === 'guide' ? 'block' : 'none';
-    document.getElementById('layout-kb').style.display    = tab === 'kb'    ? 'block' : 'none';
-    ['viz', 'guide', 'kb'].forEach(t => {
+    document.getElementById('layout-viz').style.display     = tab === 'viz'     ? 'flex'  : 'none';
+    document.getElementById('layout-creator').style.display = tab === 'creator' ? 'block' : 'none';
+    document.getElementById('layout-guide').style.display   = tab === 'guide'   ? 'block' : 'none';
+    document.getElementById('layout-kb').style.display      = tab === 'kb'      ? 'block' : 'none';
+    ['viz', 'creator', 'guide', 'kb'].forEach(t => {
       const btn = document.getElementById('tab-' + t);
+      if (!btn) return;
       btn.classList.toggle('active', t === tab);
       btn.setAttribute('aria-selected', t === tab ? 'true' : 'false');
     });
-    if (tab === 'guide') return XACMLGuide.init();
-    if (tab === 'kb')    return KnowledgeBase.init();
+    if (tab === 'guide')   return XACMLGuide.init();
+    if (tab === 'kb')      return KnowledgeBase.init();
+    if (tab === 'creator') { PolicyCreator.init(); return Promise.resolve(); }
     return Promise.resolve();
+  }
+
+  // ── Creator integration helpers ────────────────────────────────────────
+
+  function validateXmlForCreator(xmlString) {
+    return validatePolicy(xmlString);
+  }
+
+  function loadCreatorXml(xmlString, filename) {
+    try {
+      const policy   = XACMLParser.parse(xmlString, filename);
+      policy.rawXml  = xmlString;
+      invalidateValidationCache(filename);
+      getOrComputeValidation(filename, xmlString);
+      const idx = UIState.addOrReplace(policy);
+      switchTab('viz').then(() => {
+        refreshSidebar();
+        activatePolicy(idx);
+        _showToast('&#x2705; Policy im Visualizer geladen');
+      });
+    } catch (e) {
+      alert('Fehler beim Laden im Visualizer: ' + e.message);
+    }
+  }
+
+  function loadCreatorXmlIntoEditor(xmlString, filename) {
+    switchTab('viz').then(() => {
+      loadPolicyIntoEditor(filename, xmlString);
+    });
   }
 
   // ── Enforcement ──
@@ -1650,7 +1683,8 @@ const App = (() => {
     handlePolicyEdit, handlePolicyDelete, confirmPolicyDelete, cancelPolicyDelete,
     restoreMappingsOnStartup, clearAllMappings,
     toggleValidationPanel, fixPolicyInEditor,
-    openKbSection, loadExample
+    openKbSection, loadExample,
+    validateXmlForCreator, loadCreatorXml, loadCreatorXmlIntoEditor
   };
 })();
 
