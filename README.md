@@ -16,7 +16,7 @@ XACML Policy Atlas is a free, open-source browser-based tool for working with [X
 
 - 📊 **Visualizer** — Render XACML policies as interactive diagrams. Understand policy structure at a glance instead of reading raw XML.
 - ✏️ **Editor** — Edit XACML policies directly in the browser with syntax highlighting and live preview.
-- ✅ **Validator** — Validate policies against the XACML 3.0 schema and catch structural errors before deployment.
+- ✅ **Validator** — Validate policies against the XACML 2.0 & 3.0 schema and catch structural errors before deployment.
 - 📚 **Knowledge Base** — Built-in reference for XACML concepts, elements, and IHE-specific patterns.
 - 🔒 **100% local processing** — Your policies never leave your machine. Critical for sensitive healthcare access control configurations.
 
