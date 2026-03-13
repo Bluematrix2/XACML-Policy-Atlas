@@ -2486,6 +2486,48 @@ footer a:hover { opacity: 1; text-decoration: none; }
   flex-direction: column;
   gap: var(--sp-3);
 }
+/* ── Rule Target section (Phase 2) ── */
+.creator-target-section {
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-3);
+  margin-top: var(--sp-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.creator-target-hdr {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.creator-target-hdr-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.creator-target-grid {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr 1.6fr;
+  gap: var(--sp-1) var(--sp-2);
+  align-items: center;
+}
+.creator-target-cat {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.creator-attrId-input {
+  font-size: 0.75rem;
+  font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  color: var(--text-muted);
+}
+@media (max-width: 960px) {
+  .creator-target-grid { grid-template-columns: 5rem 1fr; }
+  .creator-attrId-input { grid-column: 2; }
+}
+
 .creator-add-rule-btn {
   margin-top: var(--sp-1);
   padding: 8px 16px;

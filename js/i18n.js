@@ -348,6 +348,17 @@ const TRANSLATIONS = {
     'creator.table.ruleId':      'Regel-ID',
     'creator.table.effect':      'Effect',
     'creator.table.desc':        'Beschreibung',
+    'creator.table.target':      'Target',
+
+    // ── Creator — target (Phase 2) ──
+    'creator.target.section':           'Target (optional)',
+    'creator.target.hint':              'Wenn alle Felder leer sind, gilt die Regel für alle Anfragen.',
+    'creator.target.subject':           'Subject',
+    'creator.target.resource':          'Resource',
+    'creator.target.action':            'Action',
+    'creator.target.value.ph.subject':  'z.B. alice',
+    'creator.target.value.ph.resource': 'z.B. document.pdf',
+    'creator.target.value.ph.action':   'z.B. read',
 
     // ── Creator — nav & actions ──
     'creator.nav.back':          '← Zurück',
@@ -707,6 +718,17 @@ const TRANSLATIONS = {
     'creator.table.ruleId':      'Rule ID',
     'creator.table.effect':      'Effect',
     'creator.table.desc':        'Description',
+    'creator.table.target':      'Target',
+
+    // ── Creator — target (Phase 2) ──
+    'creator.target.section':           'Target (optional)',
+    'creator.target.hint':              'If all fields are empty, the rule applies to all requests.',
+    'creator.target.subject':           'Subject',
+    'creator.target.resource':          'Resource',
+    'creator.target.action':            'Action',
+    'creator.target.value.ph.subject':  'e.g. alice',
+    'creator.target.value.ph.resource': 'e.g. document.pdf',
+    'creator.target.value.ph.action':   'e.g. read',
 
     // ── Creator — nav & actions ──
     'creator.nav.back':          '← Back',

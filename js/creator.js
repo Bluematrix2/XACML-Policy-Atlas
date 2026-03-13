@@ -1,7 +1,7 @@
 'use strict';
 
 // ================================================================
-//  POLICY CREATOR — Phase 1 (Alpha)
+//  POLICY CREATOR — Phase 2 (Alpha)
 //  Standard-Wizard: Typ → Basis-Info → Regeln → Review & Export
 // ================================================================
 
@@ -20,6 +20,14 @@ const XACML_NS = {
   '3.0': 'urn:oasis:names:tc:xacml:3.0:core:schema:wd-17',
 };
 
+const MATCH_ID_STR_EQ  = 'urn:oasis:names:tc:xacml:1.0:function:string-equal';
+const DATA_TYPE_STRING  = 'http://www.w3.org/2001/XMLSchema#string';
+const DEFAULT_ATTR_IDS = {
+  subject:  'urn:oasis:names:tc:xacml:1.0:subject:subject-id',
+  resource: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',
+  action:   'urn:oasis:names:tc:xacml:1.0:action:action-id',
+};
+
 const SESSION_KEY = 'xacml-creator-state';
 
 const PolicyCreator = (() => {
@@ -27,6 +35,14 @@ const PolicyCreator = (() => {
   let _previewTimer = null;
 
   // ── State ──────────────────────────────────────────────────────────────
+
+  function _defaultTarget() {
+    return {
+      subject:  { value: '', attributeId: '' },
+      resource: { value: '', attributeId: '' },
+      action:   { value: '', attributeId: '' },
+    };
+  }
 
   let _state = _loadState();
 
@@ -46,7 +62,14 @@ const PolicyCreator = (() => {
   function _loadState() {
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const s = JSON.parse(raw);
+        // Phase 2 migration: ensure all rules have a target object
+        if (s.policy && Array.isArray(s.policy.rules)) {
+          s.policy.rules.forEach(r => { if (!r.target) r.target = _defaultTarget(); });
+        }
+        return s;
+      }
     } catch { /* ignore */ }
     return _defaultState();
   }
@@ -89,12 +112,72 @@ const PolicyCreator = (() => {
         if (r.description.trim()) {
           xml += `    <Description>${_escXml(r.description)}</Description>\n`;
         }
+        const targetXml = ver === '2.0' ? _ruleTargetXml20(r.target) : _ruleTargetXml30(r.target);
+        if (targetXml) xml += targetXml + '\n';
         xml += `  </Rule>\n`;
       }
     }
 
     xml += `\n</Policy>`;
     return xml;
+  }
+
+  function _ruleTargetXml20(target) {
+    if (!target) return '';
+    const cats = [
+      { key: 'subject',  wrap: 'Subjects',  inner: 'Subject',  match: 'SubjectMatch',  des: 'SubjectAttributeDesignator' },
+      { key: 'resource', wrap: 'Resources', inner: 'Resource', match: 'ResourceMatch', des: 'ResourceAttributeDesignator' },
+      { key: 'action',   wrap: 'Actions',   inner: 'Action',   match: 'ActionMatch',   des: 'ActionAttributeDesignator' },
+    ];
+    const parts = [];
+    for (const c of cats) {
+      const t = target[c.key];
+      if (!t || !t.value.trim()) continue;
+      const aid = _escXml(t.attributeId.trim() || DEFAULT_ATTR_IDS[c.key]);
+      parts.push(
+        `    <${c.wrap}>\n` +
+        `      <${c.inner}>\n` +
+        `        <${c.match} MatchId="${MATCH_ID_STR_EQ}">\n` +
+        `          <AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(t.value.trim())}</AttributeValue>\n` +
+        `          <${c.des} AttributeId="${aid}" DataType="${DATA_TYPE_STRING}"/>\n` +
+        `        </${c.match}>\n` +
+        `      </${c.inner}>\n` +
+        `    </${c.wrap}>`
+      );
+    }
+    if (parts.length === 0) return '';
+    return `    <Target>\n${parts.join('\n')}\n    </Target>`;
+  }
+
+  function _ruleTargetXml30(target) {
+    if (!target) return '';
+    const cats = [
+      { key: 'subject',  cat: 'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject' },
+      { key: 'resource', cat: 'urn:oasis:names:tc:xacml:3.0:attribute-category:resource' },
+      { key: 'action',   cat: 'urn:oasis:names:tc:xacml:3.0:attribute-category:action' },
+    ];
+    const matches = [];
+    for (const c of cats) {
+      const t = target[c.key];
+      if (!t || !t.value.trim()) continue;
+      const aid = _escXml(t.attributeId.trim() || DEFAULT_ATTR_IDS[c.key]);
+      matches.push(
+        `          <Match MatchId="${MATCH_ID_STR_EQ}">\n` +
+        `            <AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(t.value.trim())}</AttributeValue>\n` +
+        `            <AttributeDesignator Category="${c.cat}" AttributeId="${aid}" DataType="${DATA_TYPE_STRING}" MustBePresent="false"/>\n` +
+        `          </Match>`
+      );
+    }
+    if (matches.length === 0) return '';
+    return (
+      `    <Target>\n` +
+      `      <AnyOf>\n` +
+      `        <AllOf>\n` +
+      matches.join('\n') + '\n' +
+      `        </AllOf>\n` +
+      `      </AnyOf>\n` +
+      `    </Target>`
+    );
   }
 
   // ── Step validation ────────────────────────────────────────────────────
@@ -421,6 +504,43 @@ const PolicyCreator = (() => {
                    placeholder="${esc(I18n.t('creator.rule.desc.ph'))}"
                    value="${esc(r.description)}" autocomplete="off">
           </div>
+          <div class="creator-target-section">
+            <div class="creator-target-hdr">
+              <span class="creator-target-hdr-label">&#x1F3AF; ${esc(I18n.t('creator.target.section'))}</span>
+              <span class="creator-hint">${esc(I18n.t('creator.target.hint'))}</span>
+            </div>
+            <div class="creator-target-grid">
+              <span class="creator-target-cat">${esc(I18n.t('creator.target.subject'))}</span>
+              <input class="creator-input" type="text"
+                     data-rule-idx="${i}" data-target-cat="subject" data-target-prop="value"
+                     placeholder="${esc(I18n.t('creator.target.value.ph.subject'))}"
+                     value="${esc(r.target ? r.target.subject.value : '')}" autocomplete="off">
+              <input class="creator-input creator-attrId-input" type="text"
+                     data-rule-idx="${i}" data-target-cat="subject" data-target-prop="attributeId"
+                     placeholder="${esc(DEFAULT_ATTR_IDS.subject)}"
+                     value="${esc(r.target ? r.target.subject.attributeId : '')}" autocomplete="off" spellcheck="false">
+
+              <span class="creator-target-cat">${esc(I18n.t('creator.target.resource'))}</span>
+              <input class="creator-input" type="text"
+                     data-rule-idx="${i}" data-target-cat="resource" data-target-prop="value"
+                     placeholder="${esc(I18n.t('creator.target.value.ph.resource'))}"
+                     value="${esc(r.target ? r.target.resource.value : '')}" autocomplete="off">
+              <input class="creator-input creator-attrId-input" type="text"
+                     data-rule-idx="${i}" data-target-cat="resource" data-target-prop="attributeId"
+                     placeholder="${esc(DEFAULT_ATTR_IDS.resource)}"
+                     value="${esc(r.target ? r.target.resource.attributeId : '')}" autocomplete="off" spellcheck="false">
+
+              <span class="creator-target-cat">${esc(I18n.t('creator.target.action'))}</span>
+              <input class="creator-input" type="text"
+                     data-rule-idx="${i}" data-target-cat="action" data-target-prop="value"
+                     placeholder="${esc(I18n.t('creator.target.value.ph.action'))}"
+                     value="${esc(r.target ? r.target.action.value : '')}" autocomplete="off">
+              <input class="creator-input creator-attrId-input" type="text"
+                     data-rule-idx="${i}" data-target-cat="action" data-target-prop="attributeId"
+                     placeholder="${esc(DEFAULT_ATTR_IDS.action)}"
+                     value="${esc(r.target ? r.target.action.attributeId : '')}" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
         </div>
       </div>`;
   }
@@ -432,13 +552,20 @@ const PolicyCreator = (() => {
     const alg = COMBINING_ALGS.find(a => a.value === p.combiningAlg);
     const algLabel = alg ? I18n.t(alg.labelKey) : p.combiningAlg;
 
-    const ruleRows = p.rules.map(r =>
-      `<tr>
+    const ruleRows = p.rules.map(r => {
+      const targetParts = [];
+      if (r.target) {
+        if (r.target.subject.value.trim())  targetParts.push(`${I18n.t('creator.target.subject')}: ${r.target.subject.value.trim()}`);
+        if (r.target.resource.value.trim()) targetParts.push(`${I18n.t('creator.target.resource')}: ${r.target.resource.value.trim()}`);
+        if (r.target.action.value.trim())   targetParts.push(`${I18n.t('creator.target.action')}: ${r.target.action.value.trim()}`);
+      }
+      return `<tr>
         <td>${esc(r.id)}</td>
         <td><span class="rule-effect-badge ${r.effect === 'Permit' ? 'permit' : 'deny'}">${r.effect}</span></td>
         <td>${esc(r.description || '\u2014')}</td>
-      </tr>`
-    ).join('');
+        <td>${esc(targetParts.length ? targetParts.join(', ') : '\u2014')}</td>
+      </tr>`;
+    }).join('');
 
     return `
       <div class="creator-step-content">
@@ -472,6 +599,7 @@ const PolicyCreator = (() => {
                 <th>${esc(I18n.t('creator.table.ruleId'))}</th>
                 <th>${esc(I18n.t('creator.table.effect'))}</th>
                 <th>${esc(I18n.t('creator.table.desc'))}</th>
+                <th>${esc(I18n.t('creator.table.target'))}</th>
               </tr>
             </thead>
             <tbody>${ruleRows}</tbody>
@@ -532,6 +660,17 @@ const PolicyCreator = (() => {
         _saveState(); _schedulePreview(); _updateNextBtn();
       }
     }
+    const cat = t.dataset.targetCat;
+    const prop = t.dataset.targetProp;
+    if (cat !== undefined && prop !== undefined) {
+      const idx = parseInt(t.dataset.ruleIdx, 10);
+      const r = _state.policy.rules[idx];
+      if (r) {
+        if (!r.target) r.target = _defaultTarget();
+        if (r.target[cat]) r.target[cat][prop] = t.value;
+        _saveState(); _schedulePreview();
+      }
+    }
   }
 
   function _handleChange(e) {
@@ -554,7 +693,7 @@ const PolicyCreator = (() => {
 
   function _addRule() {
     const n = _state.policy.rules.length + 1;
-    _state.policy.rules.push({ id: `rule-${n}`, effect: 'Permit', description: '' });
+    _state.policy.rules.push({ id: `rule-${n}`, effect: 'Permit', description: '', target: _defaultTarget() });
     _saveState();
     _reRenderRules();
     _schedulePreview();
