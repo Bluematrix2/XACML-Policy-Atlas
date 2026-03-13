@@ -30,7 +30,7 @@ const TRANSLATIONS = {
     'hdr.theme.aria.light': 'Design: Hell (wechseln zu Dunkel)',
 
     // ── Tabs ──
-    'tab.viz':   '🌍 Viewer & Editor',
+    'tab.viz':   '🌍 Visualizer & Editor',
     'tab.guide': '📖 XACML verstehen',
     'tab.kb':    '📚 Knowledge Base',
 
@@ -276,6 +276,99 @@ const TRANSLATIONS = {
     'kb.s1.title': '1. Mapping-CSV',
     'kb.s2.title': '2. Enforcement-CSV',
     'kb.s3.title': '3. Validierungsregeln',
+
+    // ── Creator tab ──
+    'tab.creator': '🛠️ Creator',
+
+    // ── Creator — shell ──
+    'creator.subtitle':       'Erstelle eine XACML-Policy Schritt für Schritt — ohne XML-Kenntnisse.',
+    'creator.reset.btn':      '↺ Zurücksetzen',
+    'creator.reset.title':    'Alles zurücksetzen und neu beginnen',
+    'creator.reset.aria':     'Creator zurücksetzen',
+    'creator.reset.confirm':  'Alle Eingaben verwerfen?',
+    'creator.reset.yes':      'Ja',
+    'creator.reset.no':       'Abbrechen',
+
+    // ── Creator — step bar ──
+    'creator.step.1': 'Typ',
+    'creator.step.2': 'Basis-Info',
+    'creator.step.3': 'Regeln',
+    'creator.step.4': 'Review',
+
+    // ── Creator — Step 1 ──
+    'creator.s1.title':              'Schritt 1 — Typ wählen',
+    'creator.s1.desc':               'Welchen Policy-Typ möchtest du erstellen?',
+    'creator.type.policy.label':     'Policy',
+    'creator.type.policy.desc':      'Enthält direkt Regeln (Rules). Gut für einen einzelnen Anwendungsfall.',
+    'creator.type.policyset.label':  'PolicySet',
+    'creator.type.policyset.desc':   'Gruppiert mehrere Policies. Verfügbar in einer zukünftigen Version.',
+    'creator.type.policyset.title':  'Verfügbar in Phase 3',
+
+    // ── Creator — Step 2 ──
+    'creator.s2.title':          'Schritt 2 — Basis-Informationen',
+    'creator.field.id.label':    'Policy-ID',
+    'creator.field.id.ph':       'z.B. access-control-physicians',
+    'creator.field.id.hint':     'Eindeutige ID der Policy (keine Leerzeichen empfohlen)',
+    'creator.field.ver.label':   'Policy Version',
+    'creator.field.ver.hint':    'Bestimmt den XML-Namespace der generierten Policy.',
+    'creator.field.desc.label':  'Beschreibung',
+    'creator.field.desc.ph':     'Optionale Beschreibung der Policy…',
+    'creator.field.alg.label':   'Kombinations-Algorithmus',
+    'creator.field.alg.hint':    'Bestimmt, welche Regel gewinnt wenn mehrere zutreffen.',
+    'creator.uuid.title':        'UUID v4 generieren',
+    'creator.uuid.aria':         'UUID v4 für Policy-ID generieren',
+    'creator.alg.deny':          'Deny überschreibt (Standard)',
+    'creator.alg.permit':        'Permit überschreibt',
+    'creator.alg.first':         'Erster zutreffender',
+    'creator.alg.only':          'Nur eins passend',
+
+    // ── Creator — Step 3 ──
+    'creator.s3.title':          'Schritt 3 — Regeln definieren',
+    'creator.s3.desc':           'Lege fest, welche Zugriffsregeln die Policy enthält. Mindestens eine Regel ist erforderlich.',
+    'creator.rules.empty':       'Noch keine Regeln. Klicke auf „+ Regel hinzufügen".',
+    'creator.rule.num':          'Regel {n}',
+    'creator.rule.delete.title': 'Regel entfernen',
+    'creator.rule.delete.aria':  'Regel {n} entfernen',
+    'creator.rule.id.label':     'Regel-ID',
+    'creator.rule.id.ph':        'z.B. permit-physicians',
+    'creator.rule.id.uuid.title':'UUID v4 für Regel-ID generieren',
+    'creator.rule.id.uuid.aria': 'UUID v4 für Regel-ID generieren',
+    'creator.rule.effect.label': 'Effect',
+    'creator.rule.desc.label':   'Beschreibung',
+    'creator.rule.desc.ph':      'Optionale Beschreibung…',
+    'creator.rule.add':          '+ Regel hinzufügen',
+
+    // ── Creator — Step 4 ──
+    'creator.s4.title':          'Schritt 4 — Review & Export',
+    'creator.s4.desc':           'Überprüfe deine Policy und lade sie herunter oder öffne sie im Editor.',
+    'creator.summary.id':        'Policy-ID',
+    'creator.summary.version':   'Version',
+    'creator.summary.alg':       'Algorithmus',
+    'creator.summary.rules':     'Regeln',
+    'creator.table.ruleId':      'Regel-ID',
+    'creator.table.effect':      'Effect',
+    'creator.table.desc':        'Beschreibung',
+
+    // ── Creator — nav & actions ──
+    'creator.nav.back':          '← Zurück',
+    'creator.nav.next':          'Weiter →',
+    'creator.action.validate':   '✓ Validieren',
+    'creator.action.viz':        '📊 Im Visualizer laden',
+    'creator.action.editor':     '✏️ Im Editor öffnen',
+    'creator.action.dl':         '↓ Als XML herunterladen',
+
+    // ── Creator — preview ──
+    'creator.preview.title':     'XACML-Vorschau',
+    'creator.copy.title':        'XML in Zwischenablage kopieren',
+
+    // ── Creator — validation ──
+    'creator.val.ok':            '✅ Validierung erfolgreich',
+    'creator.val.err':           '❌ Fehler gefunden',
+    'creator.val.xml.ok':        '✅ XML ist wohlgeformt.',
+    'creator.val.xml.err':       '❌ XML nicht wohlgeformt: {msg}',
+
+    // ── Creator — toast ──
+    'creator.toast.viz':         '✅ Policy im Visualizer geladen',
   },
 
   en: {
@@ -296,7 +389,7 @@ const TRANSLATIONS = {
     'hdr.theme.aria.light': 'Theme: Light (switch to Dark)',
 
     // ── Tabs ──
-    'tab.viz':   '🌍 View & Edit',
+    'tab.viz':   '🌍 Visualizer & Editor',
     'tab.guide': '📖 Understand XACML',
     'tab.kb':    '📚 Knowledge Base',
 
@@ -542,6 +635,99 @@ const TRANSLATIONS = {
     'kb.s1.title': '1. Mapping-CSV',
     'kb.s2.title': '2. Enforcement-CSV',
     'kb.s3.title': '3. Validation Rules',
+
+    // ── Creator tab ──
+    'tab.creator': '🛠️ Creator',
+
+    // ── Creator — shell ──
+    'creator.subtitle':       'Create an XACML policy step by step — no XML knowledge required.',
+    'creator.reset.btn':      '↺ Reset',
+    'creator.reset.title':    'Reset everything and start over',
+    'creator.reset.aria':     'Reset Creator',
+    'creator.reset.confirm':  'Discard all inputs?',
+    'creator.reset.yes':      'Yes',
+    'creator.reset.no':       'Cancel',
+
+    // ── Creator — step bar ──
+    'creator.step.1': 'Type',
+    'creator.step.2': 'Basic Info',
+    'creator.step.3': 'Rules',
+    'creator.step.4': 'Review',
+
+    // ── Creator — Step 1 ──
+    'creator.s1.title':              'Step 1 — Choose Type',
+    'creator.s1.desc':               'What type of policy do you want to create?',
+    'creator.type.policy.label':     'Policy',
+    'creator.type.policy.desc':      'Contains rules directly. Good for a single use case.',
+    'creator.type.policyset.label':  'PolicySet',
+    'creator.type.policyset.desc':   'Groups multiple policies. Available in a future version.',
+    'creator.type.policyset.title':  'Available in Phase 3',
+
+    // ── Creator — Step 2 ──
+    'creator.s2.title':          'Step 2 — Basic Information',
+    'creator.field.id.label':    'Policy ID',
+    'creator.field.id.ph':       'e.g. access-control-physicians',
+    'creator.field.id.hint':     'Unique ID for the policy (no spaces recommended)',
+    'creator.field.ver.label':   'Policy Version',
+    'creator.field.ver.hint':    'Determines the XML namespace of the generated policy.',
+    'creator.field.desc.label':  'Description',
+    'creator.field.desc.ph':     'Optional description of the policy…',
+    'creator.field.alg.label':   'Combining Algorithm',
+    'creator.field.alg.hint':    'Determines which rule wins when multiple apply.',
+    'creator.uuid.title':        'Generate UUID v4',
+    'creator.uuid.aria':         'Generate UUID v4 for Policy ID',
+    'creator.alg.deny':          'Deny overrides (default)',
+    'creator.alg.permit':        'Permit overrides',
+    'creator.alg.first':         'First applicable',
+    'creator.alg.only':          'Only one applicable',
+
+    // ── Creator — Step 3 ──
+    'creator.s3.title':          'Step 3 — Define Rules',
+    'creator.s3.desc':           'Define which access rules the policy contains. At least one rule is required.',
+    'creator.rules.empty':       'No rules yet. Click "+ Add Rule".',
+    'creator.rule.num':          'Rule {n}',
+    'creator.rule.delete.title': 'Remove rule',
+    'creator.rule.delete.aria':  'Remove rule {n}',
+    'creator.rule.id.label':     'Rule ID',
+    'creator.rule.id.ph':        'e.g. permit-physicians',
+    'creator.rule.id.uuid.title':'Generate UUID v4 for Rule ID',
+    'creator.rule.id.uuid.aria': 'Generate UUID v4 for Rule ID',
+    'creator.rule.effect.label': 'Effect',
+    'creator.rule.desc.label':   'Description',
+    'creator.rule.desc.ph':      'Optional description…',
+    'creator.rule.add':          '+ Add Rule',
+
+    // ── Creator — Step 4 ──
+    'creator.s4.title':          'Step 4 — Review & Export',
+    'creator.s4.desc':           'Review your policy and download it or open it in the editor.',
+    'creator.summary.id':        'Policy ID',
+    'creator.summary.version':   'Version',
+    'creator.summary.alg':       'Algorithm',
+    'creator.summary.rules':     'Rules',
+    'creator.table.ruleId':      'Rule ID',
+    'creator.table.effect':      'Effect',
+    'creator.table.desc':        'Description',
+
+    // ── Creator — nav & actions ──
+    'creator.nav.back':          '← Back',
+    'creator.nav.next':          'Next →',
+    'creator.action.validate':   '✓ Validate',
+    'creator.action.viz':        '📊 Load in Visualizer',
+    'creator.action.editor':     '✏️ Open in Editor',
+    'creator.action.dl':         '↓ Download as XML',
+
+    // ── Creator — preview ──
+    'creator.preview.title':     'XACML Preview',
+    'creator.copy.title':        'Copy XML to clipboard',
+
+    // ── Creator — validation ──
+    'creator.val.ok':            '✅ Validation successful',
+    'creator.val.err':           '❌ Errors found',
+    'creator.val.xml.ok':        '✅ XML is well-formed.',
+    'creator.val.xml.err':       '❌ XML not well-formed: {msg}',
+
+    // ── Creator — toast ──
+    'creator.toast.viz':         '✅ Policy loaded in Visualizer',
   }
 };
 
