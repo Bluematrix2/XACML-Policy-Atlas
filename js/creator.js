@@ -136,7 +136,7 @@ const PolicyCreator = (() => {
           <div class="creator-right">
             <details class="creator-preview" id="creator-preview-details" open>
               <summary class="creator-preview-summary">
-                XML-Vorschau
+                XACML-Vorschau
                 <button class="creator-copy-btn" id="creator-copy-btn" title="XML in Zwischenablage kopieren">&#x1F4CB;</button>
               </summary>
               <pre class="creator-xml-pre" id="creator-xml-pre"></pre>

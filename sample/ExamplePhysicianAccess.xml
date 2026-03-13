@@ -1,4 +1,4 @@
-<Policy PolicyId='urn:policyatlas:2024:policy:ExamplePhysicianAccess' RuleCombiningAlgId='urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides'
+<Policy PolicyId='urn:policyatlas:2026:policy:ExamplePhysicianAccess' RuleCombiningAlgId='urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides'
     xmlns='urn:oasis:names:tc:xacml:2.0:policy:schema:os'
     xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' Version='1'>
     <Description>Treating physicians can read the patient record and read/write clinical data for patients under their care. Access to documents with very high confidentiality (VHL) is denied unless the physician is the treating practitioner of that record.</Description>
@@ -33,7 +33,7 @@
         </Resources>
     </Target>
 
-    <Rule Effect='Permit' RuleId='urn:policyatlas:2024:rule:physician-read-patient'>
+    <Rule Effect='Permit' RuleId='urn:policyatlas:2026:rule:physician-read-patient'>
         <Description>READ-only access to the Patient resource — physicians must not modify the master patient record directly.</Description>
         <Target>
             <Resources>
@@ -62,7 +62,7 @@
         </Condition>
     </Rule>
 
-    <Rule Effect='Permit' RuleId='urn:policyatlas:2024:rule:physician-crud-clinical'>
+    <Rule Effect='Permit' RuleId='urn:policyatlas:2026:rule:physician-crud-clinical'>
         <Description>READ and WRITE access to core clinical FHIR resources for the patient under care.</Description>
         <Target>
             <Resources>
@@ -128,7 +128,7 @@
         </Condition>
     </Rule>
 
-    <Rule Effect='Permit' RuleId='urn:policyatlas:2024:rule:physician-crud-medication'>
+    <Rule Effect='Permit' RuleId='urn:policyatlas:2026:rule:physician-crud-medication'>
         <Description>READ and WRITE access to medication-related FHIR resources for the patient under care.</Description>
         <Target>
             <Resources>
@@ -182,7 +182,7 @@
         </Condition>
     </Rule>
 
-    <Rule RuleId='urn:policyatlas:2024:rule:physician-deny-vhl' Effect='Deny'>
+    <Rule RuleId='urn:policyatlas:2026:rule:physician-deny-vhl' Effect='Deny'>
         <Description>Deny access to documents flagged as very high confidentiality (VHL) unless the physician is the treating practitioner of that specific patient record.</Description>
         <Target>
             <Resources>

@@ -30,7 +30,7 @@ const TRANSLATIONS = {
     'hdr.theme.aria.light': 'Design: Hell (wechseln zu Dunkel)',
 
     // ── Tabs ──
-    'tab.viz':   '📊 Visualisierung',
+    'tab.viz':   '🌍 Viewer & Editor',
     'tab.guide': '📖 XACML verstehen',
     'tab.kb':    '📚 Knowledge Base',
 
@@ -296,7 +296,7 @@ const TRANSLATIONS = {
     'hdr.theme.aria.light': 'Theme: Light (switch to Dark)',
 
     // ── Tabs ──
-    'tab.viz':   '📊 Visualization',
+    'tab.viz':   '🌍 View & Edit',
     'tab.guide': '📖 Understand XACML',
     'tab.kb':    '📚 Knowledge Base',
 
