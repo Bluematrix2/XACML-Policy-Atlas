@@ -107,7 +107,8 @@ const XACMLParser = (() => {
       const ln = child.localName;
       if (ln === 'SubjectAttributeDesignator' ||
           ln === 'ResourceAttributeDesignator' ||
-          ln === 'ActionAttributeDesignator') {
+          ln === 'ActionAttributeDesignator' ||
+          ln === 'AttributeDesignator') {
         designator = parseDesignator(child);
         break;
       }
@@ -147,15 +148,27 @@ const XACMLParser = (() => {
           for (const matchEl of childrenByName(allOf, 'Match')) {
             const m = parseMatch(matchEl);
             let designatorLocalName = '';
+            let category = '';
             for (const child of matchEl.children) {
               if (child.localName.includes('Designator')) {
                 designatorLocalName = child.localName;
+                category = child.getAttribute('Category') || '';
                 break;
               }
             }
+            // XACML 2.0: named designators carry the category in their element name
             if (designatorLocalName.includes('Subject'))        result.subjects.push([m]);
             else if (designatorLocalName.includes('Resource'))  result.resources.push([m]);
             else if (designatorLocalName.includes('Action'))    result.actions.push([m]);
+            // XACML 3.0: generic AttributeDesignator — category is in the Category attribute
+            else if (category.includes('subject'))   result.subjects.push([m]);
+            else if (category.includes('resource'))  result.resources.push([m]);
+            else if (category.includes('action'))    result.actions.push([m]);
+            // environment category: store separately if present
+            else if (category.includes('environment')) {
+              result.environments = result.environments || [];
+              result.environments.push([m]);
+            }
           }
         }
       }
@@ -179,6 +192,14 @@ const XACMLParser = (() => {
         args.push({ nodeType: 'ResourceAttr', ...parseDesignator(child) });
       } else if (ln === 'ActionAttributeDesignator') {
         args.push({ nodeType: 'ActionAttr', ...parseDesignator(child) });
+      } else if (ln === 'AttributeDesignator') {
+        // XACML 3.0 generic designator — map to nodeType via Category attribute
+        const category = child.getAttribute('Category') || '';
+        if (category.includes('subject'))        args.push({ nodeType: 'SubjectAttr',   ...parseDesignator(child) });
+        else if (category.includes('resource'))  args.push({ nodeType: 'ResourceAttr',  ...parseDesignator(child) });
+        else if (category.includes('action'))    args.push({ nodeType: 'ActionAttr',    ...parseDesignator(child) });
+        else if (category.includes('environment')) args.push({ nodeType: 'EnvAttr',     ...parseDesignator(child) });
+        else                                     args.push({ nodeType: 'Attr',           ...parseDesignator(child) });
       } else if (ln === 'AttributeValue') {
         args.push({ nodeType: 'Value', ...parseAttributeValue(child) });
       }
@@ -203,6 +224,17 @@ const XACMLParser = (() => {
     return { ruleId, effect, description, target, condition };
   }
 
+  // Parse a single <Policy> child element (used by PolicySet handling)
+  function parsePolicyEl(policyEl) {
+    const policyId    = policyEl.getAttribute('PolicyId') || '';
+    const algorithm   = policyEl.getAttribute('RuleCombiningAlgId') || '';
+    const descEl      = childByName(policyEl, 'Description');
+    const description = descEl ? (descEl.textContent || '').trim() : '';
+    const target      = parseTarget(childByName(policyEl, 'Target'));
+    const rules       = childrenByName(policyEl, 'Rule').map(parseRule);
+    return { policyId, algorithm, description, target, rules };
+  }
+
   function parse(xmlText, filename) {
     let doc;
     try {
@@ -213,21 +245,30 @@ const XACMLParser = (() => {
       throw new Error('XML Parse-Fehler: ' + e.message);
     }
 
-    const root = doc.documentElement;
-    if (root.localName !== 'Policy') {
-      throw new Error('Kein <Policy>-Element gefunden');
+    const root     = doc.documentElement;
+    const rootName = root.localName;
+    if (rootName !== 'Policy' && rootName !== 'PolicySet') {
+      throw new Error(`Kein <Policy>- oder <PolicySet>-Element gefunden (gefunden: <${rootName}>)`);
     }
 
-    const policyId    = root.getAttribute('PolicyId') || filename;
-    const algorithm   = root.getAttribute('RuleCombiningAlgId') || '';
     const ns          = root.namespaceURI || '';
     const version     = ns.includes('2.0') ? '2.0' : '3.0';
     const descEl      = childByName(root, 'Description');
     const description = descEl ? (descEl.textContent || '').trim() : '';
     const target      = parseTarget(childByName(root, 'Target'));
-    const rules       = childrenByName(root, 'Rule').map(parseRule);
 
-    return { policyId, filename, version, algorithm, description, target, rules };
+    if (rootName === 'PolicySet') {
+      const policyId  = root.getAttribute('PolicySetId') || filename;
+      const algorithm = root.getAttribute('PolicyCombiningAlgId') || '';
+      const policies  = childrenByName(root, 'Policy').map(parsePolicyEl);
+      return { policyId, filename, version, algorithm, description, target, rootElement: 'PolicySet', policies, rules: [] };
+    }
+
+    // rootName === 'Policy'
+    const policyId  = root.getAttribute('PolicyId') || filename;
+    const algorithm = root.getAttribute('RuleCombiningAlgId') || '';
+    const rules     = childrenByName(root, 'Rule').map(parseRule);
+    return { policyId, filename, version, algorithm, description, target, rootElement: 'Policy', rules };
   }
 
   return { parse };

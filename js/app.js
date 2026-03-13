@@ -782,9 +782,10 @@ const App = (() => {
 
     list.innerHTML = policies.map((p, i) => {
       const isActive    = p === active;
-      const permitCount = p.rules.filter(r => r.effect !== 'Deny').length;
-      const denyCount   = p.rules.filter(r => r.effect === 'Deny').length;
-      const total       = p.rules.length;
+      const allRules    = p.policies ? p.policies.flatMap(r => r.rules) : p.rules;
+      const permitCount = allRules.filter(r => r.effect !== 'Deny').length;
+      const denyCount   = allRules.filter(r => r.effect === 'Deny').length;
+      const total       = allRules.length;
       const pPct        = total > 0 ? (permitCount / total * 100).toFixed(1) : 0;
       const shortName   = p.filename.replace(/\.xml$/i, '');
       const confirming  = _confirmingDelete.has(i);

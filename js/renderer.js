@@ -192,6 +192,12 @@ const TreeRenderer = (() => {
         const e = LabelMapper.lookup(node.attributeId);
         return `<span class="cond-act">${esc(e ? e.label : lastSegment(node.attributeId))}</span>`;
       }
+      case 'EnvAttr':
+      case 'Attr': {
+        // XACML 3.0 generic AttributeDesignator (environment or unknown category)
+        const e = LabelMapper.lookup(node.attributeId);
+        return `<span class="cond-val">${esc(e ? e.label : lastSegment(node.attributeId))}</span>`;
+      }
       case 'Value': {
         if (node.dataType === 'CV')  return `<span class="cond-val">${esc(node.code)}@${esc(node.codeSystem)}</span>`;
         if (node.dataType === 'II')  return `<span class="cond-val">${node.isWildcard ? '*' : esc(node.root)}</span>`;
@@ -278,8 +284,10 @@ const TreeRenderer = (() => {
   // ── Summary box ──
 
   function renderSummaryBox(policy) {
-    const permitCount = policy.rules.filter(r => r.effect !== 'Deny').length;
-    const denyCount   = policy.rules.filter(r => r.effect === 'Deny').length;
+    // For PolicySet: aggregate rules from all child policies
+    const allRules    = policy.policies ? policy.policies.flatMap(p => p.rules) : policy.rules;
+    const permitCount = allRules.filter(r => r.effect !== 'Deny').length;
+    const denyCount   = allRules.filter(r => r.effect === 'Deny').length;
 
     // Collect subjects/roles from policy target
     const subjectLabels = [];
@@ -299,7 +307,7 @@ const TreeRenderer = (() => {
 
     // Collect FHIR resources and their access modes from rules
     const fhirResMap = new Map(); // type → Set<'read'|'write'>
-    for (const rule of policy.rules) {
+    for (const rule of allRules) {
       if (!rule.target) continue;
       const actions = (rule.target.actions || []).flatMap(ag => ag.map(m => (m.value.value || '').toLowerCase()));
       const hasRead  = actions.some(a => a.includes('view') || a.includes('retrieve') || a.includes('query') || a.includes('response'));
@@ -423,11 +431,44 @@ const TreeRenderer = (() => {
          + `</div>`;
   }
 
+  // ── Sub-policy section (child <Policy> inside a <PolicySet>) ──
+
+  function renderSubPolicy(subPolicy, index) {
+    const shortId = subPolicy.policyId ? subPolicy.policyId.split(':').pop() : `Policy ${index + 1}`;
+    const pCount  = subPolicy.rules.filter(r => r.effect !== 'Deny').length;
+    const dCount  = subPolicy.rules.filter(r => r.effect === 'Deny').length;
+
+    let html = `<div class="sub-policy">`;
+    html += `<div class="sub-policy-hdr">`;
+    html += `<span class="sub-policy-num">${String(index + 1).padStart(2, '0')}</span>`;
+    html += `<div class="sub-policy-info">`;
+    html += `<span class="sub-policy-id">${esc(shortId)}</span>`;
+    if (subPolicy.description) html += `<span class="sub-policy-desc">${esc(subPolicy.description)}</span>`;
+    html += `</div>`;
+    html += `<div class="sub-policy-badges">`;
+    html += renderAlgo(subPolicy.algorithm);
+    html += `<span style="color:#2e7d32;font-size:12px;font-weight:700">&#x2705;&nbsp;${pCount}P</span>`;
+    html += `<span style="color:#c62828;font-size:12px;font-weight:700">&#x274C;&nbsp;${dCount}D</span>`;
+    html += `</div>`;
+    html += `</div>`;
+
+    if (subPolicy.target) {
+      const t = subPolicy.target;
+      const hasContent = (t.subjects || []).length + (t.resources || []).length + (t.actions || []).length > 0;
+      if (hasContent) html += renderTarget(subPolicy.target);
+    }
+
+    subPolicy.rules.forEach((rule, i) => { html += renderRule(rule, i); });
+    html += `</div>`;
+    return html;
+  }
+
   // ── Full policy (accordion wrapper) ──
 
   function render(policy) {
-    const permitCount = policy.rules.filter(r => r.effect !== 'Deny').length;
-    const denyCount   = policy.rules.filter(r => r.effect === 'Deny').length;
+    const allRules    = policy.policies ? policy.policies.flatMap(p => p.rules) : policy.rules;
+    const permitCount = allRules.filter(r => r.effect !== 'Deny').length;
+    const denyCount   = allRules.filter(r => r.effect === 'Deny').length;
     const shortId     = policy.policyId.split(':').pop();
     const bodyId      = 'accb_' + Math.random().toString(36).slice(2, 7);
 
@@ -446,6 +487,9 @@ const TreeRenderer = (() => {
     html += `<span style="color:#c62828;font-size:12px;font-weight:700">&#x274C;&nbsp;${denyCount}D</span>`;
     html += renderAlgo(policy.algorithm);
     html += `<span style="font-size:11px;color:#9e9e9e">XACML&nbsp;${policy.version}</span>`;
+    if (policy.rootElement === 'PolicySet') {
+      html += `<span style="font-size:10px;color:#7b1fa2;border:1px solid #ce93d8;border-radius:3px;padding:1px 5px;font-weight:700">PolicySet</span>`;
+    }
     html += `</div>`;
     html += `<span class="acc-chevron open">&#x25B6;</span>`;
     html += `</div>`; // acc-hdr
@@ -475,8 +519,12 @@ const TreeRenderer = (() => {
     html += `<button class="ctrl-btn" onclick="TreeRenderer.collapseAll()">${esc(I18n.t('renderer.collapseAll'))}</button>`;
     html += `</div>`;
 
-    // Rules
-    policy.rules.forEach((rule, i) => { html += renderRule(rule, i); });
+    // Rules — for PolicySet render child policies as sections, otherwise flat rules
+    if (policy.policies && policy.policies.length > 0) {
+      policy.policies.forEach((sp, i) => { html += renderSubPolicy(sp, i); });
+    } else {
+      policy.rules.forEach((rule, i) => { html += renderRule(rule, i); });
+    }
 
     html += `</div></div></div>`; // acc-inner-content, acc-inner, acc-body
     html += `</div>`; // acc-panel
