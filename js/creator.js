@@ -191,7 +191,7 @@ const PolicyCreator = (() => {
         <button class="creator-reset-btn" id="creator-reset-btn"
                 title="${esc(I18n.t('creator.reset.title'))}"
                 aria-label="${esc(I18n.t('creator.reset.aria'))}">
-          &#x21BA; ${esc(I18n.t('creator.reset.btn'))}
+          ${esc(I18n.t('creator.reset.btn'))}
         </button>
         <div class="creator-reset-confirm" id="creator-reset-confirm" style="display:none">
           <span class="creator-reset-confirm-text">${esc(I18n.t('creator.reset.confirm'))}</span>
@@ -601,7 +601,9 @@ const PolicyCreator = (() => {
     _renderFormStep();
     _renderNav();
     _updatePreview();
-    // Re-sync preview header label (not re-rendered by _render)
+    // Re-sync static labels not covered by _renderStepBar / _renderFormStep / _renderNav
+    const subtitleEl = document.querySelector('.creator-subtitle');
+    if (subtitleEl) subtitleEl.textContent = I18n.t('creator.subtitle');
     const titleEl = document.querySelector('.creator-preview-title');
     if (titleEl) titleEl.textContent = I18n.t('creator.preview.title');
     const copyBtn = document.getElementById('creator-copy-btn');
