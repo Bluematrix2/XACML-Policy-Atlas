@@ -331,6 +331,17 @@ const TreeRenderer = (() => {
     let html = `<div class="summary-box">`;
     html += `<div class="summary-box-title">${esc(I18n.t('renderer.summary.title'))}</div>`;
 
+    // Policy type (Policy vs PolicySet)
+    html += `<div class="summary-row">`;
+    html += `<span class="summary-label">${esc(I18n.t('renderer.summary.type'))}</span>`;
+    if (policy.rootElement === 'PolicySet') {
+      const n = policy.policies ? policy.policies.length : 0;
+      html += `<span class="summary-chip" style="color:#7b1fa2;border-color:#ce93d8">&#x1F4C2; ${esc(I18n.t('renderer.summary.type.policyset', { n }))}</span>`;
+    } else {
+      html += `<span class="summary-chip" style="color:#1565c0;border-color:#bbdefb">&#x1F4C4; ${esc(I18n.t('renderer.summary.type.policy'))}</span>`;
+    }
+    html += `</div>`;
+
     // Rule counts
     html += `<div class="summary-row">`;
     html += `<span class="summary-label">${esc(I18n.t('renderer.summary.rules'))}</span>`;
