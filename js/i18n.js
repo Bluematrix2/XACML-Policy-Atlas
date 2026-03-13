@@ -369,6 +369,11 @@ const TRANSLATIONS = {
     'creator.target.attrId.action.id':       'Action-ID',
     'creator.target.attrId.action.implied':  'Implied Action',
 
+    // ── Creator — policy-level target (Phase 2) ──
+    'creator.ptarget.section':   'Policy-Target (optional)',
+    'creator.ptarget.hint':      'Schränkt die gesamte Policy auf bestimmte Anfragen ein. Leer = keine Einschränkung.',
+    'creator.summary.ptarget':   'Policy-Target',
+
     // ── Creator — nav & actions ──
     'creator.nav.back':          '← Zurück',
     'creator.nav.next':          'Weiter →',
@@ -735,9 +740,9 @@ const TRANSLATIONS = {
     'creator.target.subject':           'Subject',
     'creator.target.resource':          'Resource',
     'creator.target.action':            'Action',
-    'creator.target.value.ph.subject':  'z.B. UserRole, Servername',
-    'creator.target.value.ph.resource': 'z.B. Patient, Appointment',
-    'creator.target.value.ph.action':   'z.B. read, write',
+    'creator.target.value.ph.subject':  'e.g. UserRole, Servername',
+    'creator.target.value.ph.resource': 'e.g. Patient, Appointment',
+    'creator.target.value.ph.action':   'e.g. read, write',
     'creator.target.attrId.subject.id':      'Subject-ID',
     'creator.target.attrId.subject.role':    'Role',
     'creator.target.attrId.subject.ip':      'IP Address',
@@ -747,6 +752,11 @@ const TRANSLATIONS = {
     'creator.target.attrId.resource.ns':     'Target Namespace',
     'creator.target.attrId.action.id':       'Action-ID',
     'creator.target.attrId.action.implied':  'Implied Action',
+
+    // ── Creator — policy-level target (Phase 2) ──
+    'creator.ptarget.section':   'Policy-Level Target (optional)',
+    'creator.ptarget.hint':      'Restricts the entire policy to specific requests. Empty = no restriction.',
+    'creator.summary.ptarget':   'Policy Target',
 
     // ── Creator — nav & actions ──
     'creator.nav.back':          '← Back',

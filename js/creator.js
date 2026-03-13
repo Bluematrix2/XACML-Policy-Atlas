@@ -73,6 +73,7 @@ const PolicyCreator = (() => {
         version: '3.0',
         description: '',
         combiningAlg: COMBINING_ALGS[0].value,
+        target: _defaultTarget(),
         rules: []
       }
     };
@@ -83,6 +84,8 @@ const PolicyCreator = (() => {
       const raw = sessionStorage.getItem(SESSION_KEY);
       if (raw) {
         const s = JSON.parse(raw);
+        // Migration: ensure policy has a target object
+        if (s.policy && !s.policy.target) s.policy.target = _defaultTarget();
         // Phase 2 migration: ensure all rules have a target object
         if (s.policy && Array.isArray(s.policy.rules)) {
           s.policy.rules.forEach(r => {
@@ -133,6 +136,9 @@ const PolicyCreator = (() => {
       xml += `\n  <Description>${_escXml(p.description)}</Description>\n`;
     }
 
+    const pTargetXml = ver === '2.0' ? _policyTargetXml20(p.target) : _policyTargetXml30(p.target);
+    if (pTargetXml) xml += '\n' + pTargetXml + '\n';
+
     if (p.rules.length === 0) {
       xml += `\n  <!-- ${I18n.t('creator.rules.empty').replace(/[<>]/g, '')} -->\n`;
     } else {
@@ -151,8 +157,12 @@ const PolicyCreator = (() => {
     return xml;
   }
 
-  function _ruleTargetXml20(target) {
+  function _targetXml20(target, ind) {
     if (!target) return '';
+    const i1 = ind;
+    const i2 = ind + '  ';
+    const i3 = ind + '    ';
+    const i4 = ind + '      ';
     const cats = [
       { key: 'subject',  wrap: 'Subjects',  inner: 'Subject',  match: 'SubjectMatch',  des: 'SubjectAttributeDesignator' },
       { key: 'resource', wrap: 'Resources', inner: 'Resource', match: 'ResourceMatch', des: 'ResourceAttributeDesignator' },
@@ -164,22 +174,26 @@ const PolicyCreator = (() => {
       if (!t || !t.value.trim()) continue;
       const aid = _escXml(t.attributeId.trim() || DEFAULT_ATTR_IDS[c.key]);
       parts.push(
-        `    <${c.wrap}>\n` +
-        `      <${c.inner}>\n` +
-        `        <${c.match} MatchId="${MATCH_ID_STR_EQ}">\n` +
-        `          <AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(t.value.trim())}</AttributeValue>\n` +
-        `          <${c.des} AttributeId="${aid}" DataType="${DATA_TYPE_STRING}"/>\n` +
-        `        </${c.match}>\n` +
-        `      </${c.inner}>\n` +
-        `    </${c.wrap}>`
+        `${i1}<${c.wrap}>\n` +
+        `${i2}<${c.inner}>\n` +
+        `${i3}<${c.match} MatchId="${MATCH_ID_STR_EQ}">\n` +
+        `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(t.value.trim())}</AttributeValue>\n` +
+        `${i4}<${c.des} AttributeId="${aid}" DataType="${DATA_TYPE_STRING}"/>\n` +
+        `${i3}</${c.match}>\n` +
+        `${i2}</${c.inner}>\n` +
+        `${i1}</${c.wrap}>`
       );
     }
     if (parts.length === 0) return '';
-    return `    <Target>\n${parts.join('\n')}\n    </Target>`;
+    return `${ind}<Target>\n${parts.join('\n')}\n${ind}</Target>`;
   }
 
-  function _ruleTargetXml30(target) {
+  function _targetXml30(target, ind) {
     if (!target) return '';
+    const i1 = ind + '  ';
+    const i2 = ind + '    ';
+    const i3 = ind + '      ';
+    const i4 = ind + '        ';
     const cats = [
       { key: 'subject',  cat: 'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject' },
       { key: 'resource', cat: 'urn:oasis:names:tc:xacml:3.0:attribute-category:resource' },
@@ -191,23 +205,28 @@ const PolicyCreator = (() => {
       if (!t || !t.value.trim()) continue;
       const aid = _escXml(t.attributeId.trim() || DEFAULT_ATTR_IDS[c.key]);
       matches.push(
-        `          <Match MatchId="${MATCH_ID_STR_EQ}">\n` +
-        `            <AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(t.value.trim())}</AttributeValue>\n` +
-        `            <AttributeDesignator Category="${c.cat}" AttributeId="${aid}" DataType="${DATA_TYPE_STRING}" MustBePresent="false"/>\n` +
-        `          </Match>`
+        `${i3}<Match MatchId="${MATCH_ID_STR_EQ}">\n` +
+        `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(t.value.trim())}</AttributeValue>\n` +
+        `${i4}<AttributeDesignator Category="${c.cat}" AttributeId="${aid}" DataType="${DATA_TYPE_STRING}" MustBePresent="false"/>\n` +
+        `${i3}</Match>`
       );
     }
     if (matches.length === 0) return '';
     return (
-      `    <Target>\n` +
-      `      <AnyOf>\n` +
-      `        <AllOf>\n` +
+      `${ind}<Target>\n` +
+      `${i1}<AnyOf>\n` +
+      `${i2}<AllOf>\n` +
       matches.join('\n') + '\n' +
-      `        </AllOf>\n` +
-      `      </AnyOf>\n` +
-      `    </Target>`
+      `${i2}</AllOf>\n` +
+      `${i1}</AnyOf>\n` +
+      `${ind}</Target>`
     );
   }
+
+  function _ruleTargetXml20(target)   { return _targetXml20(target, '    '); }
+  function _ruleTargetXml30(target)   { return _targetXml30(target, '    '); }
+  function _policyTargetXml20(target) { return _targetXml20(target, '  '); }
+  function _policyTargetXml30(target) { return _targetXml30(target, '  '); }
 
   // ── Step validation ────────────────────────────────────────────────────
 
@@ -456,8 +475,30 @@ const PolicyCreator = (() => {
             </select>
             <span class="creator-hint">${esc(I18n.t('creator.field.alg.hint'))}</span>
           </div>
+          ${_policyTargetSectionHtml()}
         </div>
       </div>`;
+  }
+
+  function _policyTargetSectionHtml() {
+    const t = _state.policy.target || _defaultTarget();
+    const cats = ['subject', 'resource', 'action'];
+    const rows = cats.map(cat => `
+              <span class="creator-target-cat">${esc(I18n.t(`creator.target.${cat}`))}</span>
+              ${_attrIdSelectHtml(cat, 'p', t[cat].attributeId, true)}
+              <input class="creator-input" type="text"
+                     data-policy-target-cat="${cat}" data-policy-target-prop="value"
+                     placeholder="${esc(I18n.t(`creator.target.value.ph.${cat}`))}"
+                     value="${esc(t[cat].value)}" autocomplete="off">`).join('');
+    return `
+          <div class="creator-target-section">
+            <div class="creator-target-hdr">
+              <span class="creator-target-hdr-label">&#x1F3AF; ${esc(I18n.t('creator.ptarget.section'))}</span>
+              <span class="creator-hint">${esc(I18n.t('creator.ptarget.hint'))}</span>
+            </div>
+            <div class="creator-target-grid">${rows}
+            </div>
+          </div>`;
   }
 
   // ── Step 3: Regeln ─────────────────────────────────────────────────────
@@ -485,14 +526,16 @@ const PolicyCreator = (() => {
       </div>`;
   }
 
-  function _attrIdSelectHtml(cat, ruleIdx, currentVal) {
+  function _attrIdSelectHtml(cat, ruleIdx, currentVal, policyLevel = false) {
     const opts = ATTR_ID_OPTIONS[cat];
     const sel  = currentVal || opts[0].value;
     const options = opts.map(o =>
       `<option value="${esc(o.value)}"${sel === o.value ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
     ).join('');
-    return `<select class="creator-select creator-attrId-select"
-                    data-rule-idx="${ruleIdx}" data-target-cat="${cat}" data-target-prop="attributeId">
+    const dataAttrs = policyLevel
+      ? `data-policy-target-cat="${cat}" data-policy-target-prop="attributeId"`
+      : `data-rule-idx="${ruleIdx}" data-target-cat="${cat}" data-target-prop="attributeId"`;
+    return `<select class="creator-select creator-attrId-select" ${dataAttrs}>
               ${options}
             </select>`;
   }
@@ -623,6 +666,19 @@ const PolicyCreator = (() => {
               <span class="creator-summary-key">${esc(I18n.t('creator.summary.rules'))}</span>
               <span class="creator-summary-val">${p.rules.length}</span>
             </div>
+            ${(() => {
+              const pt = p.target;
+              if (!pt) return '';
+              const parts = [];
+              if (pt.subject.value.trim())  parts.push(`${I18n.t('creator.target.subject')}: ${pt.subject.value.trim()}`);
+              if (pt.resource.value.trim()) parts.push(`${I18n.t('creator.target.resource')}: ${pt.resource.value.trim()}`);
+              if (pt.action.value.trim())   parts.push(`${I18n.t('creator.target.action')}: ${pt.action.value.trim()}`);
+              if (!parts.length) return '';
+              return `<div class="creator-summary-row">
+              <span class="creator-summary-key">${esc(I18n.t('creator.summary.ptarget'))}</span>
+              <span class="creator-summary-val">${esc(parts.join(' · '))}</span>
+            </div>`;
+            })()}
           </div>
           ${p.rules.length > 0 ? `
           <table class="creator-rules-table">
@@ -692,6 +748,14 @@ const PolicyCreator = (() => {
         _saveState(); _schedulePreview(); _updateNextBtn();
       }
     }
+    const pCat = t.dataset.policyTargetCat;
+    const pProp = t.dataset.policyTargetProp;
+    if (pCat !== undefined && pProp !== undefined) {
+      if (!_state.policy.target) _state.policy.target = _defaultTarget();
+      if (_state.policy.target[pCat]) _state.policy.target[pCat][pProp] = t.value;
+      _saveState(); _schedulePreview();
+      return;
+    }
     const cat = t.dataset.targetCat;
     const prop = t.dataset.targetProp;
     if (cat !== undefined && prop !== undefined) {
@@ -718,6 +782,14 @@ const PolicyCreator = (() => {
         _state.policy.rules[idx][t.dataset.ruleField] = t.value;
         _saveState(); _schedulePreview();
       }
+      return;
+    }
+    const pCat2 = t.dataset.policyTargetCat;
+    const pProp2 = t.dataset.policyTargetProp;
+    if (pCat2 !== undefined && pProp2 !== undefined) {
+      if (!_state.policy.target) _state.policy.target = _defaultTarget();
+      if (_state.policy.target[pCat2]) _state.policy.target[pCat2][pProp2] = t.value;
+      _saveState(); _schedulePreview();
       return;
     }
     const cat  = t.dataset.targetCat;
