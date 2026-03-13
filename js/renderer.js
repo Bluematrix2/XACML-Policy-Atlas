@@ -336,17 +336,17 @@ const TreeRenderer = (() => {
     html += `<span class="summary-label">${esc(I18n.t('renderer.summary.type'))}</span>`;
     if (policy.rootElement === 'PolicySet') {
       const n = policy.policies ? policy.policies.length : 0;
-      html += `<span class="summary-chip" style="color:#7b1fa2;border-color:#ce93d8">&#x1F4C2; ${esc(I18n.t('renderer.summary.type.policyset', { n }))}</span>`;
+      html += `<span class="summary-chip" style="background:#7b1fa2;color:#fff;border-color:#7b1fa2">&#x1F4C2; ${esc(I18n.t('renderer.summary.type.policyset', { n }))}</span>`;
     } else {
-      html += `<span class="summary-chip" style="color:#1565c0;border-color:#bbdefb">&#x1F4C4; ${esc(I18n.t('renderer.summary.type.policy'))}</span>`;
+      html += `<span class="summary-chip" style="background:#1565c0;color:#fff;border-color:#1565c0">&#x1F4C4; ${esc(I18n.t('renderer.summary.type.policy'))}</span>`;
     }
     html += `</div>`;
 
     // Rule counts
     html += `<div class="summary-row">`;
     html += `<span class="summary-label">${esc(I18n.t('renderer.summary.rules'))}</span>`;
-    html += `<span class="summary-chip" style="color:#2e7d32;border-color:#c8e6c9">&#x2705; ${permitCount}&nbsp;Permit</span>`;
-    html += `<span class="summary-chip" style="color:#c62828;border-color:#ffcdd2">&#x274C; ${denyCount}&nbsp;Deny</span>`;
+    html += `<span class="summary-chip" style="background:#2e7d32;color:#fff;border-color:#2e7d32">&#x2705; ${permitCount}&nbsp;Permit</span>`;
+    html += `<span class="summary-chip" style="background:#c62828;color:#fff;border-color:#c62828">&#x274C; ${denyCount}&nbsp;Deny</span>`;
     html += `</div>`;
 
     // Subjects / roles
