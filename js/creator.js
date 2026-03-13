@@ -125,20 +125,8 @@ const PolicyCreator = (() => {
     container.innerHTML = `
       <div class="creator-wrap">
         <div class="creator-header">
-          <div class="creator-header-row">
-            <h2 class="creator-title">&#x1F6E0;&#xFE0F; Policy Creator <span class="alpha-badge">ALPHA</span></h2>
-            <button class="creator-reset-btn" id="creator-reset-btn"
-                    title="Alles zur&#252;cksetzen und neu beginnen"
-                    aria-label="Creator zur&#252;cksetzen">
-              &#x21BA; Zur&#252;cksetzen
-            </button>
-          </div>
+          <h2 class="creator-title">&#x1F6E0;&#xFE0F; Policy Creator <span class="alpha-badge">ALPHA</span></h2>
           <p class="creator-subtitle">Erstelle eine XACML-Policy Schritt f&#252;r Schritt &#8212; ohne XML-Kenntnisse.</p>
-          <div class="creator-reset-confirm" id="creator-reset-confirm" style="display:none">
-            <span class="creator-reset-confirm-text">Alle Eingaben verwerfen und neu beginnen?</span>
-            <button class="creator-confirm-yes" id="creator-reset-yes">Ja, zur&#252;cksetzen</button>
-            <button class="creator-confirm-no"  id="creator-reset-no">Abbrechen</button>
-          </div>
         </div>
         <div class="creator-main">
           <div class="creator-left">
@@ -176,7 +164,7 @@ const PolicyCreator = (() => {
     const el = document.getElementById('creator-steps');
     if (!el) return;
 
-    el.innerHTML = labels.map((label, i) => {
+    const steps = labels.map((label, i) => {
       const step     = i + 1;
       const isDone   = step < _state.step;
       const isActive = step === _state.step;
@@ -188,6 +176,20 @@ const PolicyCreator = (() => {
         <span class="step-label">${label}</span>
       </div>${sep}`;
     }).join('');
+
+    el.innerHTML = steps + `
+      <div class="creator-stepbar-right">
+        <button class="creator-reset-btn" id="creator-reset-btn"
+                title="Alles zur&#252;cksetzen und neu beginnen"
+                aria-label="Creator zur&#252;cksetzen">
+          &#x21BA; Zur&#252;cksetzen
+        </button>
+        <div class="creator-reset-confirm" id="creator-reset-confirm" style="display:none">
+          <span class="creator-reset-confirm-text">Alle Eingaben verwerfen?</span>
+          <button class="creator-confirm-yes" id="creator-reset-yes">Ja</button>
+          <button class="creator-confirm-no"  id="creator-reset-no">Abbrechen</button>
+        </div>
+      </div>`;
   }
 
   // ── Form step rendering ────────────────────────────────────────────────
@@ -341,10 +343,16 @@ const PolicyCreator = (() => {
         <div class="creator-field-row">
           <div class="creator-field creator-field-grow">
             <label class="creator-label" for="f-rule-id-${i}">Regel-ID <span class="field-required">*</span></label>
-            <input class="creator-input" id="f-rule-id-${i}" type="text"
-                   data-rule-idx="${i}" data-rule-field="id"
-                   placeholder="z.B. permit-physicians"
-                   value="${esc(r.id)}" autocomplete="off" spellcheck="false">
+            <div class="creator-input-row">
+              <input class="creator-input" id="f-rule-id-${i}" type="text"
+                     data-rule-idx="${i}" data-rule-field="id"
+                     placeholder="z.B. permit-physicians"
+                     value="${esc(r.id)}" autocomplete="off" spellcheck="false">
+              <button class="creator-uuid-btn" data-action="gen-rule-uuid" data-idx="${i}"
+                      title="UUID v4 generieren" aria-label="UUID f&#252;r Regel-ID generieren">
+                &#x1F3B2; UUID
+              </button>
+            </div>
           </div>
           <div class="creator-field creator-field-sm">
             <label class="creator-label" for="f-rule-effect-${i}">Effect</label>
@@ -457,6 +465,12 @@ const PolicyCreator = (() => {
 
     if (t.dataset.action === 'gen-uuid' || t.closest('[data-action="gen-uuid"]')) {
       _generateUuid();
+      return;
+    }
+
+    const ruleUuidBtn = t.closest('[data-action="gen-rule-uuid"]');
+    if (ruleUuidBtn) {
+      _generateRuleUuid(parseInt(ruleUuidBtn.dataset.idx, 10));
       return;
     }
 
@@ -660,6 +674,22 @@ const PolicyCreator = (() => {
     _state.policy.id = uuid;
     _saveState();
     const input = document.getElementById('f-policy-id');
+    if (input) input.value = uuid;
+    _schedulePreview();
+    _updateNextBtn();
+  }
+
+  function _generateRuleUuid(idx) {
+    if (!_state.policy.rules[idx]) return;
+    const uuid = (crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+          const r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+    _state.policy.rules[idx].id = uuid;
+    _saveState();
+    const input = document.getElementById(`f-rule-id-${idx}`);
     if (input) input.value = uuid;
     _schedulePreview();
     _updateNextBtn();

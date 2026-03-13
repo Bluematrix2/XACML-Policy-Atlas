@@ -2145,9 +2145,8 @@ footer a:hover { opacity: 1; text-decoration: none; }
 .creator-reset-confirm {
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
-  margin-top: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3);
+  gap: var(--sp-2);
+  padding: 5px var(--sp-3);
   background: var(--deny-bg);
   border: 1px solid var(--deny-border);
   border-radius: var(--radius);
@@ -2220,6 +2219,14 @@ footer a:hover { opacity: 1; text-decoration: none; }
   align-items: center;
   gap: 0;
   margin-bottom: var(--sp-5);
+  justify-content: space-between;
+}
+.creator-stepbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-left: auto;
+  padding-left: var(--sp-3);
 }
 .creator-step {
   display: flex;
