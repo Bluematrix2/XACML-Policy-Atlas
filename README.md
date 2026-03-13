@@ -2,7 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repo-black.svg)](https://github.com/Bluematrix2/XACML-Policy-Atlas)
-[![Page_Link](https://img.shields.io/badge/Page_link-online-green)](https://policyatlas.puschmann.io)
+[![Page_Link](https://img.shields.io/badge/Open_Atlas-online-green)](https://policyatlas.puschmann.io/?utm_source=website&utm_medium=link&utm_campaign=github)
 
 ## What is XACML Policy Atlas?
 
@@ -26,7 +26,7 @@ XACML Policy Atlas is a free, open-source browser-based tool for working with [X
 
 Open the tool directly in your browser:
 
-👉 [XACML Policy Atlas](https://policyatlas.puschmann.io)
+👉 [XACML Policy Atlas](https://policyatlas.puschmann.io/?utm_source=website&utm_medium=link&utm_campaign=github)
 
 ---
 
