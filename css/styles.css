@@ -90,6 +90,32 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; flex: 1; fo
   line-height: 1;
 }
 
+/* ── Language switcher ── */
+.lang-switcher {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 4px;
+  padding: 2px;
+}
+.lang-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,.6);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 3px;
+  transition: background .15s, color .15s;
+  line-height: 1;
+  letter-spacing: .5px;
+}
+.lang-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+.lang-btn.active { background: rgba(255,255,255,.22); color: #fff; }
+
 /* ── Layout ── */
 .layout { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 

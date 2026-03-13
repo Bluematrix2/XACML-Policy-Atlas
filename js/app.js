@@ -10,6 +10,7 @@ import { TreeRenderer } from './renderer.js';
 import { UIState } from './ui.js';
 import { XACMLGuide } from './guide.js';
 import { KnowledgeBase } from './kb.js';
+import { I18n } from './i18n.js';
 
 // ── Upload security constants ──
 const MAX_XML_SIZE = 5 * 1024 * 1024;  // 5 MB
@@ -20,11 +21,11 @@ const ALLOWED_CSV_EXT = '.csv';
 
 function _checkFile(file, allowedExt, maxBytes) {
   if (!file.name.toLowerCase().endsWith(allowedExt)) {
-    alert(`Ungültiger Dateityp. Nur ${allowedExt.toUpperCase()}-Dateien erlaubt.`);
+    alert(I18n.t('file.err.type', { ext: allowedExt.toUpperCase() }));
     return false;
   }
   if (file.size > maxBytes) {
-    alert(`Datei zu groß (max. ${Math.round(maxBytes / 1024 / 1024)} MB): ${file.name}`);
+    alert(I18n.t('file.err.size', { mb: Math.round(maxBytes / 1024 / 1024), name: file.name }));
     return false;
   }
   return true;
@@ -115,15 +116,15 @@ const App = (() => {
         errors: [{ line: lineMatch ? parseInt(lineMatch[1]) : null, message: msg }],
         warnings: [],
         checks: [
-          { label: 'XML ist syntaktisch korrekt',                      ok: false, detail: msg },
-          { label: 'Gültiger XACML Namespace (2.0 oder 3.0)',          ok: false, detail: '' },
-          { label: 'Wurzelelement ist Policy oder PolicySet',           ok: false, detail: '' },
-          { label: 'Alle Rules besitzen ein Effect (Permit/Deny)',      ok: false, detail: '' },
-          { label: 'Policies besitzen einen Combining Algorithm',       ok: false, detail: '' },
-          { label: 'Designatoren enthalten AttributeId und DataType',   ok: false, detail: '' },
-          { label: 'Policy oder Rules definieren ein Target',           ok: false, detail: '' },
-          { label: 'Policies enthalten Rules',                          ok: false, detail: '' },
-          { label: 'Policy- und Rule-IDs sind eindeutig',               ok: false, detail: '' },
+          { label: I18n.t('check.1'), ok: false, detail: msg },
+          { label: I18n.t('check.2'), ok: false, detail: '' },
+          { label: I18n.t('check.3'), ok: false, detail: '' },
+          { label: I18n.t('check.4'), ok: false, detail: '' },
+          { label: I18n.t('check.5'), ok: false, detail: '' },
+          { label: I18n.t('check.6'), ok: false, detail: '' },
+          { label: I18n.t('check.7'), ok: false, detail: '' },
+          { label: I18n.t('check.8'), ok: false, detail: '' },
+          { label: I18n.t('check.9'), ok: false, detail: '' },
         ],
         info: {}
       };
@@ -141,7 +142,7 @@ const App = (() => {
       info.namespace = ns;
       info.version   = ns.includes('3.0') ? 'XACML 3.0' : 'XACML 2.0';
     } else {
-      errors.push({ line: 1, message: `Unbekannter XACML-Namespace: \u201e${ns}\u201c. Erwartet: XACML 3.0 oder 2.0.` });
+      errors.push({ line: 1, message: I18n.t('val.err.namespace', { ns }) });
     }
 
     // ── Check 3: Root element ──
@@ -151,7 +152,7 @@ const App = (() => {
       info.rootElement = rootName;
       info.policyId    = root.getAttribute('PolicyId') || '(keine ID)';
     } else {
-      errors.push({ line: null, message: `Wurzelelement ist <${rootName}>, erwartet <Policy> oder <PolicySet>` });
+      errors.push({ line: null, message: I18n.t('val.err.root', { name: rootName }) });
     }
 
     const allEls    = Array.from(doc.getElementsByTagName('*'));
@@ -165,7 +166,7 @@ const App = (() => {
         missingAlg.push((p.getAttribute('PolicyId') || '(unbekannt)').split(':').pop());
       }
     }
-    if (missingAlg.length) errors.push({ line: null, message: `Kein Combining Algorithm bei: ${missingAlg.join(', ')}` });
+    if (missingAlg.length) errors.push({ line: null, message: I18n.t('val.err.alg', { names: missingAlg.join(', ') }) });
 
     // ── Check 5: Rules Effect ──
     info.ruleCount   = ruleEls.length;
@@ -178,7 +179,7 @@ const App = (() => {
       else if (eff === 'Deny') { info.denyCount++; }
       else { badEffect.push((r.getAttribute('RuleId') || '').split(':').pop() || '(unbekannt)'); }
     }
-    if (badEffect.length) errors.push({ line: null, message: `Rule ohne g\u00fcltiges Effect: ${badEffect.join(', ')}` });
+    if (badEffect.length) errors.push({ line: null, message: I18n.t('val.err.effect', { names: badEffect.join(', ') }) });
 
     // ── Check 6: Designators ──
     let badDesig = 0;
@@ -189,18 +190,18 @@ const App = (() => {
         if (++badDesig >= 3) break;
       }
     }
-    if (desigNames.size) errors.push({ line: null, message: `Designatoren enthalten kein AttributeId oder DataType: ${[...desigNames].join(', ')}` });
+    if (desigNames.size) errors.push({ line: null, message: I18n.t('val.err.desig', { names: [...desigNames].join(', ') }) });
 
     // ── Check 7: Target defined ──
     const targetEls  = allEls.filter(e => e.localName === 'Target');
     const hasTargets = targetEls.length > 0;
-    if (!hasTargets) warnings.push('Keine Targets definiert \u2014 Policy gilt f\u00fcr alle Requests');
+    if (!hasTargets) warnings.push(I18n.t('val.warn.noTargets'));
 
     // ── Check 8: Policies contain Rules ──
     const emptyPolicies = policyEls
       .filter(p => p.localName === 'Policy' && !Array.from(p.children).some(c => c.localName === 'Rule'))
       .map(p => (p.getAttribute('PolicyId') || '?').split(':').pop());
-    if (emptyPolicies.length) warnings.push(`Policy ohne Rules: ${emptyPolicies.join(', ')}`);
+    if (emptyPolicies.length) warnings.push(I18n.t('val.warn.emptyPolicy', { names: emptyPolicies.join(', ') }));
 
     // ── Check 9: Unique IDs ──
     const idSet = new Set();
@@ -211,7 +212,7 @@ const App = (() => {
       if (idSet.has(id)) { if (!duplicateIds.includes(id)) duplicateIds.push(id); }
       else idSet.add(id);
     }
-    if (duplicateIds.length) errors.push({ line: null, message: `Doppelte IDs: ${duplicateIds.map(i => i.split(':').pop()).join(', ')}` });
+    if (duplicateIds.length) errors.push({ line: null, message: I18n.t('val.err.duplicate', { ids: duplicateIds.map(i => i.split(':').pop()).join(', ') }) });
 
     info.policyIds = policyEls.map(p => p.getAttribute('PolicyId')).filter(Boolean);
 
@@ -223,11 +224,11 @@ const App = (() => {
     const emptySets = policyEls
       .filter(p => p.localName === 'PolicySet' && !Array.from(p.children).some(c => c.localName === 'Policy' || c.localName === 'PolicySet'))
       .map(p => (p.getAttribute('PolicyId') || '?').split(':').pop());
-    if (emptySets.length) warnings.push(`PolicySet ohne Policy-Kinder: ${emptySets.join(', ')}`);
+    if (emptySets.length) warnings.push(I18n.t('val.warn.emptySet', { names: emptySets.join(', ') }));
 
     // Check 11: Empty Target elements
     const emptyTargets = targetEls.filter(t => t.children.length === 0);
-    if (emptyTargets.length) warnings.push(`${emptyTargets.length} leere(s) <Target/>-Element(e) gefunden \u2014 Policy gilt uneingeschr\u00e4nkt`);
+    if (emptyTargets.length) warnings.push(I18n.t('val.warn.emptyTargets', { n: emptyTargets.length }));
 
     // Check 12 & 13 & 14: Rules without Condition / Permit-all / Deny-all
     let noCondCount    = 0;
@@ -245,9 +246,9 @@ const App = (() => {
         }
       }
     }
-    if (noCondCount)    warnings.push(`${noCondCount} Rule(s) ohne Condition \u2014 greifen bei jedem passenden Request`);
-    if (permitAllCount) warnings.push(`${permitAllCount} unbedingte Permit-Rule(s) ohne Target/Condition \u2014 m\u00f6glicherweise zu weite Rechte`);
-    if (denyAllCount)   warnings.push(`${denyAllCount} unbedingte Deny-Rule(s) ohne Target/Condition \u2014 k\u00f6nnte Zugriff vollst\u00e4ndig sperren`);
+    if (noCondCount)    warnings.push(I18n.t('val.warn.noCond',     { n: noCondCount }));
+    if (permitAllCount) warnings.push(I18n.t('val.warn.permitAll', { n: permitAllCount }));
+    if (denyAllCount)   warnings.push(I18n.t('val.warn.denyAll',   { n: denyAllCount }));
 
     // Check 15: Overlapping Rules (heuristic: multiple rules without Target in same Policy)
     for (const p of policyEls) {
@@ -256,7 +257,7 @@ const App = (() => {
       const noTargetRules = rules.filter(r => !Array.from(r.children).some(c => c.localName === 'Target'));
       if (noTargetRules.length > 1) {
         const pid = (p.getAttribute('PolicyId') || '?').split(':').pop();
-        warnings.push(`Policy \u201e${pid}\u201c: ${noTargetRules.length} Rules ohne eigenes Target \u2014 m\u00f6gliche \u00dcberschneidungen`);
+        warnings.push(I18n.t('val.warn.overlap', { id: pid, n: noTargetRules.length }));
         break;
       }
     }
@@ -277,7 +278,7 @@ const App = (() => {
       }
       if (unreachableCount > 0) {
         const pid = (p.getAttribute('PolicyId') || '?').split(':').pop();
-        warnings.push(`Policy \u201e${pid}\u201c (permit-overrides): ${unreachableCount} Rule(s) nach unbedingtem Permit nicht erreichbar`);
+        warnings.push(I18n.t('val.warn.unreachable', { id: pid, n: unreachableCount }));
       }
     }
 
@@ -285,7 +286,7 @@ const App = (() => {
     for (const r of ruleEls) {
       if (!Array.from(r.children).some(c => c.localName === 'Description')) {
         const rid = (r.getAttribute('RuleId') || '').split(':').pop() || '?';
-        warnings.push(`Rule \u201e${rid}\u201c hat keine Description`);
+        warnings.push(I18n.t('val.warn.noDesc', { id: rid }));
       }
     }
 
@@ -295,7 +296,7 @@ const App = (() => {
       .map(e => e.getAttribute('AttributeId'));
     const hasUri  = attrIds.some(id => id.startsWith('urn:') || id.startsWith('http'));
     const hasDot  = attrIds.some(id => !id.includes(':') && !id.includes('/') && id.includes('.'));
-    if (hasUri && hasDot) warnings.push('Inkonsistente AttributeId-Formate: Mischung aus URI und Kurzform gefunden');
+    if (hasUri && hasDot) warnings.push(I18n.t('val.warn.mixedAttr'));
 
     // Check 19: Unsupported DataType
     const badDtSet = new Set();
@@ -303,7 +304,7 @@ const App = (() => {
       const dt = el.getAttribute('DataType');
       if (dt && !_XACML_DATATYPES.has(dt)) badDtSet.add(dt);
     }
-    if (badDtSet.size) warnings.push(`Nicht-standardisierte DataTypes: ${[...badDtSet].map(d => d.split(/[:#/]/).pop()).join(', ')}`);
+    if (badDtSet.size) warnings.push(I18n.t('val.warn.badDt', { list: [...badDtSet].map(d => d.split(/[:#/]/).pop()).join(', ') }));
 
     // Check 20: Unknown XACML elements (in XACML namespace, not in known set)
     const unknownEls = new Set();
@@ -313,45 +314,45 @@ const App = (() => {
         unknownEls.add(el.localName);
       }
     }
-    if (unknownEls.size) warnings.push(`Unbekannte XACML-Elemente: ${[...unknownEls].join(', ')}`);
+    if (unknownEls.size) warnings.push(I18n.t('val.warn.unknownEl', { list: [...unknownEls].join(', ') }));
 
     // Check 21: Excessively deep PolicySet nesting
     const maxDepth = _getPolicyNestingDepth(root, root.localName === 'PolicySet' ? 1 : 0);
-    if (maxDepth > 3) warnings.push(`PolicySet-Verschachtelung zu tief (${maxDepth} Ebenen) \u2014 kann PDP-Performance beeintr\u00e4chtigen`);
+    if (maxDepth > 3) warnings.push(I18n.t('val.warn.nesting', { n: maxDepth }));
 
     // Check 22: Missing PolicyId
     const noPolicyId = policyEls.filter(p => !p.getAttribute('PolicyId'));
-    if (noPolicyId.length) warnings.push(`${noPolicyId.length} Policy/PolicySet-Element(e) ohne PolicyId`);
+    if (noPolicyId.length) warnings.push(I18n.t('val.warn.noPolicyId', { n: noPolicyId.length }));
 
     // Check 23: Missing RuleId
     const noRuleId = ruleEls.filter(r => !r.getAttribute('RuleId'));
-    if (noRuleId.length) warnings.push(`${noRuleId.length} Rule(s) ohne RuleId`);
+    if (noRuleId.length) warnings.push(I18n.t('val.warn.noRuleId', { n: noRuleId.length }));
 
     // Check 24: Large Policy
     const LARGE_RULE_THRESHOLD = 20;
     if (ruleEls.length > LARGE_RULE_THRESHOLD) {
-      warnings.push(`Policy sehr groß (${ruleEls.length} Rules) \u2014 kann Wartung und PDP-Performance erschweren`);
+      warnings.push(I18n.t('val.warn.large', { n: ruleEls.length }));
     }
 
     // ── Build checks array (core structural, checks 1–9) ──
     const checks = [
-      { label: 'XML ist syntaktisch korrekt',
+      { label: I18n.t('check.1'),
         ok: true, detail: '' },
-      { label: `G\u00fcltiger XACML Namespace${info.version ? ` (${info.version})` : ' (2.0 oder 3.0)'}`,
+      { label: info.version ? I18n.t('check.2.version', { version: info.version }) : I18n.t('check.2'),
         ok: nsOk, detail: nsOk ? '' : `Unbekannt: ${ns}` },
-      { label: `Wurzelelement ist Policy oder PolicySet${rootOk ? ` (${info.rootElement})` : ''}`,
+      { label: rootOk ? I18n.t('check.3.found', { el: info.rootElement }) : I18n.t('check.3'),
         ok: rootOk, detail: '' },
-      { label: 'Alle Rules besitzen ein Effect (Permit/Deny)',
+      { label: I18n.t('check.4'),
         ok: !badEffect.length, detail: badEffect.length ? `${badEffect.length} Rule(s) betroffen` : '' },
-      { label: 'Policies besitzen einen Combining Algorithm',
+      { label: I18n.t('check.5'),
         ok: !missingAlg.length, detail: missingAlg.length ? `${missingAlg.length} Policy(s) betroffen` : '' },
-      { label: 'Designatoren enthalten AttributeId und DataType',
+      { label: I18n.t('check.6'),
         ok: !desigNames.size, detail: desigNames.size ? [...desigNames].join(', ') : '' },
-      { label: 'Policy oder Rules definieren ein Target',
-        ok: hasTargets, detail: hasTargets ? '' : 'Keine Targets definiert' },
-      { label: 'Policies enthalten Rules',
+      { label: I18n.t('check.7'),
+        ok: hasTargets, detail: hasTargets ? '' : I18n.t('val.warn.noTargets') },
+      { label: I18n.t('check.8'),
         ok: !emptyPolicies.length, detail: emptyPolicies.length ? emptyPolicies.join(', ') : '' },
-      { label: 'Policy- und Rule-IDs sind eindeutig',
+      { label: I18n.t('check.9'),
         ok: !duplicateIds.length, detail: duplicateIds.length ? duplicateIds.map(i => i.split(':').pop()).join(', ') : '' },
     ];
 
@@ -402,7 +403,7 @@ const App = (() => {
       return true;
     } catch (e) {
       if (e.name === 'QuotaExceededError') {
-        _showToast('Speicher voll \u2013 Mapping-Tabelle wurde nur tempor\u00e4r geladen.');
+        _showToast(I18n.t('toast.mapping.full'));
       }
       return false;
     }
@@ -431,7 +432,7 @@ const App = (() => {
       .forEach(k => localStorage.removeItem(k));
     setMappingStatus('none');
     updateMappingTooltip();
-    _showToast('Alle Mapping-Tabellen wurden entfernt.');
+    _showToast(I18n.t('toast.mapping.cleared'));
   }
 
   function setMappingStatus(state) {
@@ -450,13 +451,14 @@ const App = (() => {
     const btn = document.getElementById('csv-btn');
     if (!btn) return;
     if (!stored.length) {
-      btn.title = 'Keine Mapping-Tabelle geladen';
+      btn.title = I18n.t('csv.tooltip.none');
       return;
     }
+    const locale = I18n.getLang() === 'de' ? 'de-DE' : 'en-US';
     btn.title = stored.map(e => {
-      const date = new Date(e.loadedAt).toLocaleString('de-DE');
+      const date = new Date(e.loadedAt).toLocaleString(locale);
       const kb   = Math.round(e.sizeBytes / 1024);
-      return `${e.filename} (${kb} KB, geladen: ${date})`;
+      return I18n.t('csv.tooltip.item', { name: e.filename, kb, date });
     }).join('\n');
   }
 
@@ -475,8 +477,8 @@ const App = (() => {
     setMappingStatus('loaded');
     updateMappingTooltip();
     _showToast(isUpdate
-      ? `\u201e${filename}\u201c wurde aktualisiert.`
-      : `\u201e${filename}\u201c wurde erfolgreich geladen.`);
+      ? I18n.t('toast.mapping.updated', { name: filename })
+      : I18n.t('toast.mapping.loaded',  { name: filename }));
   }
 
   function restoreMappingsOnStartup() {
@@ -484,7 +486,9 @@ const App = (() => {
     if (!stored.length) return;
     stored.forEach(entry => loadMappingIntoApp(entry.filename, entry.data));
     const count = stored.length;
-    _showToast(`${count} Mapping-${count === 1 ? 'Tabelle' : 'Tabellen'} wiederhergestellt.`);
+    _showToast(count === 1
+      ? I18n.t('toast.mapping.restored.one')
+      : I18n.t('toast.mapping.restored.many', { n: count }));
     setMappingStatus('loaded');
     updateMappingTooltip();
   }
@@ -516,9 +520,9 @@ const App = (() => {
       await switchTab('viz');
       refreshSidebar();
       activatePolicy(idx);
-      _showToast('Beispiel-Policy geladen.');
+      _showToast(I18n.t('toast.example'));
     } catch (e) {
-      alert('Beispiel konnte nicht geladen werden: ' + e.message);
+      alert(I18n.t('toast.example.err', { msg: e.message }));
     }
   }
 
@@ -541,7 +545,7 @@ const App = (() => {
     const oversized = all.filter(f => f.size > MAX_XML_SIZE);
     const files = all.filter(f => f.size <= MAX_XML_SIZE);
     if (oversized.length) {
-      alert(`Übersprungen (max. ${MAX_XML_SIZE / 1024 / 1024} MB überschritten):\n${oversized.map(f => f.name).join('\n')}`);
+      alert(I18n.t('file.err.oversized', { mb: MAX_XML_SIZE / 1024 / 1024, files: oversized.map(f => f.name).join('\n') }));
     }
     if (!files.length) { input.value = ''; return; }
 
@@ -561,7 +565,7 @@ const App = (() => {
 
     refreshSidebar();
     if (firstIdx >= 0) activatePolicy(firstIdx);
-    if (errors.length > 0) alert('Fehler beim Laden:\n' + errors.join('\n'));
+    if (errors.length > 0) alert(I18n.t('modal.err.load', { errors: errors.join('\n') }));
     input.value = '';
   }
 
@@ -589,12 +593,12 @@ const App = (() => {
     const searchBar = `<div class="search-bar">`
       + `<div class="search-input-wrap">`
       + `<input class="search-input" id="s-input" type="text" value="${sv}"`
-      + ` placeholder="&#x1F50D; Suchen (Beschreibung, Label, URI...)" oninput="App.applySearch(this.value)">`
-      + `<button class="search-clear-btn" id="s-clear" onclick="App.clearSearch()" title="Suche leeren" aria-label="Suche leeren" style="display:${sv?'flex':'none'}">&#x2715;</button>`
+      + ` placeholder="${esc(I18n.t('search.placeholder'))}" oninput="App.applySearch(this.value)">`
+      + `<button class="search-clear-btn" id="s-clear" onclick="App.clearSearch()" title="${esc(I18n.t('search.clear.title'))}" aria-label="${esc(I18n.t('search.clear.aria'))}" style="display:${sv?'flex':'none'}">&#x2715;</button>`
       + `</div>`
-      + `<button class="filter-btn${_currentFilter==='all'?' active':''}" id="f-all" onclick="App.setFilter('all')">Alle</button>`
-      + `<button class="filter-btn${_currentFilter==='permit'?' active':''}" id="f-permit" onclick="App.setFilter('permit')">&#x2705; Nur Permit</button>`
-      + `<button class="filter-btn${_currentFilter==='deny'?' active':''}" id="f-deny" onclick="App.setFilter('deny')">&#x274C; Nur Deny</button>`
+      + `<button class="filter-btn${_currentFilter==='all'?' active':''}" id="f-all" onclick="App.setFilter('all')">${esc(I18n.t('filter.all'))}</button>`
+      + `<button class="filter-btn${_currentFilter==='permit'?' active':''}" id="f-permit" onclick="App.setFilter('permit')">${esc(I18n.t('filter.permit'))}</button>`
+      + `<button class="filter-btn${_currentFilter==='deny'?' active':''}" id="f-deny" onclick="App.setFilter('deny')">${esc(I18n.t('filter.deny'))}</button>`
       + `</div>`;
 
     document.getElementById('content').innerHTML = searchBar + TreeRenderer.render(policy);
@@ -615,8 +619,8 @@ const App = (() => {
     const result   = getOrComputeValidation(policyId, policy.rawXml);
     const hasError = !result.valid;
     const badgeLabel = hasError
-      ? `\u274C ${result.errors.length} Fehler`
-      : '\u2705 Valide';
+      ? I18n.t('val.badge.errors', { n: result.errors.length })
+      : I18n.t('val.badge.valid');
 
     const checks = (result.checks || []).map(c => {
       const ico = c.ok ? '\u2705' : '\u274C';
@@ -632,18 +636,18 @@ const App = (() => {
 
     const pId = policyId.replace(/'/g, "\\'");
     const fixBtn = hasError
-      ? `<button class="val-fix-btn" onclick="App.fixPolicyInEditor('${pId}')">Im Editor \u00f6ffnen und beheben \u2192</button>`
+      ? `<button class="val-fix-btn" onclick="App.fixPolicyInEditor('${pId}')">${esc(I18n.t('val.fixBtn'))}</button>`
       : '';
 
     summaryBox.insertAdjacentHTML('beforeend',
       `<div class="val-summary-wrap">`
       + `<div class="summary-row">`
-      + `<span class="summary-label">Validierung</span>`
+      + `<span class="summary-label">${esc(I18n.t('val.label'))}</span>`
       + `<button class="val-badge${hasError ? ' val-badge--error' : ''}" id="val-badge-btn"`
       + ` onclick="App.toggleValidationPanel()" aria-expanded="false">`
       + badgeLabel + ` <span class="val-badge-chevron">\u25be</span>`
       + `</button>`
-      + `<button class="val-info-btn" onclick="App.openKbSection('kb-validation')" title="Validierungsregeln (Knowledge Base)" aria-label="Validierungsregeln">&#x2139;</button>`
+      + `<button class="val-info-btn" onclick="App.openKbSection('kb-validation')" title="${esc(I18n.t('val.info.title'))}" aria-label="${esc(I18n.t('val.info.aria'))}">&#x2139;</button>`
       + `</div>`
       + `<div class="val-badge-panel" id="val-detail-panel" style="display:none">`
       + checks + warnings + fixBtn
@@ -790,9 +794,9 @@ const App = (() => {
              + `<div class="sb-item-main">`
              + `<div class="sb-name" title="${esc(p.filename)}">${esc(shortName)}</div>`
              + `<div class="sb-confirm">`
-             + `<span class="sb-confirm-text">Entfernen?</span>`
-             + `<button class="sb-confirm-yes" onclick="event.stopPropagation();App.confirmPolicyDelete(${i})">Ja</button>`
-             + `<button class="sb-confirm-no" onclick="event.stopPropagation();App.cancelPolicyDelete(${i})">Abbrechen</button>`
+             + `<span class="sb-confirm-text">${esc(I18n.t('confirm.delete.text'))}</span>`
+             + `<button class="sb-confirm-yes" onclick="event.stopPropagation();App.confirmPolicyDelete(${i})">${esc(I18n.t('confirm.delete.yes'))}</button>`
+             + `<button class="sb-confirm-no" onclick="event.stopPropagation();App.cancelPolicyDelete(${i})">${esc(I18n.t('confirm.delete.no'))}</button>`
              + `</div></div></div>`;
       }
 
@@ -802,13 +806,13 @@ const App = (() => {
            + `<div class="sb-item-main">`
            + `<div class="sb-name-row">`
            + `<div class="sb-name">${esc(shortName)}</div>`
-           + (hasDirty ? `<span class="sb-dirty-dot" title="Ungespeicherte \u00c4nderungen">\u25CF</span>` : '')
+           + (hasDirty ? `<span class="sb-dirty-dot" title="${esc(I18n.t('sidebar.dirty.title'))}">\u25CF</span>` : '')
            + `</div>`
-           + `<div class="sb-meta">${total} Regel${total !== 1 ? 'n' : ''} &middot; ${permitCount}P&thinsp;/&thinsp;${denyCount}D</div>`
+           + `<div class="sb-meta">${total} ${total !== 1 ? esc(I18n.t('sidebar.rules.many')) : esc(I18n.t('sidebar.rules.one'))} &middot; ${permitCount}P&thinsp;/&thinsp;${denyCount}D</div>`
            + `<div class="sb-bar" style="background:linear-gradient(to right,#4CAF50 ${pPct}%,#F44336 ${pPct}%)"></div></div>`
            + `<div class="policy-actions">`
-           + `<button class="sb-action-btn" onclick="event.stopPropagation();App.handlePolicyEdit(${i})" title="Bearbeiten" aria-label="Bearbeiten">&#x270F;&#xFE0F;</button>`
-           + `<button class="sb-action-btn sb-action-delete" onclick="event.stopPropagation();App.handlePolicyDelete(${i})" title="Entfernen" aria-label="Entfernen">&#x1F5D1;</button>`
+           + `<button class="sb-action-btn" onclick="event.stopPropagation();App.handlePolicyEdit(${i})" title="${esc(I18n.t('sidebar.editBtn.title'))}" aria-label="${esc(I18n.t('sidebar.editBtn.aria'))}">&#x270F;&#xFE0F;</button>`
+           + `<button class="sb-action-btn sb-action-delete" onclick="event.stopPropagation();App.handlePolicyDelete(${i})" title="${esc(I18n.t('sidebar.deleteBtn.title'))}" aria-label="${esc(I18n.t('sidebar.deleteBtn.aria'))}">&#x1F5D1;</button>`
            + `</div></div>`;
     }).join('');
   }
@@ -901,11 +905,11 @@ const App = (() => {
       const btn = document.getElementById('enf-btn');
       if (btn) {
         const orig = btn.innerHTML;
-        btn.textContent = '\u2713 ' + EnforcementMapper.getCount() + ' Ressourcen geladen';
+        btn.textContent = I18n.t('toast.enf.loaded', { n: EnforcementMapper.getCount() });
         setTimeout(() => { btn.innerHTML = orig; }, 2500);
       }
     } catch (e) {
-      alert('Enforcement-CSV-Fehler: ' + e.message);
+      alert(I18n.t('toast.enf.err', { msg: e.message }));
     }
     input.value = '';
   }
@@ -935,27 +939,27 @@ const App = (() => {
     let html = `<div class="enf-resource-title">&#x1F3E5; ${esc(fhirType)}</div>`;
     //html += `<a class="enf-fhir-link" href="https://hl7.org/fhir/${FHIR_VERSION}/${fhirType.toLowerCase()}.html" target="_blank" rel="noopener">`;
     html += `<a class="enf-fhir-link" href="https://hl7.org/fhir/${esc(fhirType.toLowerCase())}.html" target="_blank" rel="noopener">`;
-    html += `&#x1F517; FHIR ${FHIR_VERSION} Spezifikation &rarr;</a>`;
+    html += `${esc(I18n.t('enf.fhirLink', { version: FHIR_VERSION }))}</a>`;
 
     if (!data) {
-      html += `<p style="color:#9e9e9e;font-size:13px">Kein Enforcement-Eintrag f&uuml;r diese Ressource.</p>`;
+      html += `<p style="color:#9e9e9e;font-size:13px">${esc(I18n.t('enf.noData'))}</p>`;
       return html;
     }
 
     const ac = data.primaryControl;
     if (ac === 'public') {
-      html += `<span class="enf-badge public">&#x1F310; Public</span>`;
-      html += `<div class="enf-public-msg">&#x1F310; &Ouml;ffentlich zug&auml;nglich &mdash; keine Policy-Einschr&auml;nkung</div>`;
+      html += `<span class="enf-badge public">${esc(I18n.t('enf.public'))}</span>`;
+      html += `<div class="enf-public-msg">${esc(I18n.t('enf.publicMsg'))}</div>`;
     } else if (ac.endsWith('*')) {
-      html += `<span class="enf-badge enforced-special">&#x26A0; Policy Enforced*</span>`;
+      html += `<span class="enf-badge enforced-special">${esc(I18n.t('enf.enforced.special'))}</span>`;
     } else {
-      html += `<span class="enf-badge enforced">&#x1F512; Policy Enforced</span>`;
+      html += `<span class="enf-badge enforced">${esc(I18n.t('enf.enforced'))}</span>`;
     }
 
     if (data.entries.length > 0) {
-      html += `<div class="enf-section-label">Enforcement-Attribute</div>`;
+      html += `<div class="enf-section-label">${esc(I18n.t('enf.section'))}</div>`;
       html += `<table class="enf-table"><thead><tr>`;
-      html += `<th>Suchparameter</th><th>FHIR-Pfad</th><th>XACML-Attribut</th>`;
+      html += `<th>${esc(I18n.t('enf.th.sp'))}</th><th>${esc(I18n.t('enf.th.path'))}</th><th>${esc(I18n.t('enf.th.xacml'))}</th>`;
       html += `</tr></thead><tbody>`;
 
       const spLabels = [];
@@ -977,7 +981,7 @@ const App = (() => {
 
       // Summary
       html += `<div class="enf-summary-box">`;
-      html += `<strong>${data.entries.length} Attribute kontrolliert:</strong> `;
+      html += `<strong>${esc(I18n.t('enf.summary', { n: data.entries.length }))}</strong> `;
       html += spLabels.slice(0, 6).map(s => esc(s)).join(', ');
       if (spLabels.length > 6) html += `, (+${spLabels.length - 6} weitere)`;
       html += `</div>`;
@@ -998,7 +1002,7 @@ const App = (() => {
     const result = validatePolicy(xmlString);
     if (!result.valid) {
       const e = result.errors[0];
-      return { success: false, error: `Zeile ${e.line || '?'}: XML ist fehlerhaft. Bitte Syntax pr\u00fcfen.` };
+      return { success: false, error: I18n.t('editor.err.line', { line: e.line || '?' }) };
     }
     return { success: true, filename };
   }
@@ -1007,8 +1011,8 @@ const App = (() => {
     document.getElementById('content').innerHTML =
       `<div class="empty-state">`
       + `<div class="icon">&#x1F4C2;</div>`
-      + `<p>Noch keine Policy geladen</p>`
-      + `<button class="import-trigger-btn" onclick="App.openImportModal()">+ Policy importieren</button>`
+      + `<p>${esc(I18n.t('empty.text'))}</p>`
+      + `<button class="import-trigger-btn" onclick="App.openImportModal()">${esc(I18n.t('empty.import'))}</button>`
       + `</div>`;
   }
 
@@ -1080,7 +1084,7 @@ const App = (() => {
 
     const xmlFiles = files.filter(f => f.name.toLowerCase().endsWith('.xml'));
     if (!xmlFiles.length) {
-      errEl.textContent = 'Keine XML-Datei gefunden. Bitte eine .xml-Datei w\u00e4hlen.';
+      errEl.textContent = I18n.t('modal.err.noXml');
       errEl.style.display = 'block';
       return;
     }
@@ -1107,7 +1111,7 @@ const App = (() => {
         errors.push(`${file.name}: ${e.message}`);
       }
     }
-    oversized.forEach(f => errors.push(`${f.name}: Datei zu gro\u00df (max. ${MAX_XML_SIZE / 1024 / 1024} MB)`));
+    oversized.forEach(f => errors.push(`${f.name}: ${I18n.t('modal.err.tooBig', { mb: MAX_XML_SIZE / 1024 / 1024 })}`));
 
     if (!loadedCount) {
       errEl.textContent = errors.join('\n');
@@ -1120,11 +1124,11 @@ const App = (() => {
     if (firstIdx >= 0) activatePolicy(firstIdx);
 
     const msg = loadedCount === 1
-      ? `\u201e${toLoad[0].name}\u201c wurde erfolgreich geladen.`
-      : `${loadedCount} Policies erfolgreich geladen.`;
+      ? I18n.t('modal.success.single', { name: toLoad[0].name })
+      : I18n.t('modal.success.multi', { n: loadedCount });
     _showToast(msg);
 
-    if (errors.length) setTimeout(() => alert('Fehler beim Laden:\n' + errors.join('\n')), 100);
+    if (errors.length) setTimeout(() => alert(I18n.t('modal.err.load', { errors: errors.join('\n') })), 100);
   }
 
   async function importFromPaste() {
@@ -1135,7 +1139,7 @@ const App = (() => {
 
     const text = textarea.value.trim();
     if (!text) {
-      errEl.textContent = 'Bitte XML-Inhalt eingeben.';
+      errEl.textContent = I18n.t('modal.err.noContent');
       errEl.style.display = 'block';
       return;
     }
@@ -1157,7 +1161,7 @@ const App = (() => {
       textarea.value = '';
       refreshSidebar();
       activatePolicy(idx);
-      _showToast(`\u201e${policy.filename || 'Policy'}\u201c wurde erfolgreich geladen.`);
+      _showToast(I18n.t('modal.success.single', { name: policy.filename || 'Policy' }));
     } catch (e) {
       errEl.textContent = e.message;
       errEl.style.display = 'block';
@@ -1237,7 +1241,7 @@ const App = (() => {
     const n = _search.results.length;
     const i = _search.index;
     if (!_search.query)         { countEl.textContent = ''; countEl.className = 'editor-search-count'; }
-    else if (n === 0)           { countEl.textContent = '0 Treffer'; countEl.className = 'editor-search-count editor-search-count--none'; }
+    else if (n === 0)           { countEl.textContent = I18n.t('editor.search.noMatch'); countEl.className = 'editor-search-count editor-search-count--none'; }
     else                        { countEl.textContent = `${i + 1} / ${n}`; countEl.className = 'editor-search-count'; }
   }
 
@@ -1373,10 +1377,10 @@ const App = (() => {
     const result = validatePolicy(xmlString);
     if (!result.valid) {
       const e = result.errors[0];
-      statusEl.textContent = `\u274C ${e.line ? `Zeile ${e.line}: ` : ''}${e.message}`;
+      statusEl.textContent = `\u274C ${e.line ? I18n.t('editor.err.line', { line: e.line }) + ' ' : ''}${e.message}`;
       statusEl.style.color = '#ef4444';
     } else {
-      statusEl.textContent = `\u2705 ${result.version || 'G\u00fcltiges XML'}`;
+      statusEl.textContent = `\u2705 ${result.version || I18n.t('editor.valid.xml')}`;
       statusEl.style.color = '#22c55e';
     }
     if (infoBtn) infoBtn.style.display = 'inline-flex';
@@ -1422,7 +1426,7 @@ const App = (() => {
 
   function handleBeautify() {
     const result = beautifyXml(editorGetValue());
-    if (!result) { showEditorError('XML ist fehlerhaft \u2013 Beautify nicht m\u00f6glich.'); return; }
+    if (!result) { showEditorError(I18n.t('editor.err.beautify')); return; }
     hideEditorError();
     editorSetValue(result);
   }
@@ -1484,7 +1488,7 @@ const App = (() => {
       switchContentTab('viz');
       activatePolicy(idx);
     } catch (e) {
-      showEditorError('Fehler beim Rendern: ' + e.message);
+      showEditorError(I18n.t('editor.err.render', { msg: e.message }));
     }
   }
 
@@ -1527,7 +1531,7 @@ const App = (() => {
     if (btn) {
       btn.textContent    = theme === 'dark' ? '\uD83C\uDF19' : '\u2600\uFE0F';
       btn.setAttribute('aria-label',
-        'Design: ' + (theme === 'dark' ? 'Dunkel (wechseln zu Hell)' : 'Hell (wechseln zu Dunkel)')
+        I18n.t(theme === 'dark' ? 'hdr.theme.aria.dark' : 'hdr.theme.aria.light')
       );
     }
   }
@@ -1553,7 +1557,7 @@ const App = (() => {
     hint.className = 'sb-drop-hint';
     hint.setAttribute('aria-hidden', 'true');
     hint.innerHTML = '<div class="sb-drop-hint-icon">\uD83D\uDCC2</div>'
-                   + '<div class="sb-drop-hint-text">XACML-Policy hier ablegen</div>';
+                   + `<div class="sb-drop-hint-text">${I18n.t('sidebar.drop')}</div>`;
     sidebar.insertBefore(hint, sidebar.querySelector('.sb-import-wrap'));
 
     // Track drag-enter depth across all child elements
@@ -1610,11 +1614,29 @@ const App = (() => {
     });
   })();
 
+  function setLang(lang) {
+    I18n.setLang(lang);
+  }
+
+  // Re-render dynamic UI on language change
+  document.addEventListener('i18n:change', () => {
+    const policy = UIState.getActive();
+    if (policy) {
+      showPolicy(policy);
+    } else {
+      _renderEmptyState();
+    }
+    refreshSidebar();
+    closeEnfPanel();
+    updateMappingTooltip();
+    _applyTheme(_theme); // re-apply to update aria-label
+  });
+
   return {
     triggerCSV, loadCSV, activatePolicy, applySearch, clearSearch, setFilter,
     clearPolicies,
     triggerEnforcement, loadEnforcement, openEnfPanel, closeEnfPanel, switchTab,
-    toggleTheme,
+    toggleTheme, setLang,
     openImportModal, closeImportModal, switchImportTab,
     importDragOver, importDragLeave, importDrop, importFromFiles, importFromPaste,
     switchContentTab, handleEditorUpdate, handleBeautify, handleDownload,

@@ -6,6 +6,7 @@
 
 import { esc, isLightColor, lastSegment } from './parser.js';
 import { LabelMapper, EnforcementMapper } from './mappers.js';
+import { I18n } from './i18n.js';
 
 const TreeRenderer = (() => {
   const FALLBACK_COLOR = '#607D8B';
@@ -16,14 +17,14 @@ const TreeRenderer = (() => {
   // ── Logic chips ──
 
   function oderChip() {
-    return `<span class="logic-chip oder">ODER (or)`
-         + `<span class="tooltip" style="min-width:210px">Eine dieser Bedingungen muss zutreffen</span>`
+    return `<span class="logic-chip oder">${esc(I18n.t('renderer.oder.label'))}`
+         + `<span class="tooltip" style="min-width:210px">${esc(I18n.t('renderer.oder.tooltip'))}</span>`
          + `</span>`;
   }
 
   function undChip() {
-    return `<span class="logic-chip und">UND (and)`
-         + `<span class="tooltip" style="min-width:210px">Alle Bedingungen m&uuml;ssen gleichzeitig zutreffen</span>`
+    return `<span class="logic-chip und">${esc(I18n.t('renderer.und.label'))}`
+         + `<span class="tooltip" style="min-width:210px">${esc(I18n.t('renderer.und.tooltip'))}</span>`
          + `</span>`;
   }
 
@@ -48,7 +49,7 @@ const TreeRenderer = (() => {
   function fallbackChip(uri, attrHint) {
     const parts = [];
     if (attrHint) parts.push(`<span class="tooltip-attr">${attrHint}</span>`);
-    if (LabelMapper.isLoaded()) parts.push(`Kein Label im Mapping gefunden`);
+    if (LabelMapper.isLoaded()) parts.push(I18n.t('renderer.fallback.tooltip'));
     parts.push(`<span class="tooltip-uri">${esc(uri)}</span>`);
     return `<span class="chip fallback">${esc(uri)}<span class="tooltip">${parts.join('<br>')}</span></span>`;
   }
@@ -68,10 +69,10 @@ const TreeRenderer = (() => {
       if (isWildcard) {
         const wParts = [];
         if (attrHint) wParts.push(`<span class="tooltip-attr">${attrHint}</span>`);
-        wParts.push(`Wildcard-Policy: Gilt automatisch f&uuml;r alle Patientenakten`);
+        wParts.push(esc(I18n.t('renderer.wildcard.tooltip')));
         wParts.push(`<span class="tooltip-uri">root=&apos;*&apos;</span>`);
         return `<span class="chip" style="background:#fff8e1;color:#f57f17;border-color:#ffe082">`
-             + `<span class="star">&#x2B50;</span>Alle Patienten (Wildcard)`
+             + `<span class="star">&#x2B50;</span>${esc(I18n.t('renderer.wildcard.label'))}`
              + `<span class="tooltip">${wParts.join('<br>')}</span></span>`;
       }
       return chipHtml(root || 'II', '', root, '#795548', null, attrHint);
@@ -98,7 +99,7 @@ const TreeRenderer = (() => {
       if (attrHint) tooltipParts.push(`<span class="tooltip-attr">${attrHint}</span>`);
       if (desc)     tooltipParts.push(esc(desc));
       tooltipParts.push(`<span class="tooltip-uri">${esc(v)}</span>`);
-      tooltipParts.push(`<span class="tooltip-uri" style="color:#80cbc4">&#x1F517; FHIR ${FHIR_VERSION} Spezifikation</span>`);
+      tooltipParts.push(`<span class="tooltip-uri" style="color:#80cbc4">${esc(I18n.t('renderer.fhir.spec', { version: FHIR_VERSION }))}</span>`);
       const tooltip = `<span class="tooltip">${tooltipParts.join('<br>')}</span>`;
       const href = `https://hl7.org/fhir/${esc(v.toLowerCase())}.html`;
       const chip = `<a class="chip fhir-chip" href="${href}" target="_blank" rel="noopener"`
@@ -205,14 +206,14 @@ const TreeRenderer = (() => {
 
     if (fn.includes(':not')) {
       const inner = apply.args[0] ? condNode(apply.args[0]) : '';
-      return `<span class="cond-not">&#x26D4; NICHT</span>(${inner})`;
+      return `<span class="cond-not">${esc(I18n.t('renderer.not'))}</span>(${inner})`;
     }
 
     if (fn.includes('any-of-any')) {
-      // Render as readable: [left attr] entspricht [right attr]
+      // Render as readable: [left attr] matches [right attr]
       const attrArgs = apply.args.filter(a => a.nodeType !== 'Function');
       if (attrArgs.length === 2) {
-        return `${condNode(attrArgs[0])} <em style="color:#9e9e9e">entspricht</em> ${condNode(attrArgs[1])}`;
+        return `${condNode(attrArgs[0])} <em style="color:#9e9e9e">${esc(I18n.t('renderer.entspricht'))}</em> ${condNode(attrArgs[1])}`;
       }
       const argStrs = apply.args.map(condNode).filter(Boolean);
       return `<span class="cond-fn">${esc(lastSegment(fn))}</span>(${argStrs.join(', ')})`;
@@ -235,18 +236,18 @@ const TreeRenderer = (() => {
     // Detect top-level NOT (negated condition)
     const isNegated = cond.functionId && cond.functionId.includes(':not');
     const negHint   = isNegated
-      ? ` <span style="font-size:11px;color:#757575;font-weight:400">&mdash; Bedingung ist negiert (NOT)</span>`
+      ? ` <span style="font-size:11px;color:#757575;font-weight:400">${esc(I18n.t('renderer.negated'))}</span>`
       : '';
 
     const impactHtml = `<div class="cond-impact ${impactCls}">`
-                     + `${impactIco} Wenn WAHR &rarr; Regel wird angewendet (${impactLbl})`
+                     + `${impactIco} ${esc(I18n.t('renderer.impact', { effect: impactLbl }))}`
                      + negHint
                      + `</div>`;
 
     const condHtml = condApply(cond);
 
     return `<div class="match-group">`
-         + `<div class="mg-label">&#x1F50D; Bedingung</div>`
+         + `<div class="mg-label">${esc(I18n.t('renderer.condition'))}</div>`
          + `<div class="condition-block">${impactHtml}${condHtml}</div>`
          + `</div>`;
   }
@@ -257,9 +258,9 @@ const TreeRenderer = (() => {
     if (!target) return '';
     const { subjects = [], resources = [], actions = [] } = target;
     let html = '';
-    if (subjects.length)  html += renderMatchGroups(subjects,  '&#x1F464; Wer (Subject)');
-    if (resources.length) html += renderMatchGroups(resources, '&#x1F4E6; Ressourcen');
-    if (actions.length)   html += renderMatchGroups(actions,   '&#x26A1; Action', true);
+    if (subjects.length)  html += renderMatchGroups(subjects,  esc(I18n.t('renderer.who')));
+    if (resources.length) html += renderMatchGroups(resources, esc(I18n.t('renderer.resources')));
+    if (actions.length)   html += renderMatchGroups(actions,   esc(I18n.t('renderer.action')), true);
     return html;
   }
 
@@ -320,11 +321,11 @@ const TreeRenderer = (() => {
     }
 
     let html = `<div class="summary-box">`;
-    html += `<div class="summary-box-title">&#x1F4CA; Zusammenfassung</div>`;
+    html += `<div class="summary-box-title">${esc(I18n.t('renderer.summary.title'))}</div>`;
 
     // Rule counts
     html += `<div class="summary-row">`;
-    html += `<span class="summary-label">Regeln</span>`;
+    html += `<span class="summary-label">${esc(I18n.t('renderer.summary.rules'))}</span>`;
     html += `<span class="summary-chip" style="color:#2e7d32;border-color:#c8e6c9">&#x2705; ${permitCount}&nbsp;Permit</span>`;
     html += `<span class="summary-chip" style="color:#c62828;border-color:#ffcdd2">&#x274C; ${denyCount}&nbsp;Deny</span>`;
     html += `</div>`;
@@ -332,7 +333,7 @@ const TreeRenderer = (() => {
     // Subjects / roles
     if (subjectLabels.length > 0) {
       html += `<div class="summary-row">`;
-      html += `<span class="summary-label">Zugang f&uuml;r</span>`;
+      html += `<span class="summary-label">${esc(I18n.t('renderer.summary.access'))}</span>`;
       html += subjectLabels.map(l => `<span class="summary-chip">&#x1F464; ${esc(l)}</span>`).join('');
       html += `</div>`;
     }
@@ -346,7 +347,7 @@ const TreeRenderer = (() => {
       const togId   = 'smr_' + Math.random().toString(36).slice(2, 7);
 
       html += `<div class="summary-row">`;
-      html += `<span class="summary-label">FHIR-Ressourcen</span>`;
+      html += `<span class="summary-label">${esc(I18n.t('renderer.summary.fhir'))}</span>`;
 
       const renderResChip = ([type, modes]) => {
         const readOnly = !modes.has('write');
@@ -363,7 +364,7 @@ const TreeRenderer = (() => {
       if (hidden.length > 0) {
         html += `<span class="summary-chip summary-chip--more" id="${togId}"`
               + ` onclick="document.querySelectorAll('.${togId}').forEach(e=>e.style.display='inline-flex');document.getElementById('${togId}').style.display='none'"`
-              + `>+${hidden.length} weitere</span>`;
+              + `>${esc(I18n.t('renderer.more', { n: hidden.length }))}</span>`;
         html += hidden.map(e => {
           const chip = renderResChip(e);
           return chip.replace('class="summary-chip"', `class="summary-chip ${togId}" style="display:none"`);
@@ -376,13 +377,13 @@ const TreeRenderer = (() => {
     // Enforcement count
     if (EnforcementMapper.isLoaded()) {
       html += `<div class="summary-row">`;
-      html += `<span class="summary-label">Enforcement</span>`;
-      html += `<span class="summary-chip" style="color:#7B1FA2;border-color:#ce93d8">&#x1F4CA; ${EnforcementMapper.getCount()} Ressourcen geladen</span>`;
+      html += `<span class="summary-label">${esc(I18n.t('renderer.summary.enf'))}</span>`;
+      html += `<span class="summary-chip" style="color:#7B1FA2;border-color:#ce93d8">${esc(I18n.t('renderer.summary.enfCount', { n: EnforcementMapper.getCount() }))}</span>`;
       html += `</div>`;
     }
 
     if (isStarPolicy) {
-      html += `<div class="star-hint">&#x2B50; Wildcard-Policy: Gilt automatisch f&uuml;r alle Patientenakten &mdash; kein Zustimmungsdokument erforderlich.</div>`;
+      html += `<div class="star-hint">${esc(I18n.t('renderer.wildcard.hint'))}</div>`;
     }
 
     html += `</div>`;
@@ -397,17 +398,17 @@ const TreeRenderer = (() => {
     const badge     = isDeny ? 'DENY' : 'PERMIT';
     const titleText = rule.description
       ? esc(rule.description)
-      : `<span class="rule-no-desc">Regel ${index + 1} (keine Beschreibung)</span>`;
+      : `<span class="rule-no-desc">${esc(I18n.t('renderer.rule.noDesc', { n: index + 1 }))}</span>`;
 
     // Plain-text for search
-    const searchText = (rule.description || `Regel ${index + 1}`).toLowerCase();
+    const searchText = (rule.description || I18n.t('renderer.rule.noDesc', { n: index + 1 })).toLowerCase();
 
     let body = '';
     if (rule.target)    body += renderTarget(rule.target);
     if (rule.condition) {
       body += renderCondition(rule.condition, rule.effect);
     } else {
-      body += `<div class="no-cond-hint">&#x2139;&#xFE0F; Keine Zusatzbedingung &mdash; Regel greift immer wenn Subject übereinstimmt</div>`;
+      body += `<div class="no-cond-hint">${esc(I18n.t('renderer.noCondHint'))}</div>`;
     }
 
     const bodyId = `rb_${index}_${Math.random().toString(36).slice(2, 7)}`;
@@ -462,7 +463,7 @@ const TreeRenderer = (() => {
       const hasContent = (t.subjects || []).length + (t.resources || []).length + (t.actions || []).length > 0;
       if (hasContent) {
         html += `<div class="policy-target">`;
-        html += `<div class="section-label">&#x1F3AF; Policy-Target &mdash; gilt f&uuml;r alle Regeln</div>`;
+        html += `<div class="section-label">${esc(I18n.t('renderer.policyTarget'))}</div>`;
         html += renderTarget(policy.target);
         html += `</div>`;
       }
@@ -470,8 +471,8 @@ const TreeRenderer = (() => {
 
     // Expand/collapse buttons
     html += `<div class="policy-hdr-ctrl">`;
-    html += `<button class="ctrl-btn" onclick="TreeRenderer.expandAll()">&#x25BC; Alle aufklappen</button>`;
-    html += `<button class="ctrl-btn" onclick="TreeRenderer.collapseAll()">&#x25B6; Alle zuklappen</button>`;
+    html += `<button class="ctrl-btn" onclick="TreeRenderer.expandAll()">${esc(I18n.t('renderer.expandAll'))}</button>`;
+    html += `<button class="ctrl-btn" onclick="TreeRenderer.collapseAll()">${esc(I18n.t('renderer.collapseAll'))}</button>`;
     html += `</div>`;
 
     // Rules

@@ -1,15 +1,16 @@
 'use strict';
 
 import { parseMarkdown } from './markdown.js';
+import { I18n } from './i18n.js';
 
 const SECTIONS = [
-  { id: 'was-ist-xacml',        title: '1. Was ist XACML?',                    file: 'content/xacml-01-was-ist-xacml.md' },
-  { id: 'aufbau-policy',        title: '2. Aufbau einer Policy',               file: 'content/xacml-02-aufbau-policy.md' },
-  { id: 'target',               title: '3. Target — Für wen gilt die Regel?',  file: 'content/xacml-03-target.md' },
-  { id: 'und-oder',             title: '4. UND- und ODER-Verknüpfungen',       file: 'content/xacml-04-und-oder.md' },
-  { id: 'conditions',           title: '5. Conditions',                        file: 'content/xacml-05-conditions.md' },
-  { id: 'combining-algorithms', title: '6. Combining Algorithms',              file: 'content/xacml-06-combining-algorithms.md' },
-  { id: 'praxisbeispiel',       title: '7. Praxisbeispiel',                    file: 'content/xacml-07-praxisbeispiel.md' },
+  { id: 'was-ist-xacml',        titleKey: 'guide.s1.title', file: 'content/xacml-01-was-ist-xacml.md' },
+  { id: 'aufbau-policy',        titleKey: 'guide.s2.title', file: 'content/xacml-02-aufbau-policy.md' },
+  { id: 'target',               titleKey: 'guide.s3.title', file: 'content/xacml-03-target.md' },
+  { id: 'und-oder',             titleKey: 'guide.s4.title', file: 'content/xacml-04-und-oder.md' },
+  { id: 'conditions',           titleKey: 'guide.s5.title', file: 'content/xacml-05-conditions.md' },
+  { id: 'combining-algorithms', titleKey: 'guide.s6.title', file: 'content/xacml-06-combining-algorithms.md' },
+  { id: 'praxisbeispiel',       titleKey: 'guide.s7.title', file: 'content/xacml-07-praxisbeispiel.md' },
 ];
 
 const XACMLGuide = (() => {
@@ -19,6 +20,20 @@ const XACMLGuide = (() => {
   // Plain-text cache for search (filled after render)
   const _textCache = {};
 
+  // ── Fetch with lang fallback ────────────────────────────────────────────
+  async function _fetchSection(file) {
+    const langPath = I18n.mdPath(file);
+    if (langPath !== file) {
+      try {
+        const r = await fetch(langPath);
+        if (r.ok) return r.text();
+      } catch { /* fall through */ }
+    }
+    const r = await fetch(file);
+    if (!r.ok) throw new Error(`HTTP ${r.status} loading ${file}`);
+    return r.text();
+  }
+
   function init() {
     if (_initialized) return _initPromise || Promise.resolve();
     _initialized = true;
@@ -26,22 +41,16 @@ const XACMLGuide = (() => {
     const container = document.getElementById('layout-guide');
     if (!container) return Promise.resolve();
 
-    container.innerHTML = '<div class="guide-loading">Inhalte werden geladen…</div>';
+    container.innerHTML = `<div class="guide-loading">${I18n.t('guide.loading')}</div>`;
 
-    _initPromise = Promise.all(SECTIONS.map(s => fetch(s.file).then(r => {
-      if (!r.ok) throw new Error(`HTTP ${r.status} beim Laden von ${s.file}`);
-      return r.text();
-    })))
+    _initPromise = Promise.all(SECTIONS.map(s => _fetchSection(s.file)))
       .then(texts => render(texts))
       .catch(err => {
         container.innerHTML = `<div class="guide-error">
-          <h3>Inhalte konnten nicht geladen werden</h3>
+          <h3>${I18n.t('guide.err.title')}</h3>
           <p>${err.message}</p>
           <p style="margin-top:10px;font-size:13px;color:var(--text-muted)">
-            Hinweis: Der Guide benötigt einen HTTP-Server. Wenn du die Datei direkt als
-            <code>file://</code>-URL öffnest, blockiert der Browser das Laden der
-            Markdown-Dateien. Starte einen lokalen HTTP-Server (z.&nbsp;B.
-            <code>npx serve .</code>) oder nutze GitHub&nbsp;Pages.
+            ${I18n.t('guide.err.hint')}
           </p>
         </div>`;
       });
@@ -78,16 +87,16 @@ const XACMLGuide = (() => {
     // ToC (search + links)
     const tocItems = SECTIONS.map(s =>
       `<li class="guide-toc-item" data-id="${s.id}">` +
-      `<a href="#${s.id}" class="guide-toc-link" data-id="${s.id}">${s.title}</a></li>`
+      `<a href="#${s.id}" class="guide-toc-link" data-id="${s.id}">${I18n.t(s.titleKey)}</a></li>`
     ).join('');
 
     const toc = `<nav class="guide-toc" id="guide-toc">
-      <div class="guide-toc-title">Inhalt</div>
+      <div class="guide-toc-title">${I18n.t('guide.toc.title')}</div>
       <div class="guide-search-wrap">
         <span class="guide-search-icon">⌕</span>
         <input type="search" class="guide-search" id="guide-search"
-               placeholder="Suche…" aria-label="Guide durchsuchen" autocomplete="off">
-        <button class="guide-search-clear" id="guide-search-clear" style="display:none" title="Suche leeren" aria-label="Suche leeren">&#x2715;</button>
+               placeholder="${I18n.t('guide.search.placeholder')}" aria-label="${I18n.t('guide.search.aria')}" autocomplete="off">
+        <button class="guide-search-clear" id="guide-search-clear" style="display:none" title="${I18n.t('guide.search.clear.title')}" aria-label="${I18n.t('guide.search.clear.aria')}">&#x2715;</button>
       </div>
       <ul class="guide-toc-list" id="guide-toc-list">${tocItems}</ul>
     </nav>`;
@@ -96,7 +105,7 @@ const XACMLGuide = (() => {
     const accItems = SECTIONS.map((s, idx) => {
       const html   = parseMarkdown(markdownTexts[idx] || '');
       const numStr = String(idx + 1).padStart(2, '0');
-      const label  = s.title.replace(/^\d+\.\s*/, '');
+      const label  = I18n.t(s.titleKey).replace(/^\d+\.\s*/, '');
       return `<div class="guide-acc" id="${s.id}">
         <button class="guide-acc-hdr"
                 aria-expanded="false"
@@ -112,7 +121,7 @@ const XACMLGuide = (() => {
     }).join('');
 
     const backToTop = `<button class="guide-back-top" id="guide-back-top"
-        title="Zurück nach oben" aria-label="Zurück nach oben"
+        title="${I18n.t('guide.backTop.title')}" aria-label="${I18n.t('guide.backTop.aria')}"
         onclick="window.scrollTo({top:0,behavior:'smooth'})">&#x2191;</button>`;
 
     const content = `<div class="guide-content" id="guide-content">${accItems}${backToTop}</div>`;
@@ -181,7 +190,7 @@ const XACMLGuide = (() => {
         if (!tocItem || !acc) return;
 
         const matches = !q
-          || s.title.toLowerCase().includes(q)
+          || I18n.t(s.titleKey).toLowerCase().includes(q)
           || (_textCache[s.id] || '').includes(q);
 
         tocItem.style.display = matches ? '' : 'none';
@@ -237,8 +246,8 @@ const XACMLGuide = (() => {
       .forEach(heading => {
         const btn = document.createElement('button');
         btn.className = 'heading-anchor-btn';
-        btn.title = 'Link zu diesem Abschnitt kopieren';
-        btn.setAttribute('aria-label', 'Abschnittslink kopieren');
+        btn.title = I18n.t('guide.anchor.title');
+        btn.setAttribute('aria-label', I18n.t('guide.anchor.aria'));
         btn.innerHTML = '<span class="heading-anchor-icon">#</span>';
         btn.addEventListener('click', () => {
           const url = `${location.origin}${location.pathname}#${heading.id}`;
@@ -257,6 +266,16 @@ const XACMLGuide = (() => {
         heading.appendChild(btn);
       });
   }
+
+  // ── Reset on language change ───────────────────────────────────────────────
+  document.addEventListener('i18n:change', () => {
+    _initialized = false;
+    _initPromise = null;
+    const container = document.getElementById('layout-guide');
+    if (container && container.style.display !== 'none') {
+      init();
+    }
+  });
 
   return { init, render, openSection, get _initialized() { return _initialized; } };
 })();

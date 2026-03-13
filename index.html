@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-lang="de">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -91,6 +91,16 @@
       document.documentElement.setAttribute('data-theme', theme);
     })();
   </script>
+  <!-- Anti-flash: set lang before first render -->
+  <script>
+    (function() {
+      var saved = sessionStorage.getItem('xacml-lang');
+      var browser = (navigator.language || 'de').slice(0, 2).toLowerCase();
+      var supported = ['de', 'en'];
+      var lang = saved || (supported.includes(browser) ? browser : 'de');
+      document.documentElement.lang = lang;
+    })();
+  </script>
   <script defer src="https://statistics.puschmann.io/script.js" data-website-id="42e00316-644f-4b96-b388-e271b095351a"></script>
 </head>
 <body>
@@ -101,36 +111,43 @@
     <span class="header-notice">&#x26A0;&#xFE0F; For educational purposes only. Use at your own risk.</span>
     <span class="header-notice">&#x1F512; All data is processed locally in your browser and is never uploaded.</span>
   </div>
-  <button class="hbtn hbtn-example" id="example-btn" onclick="App.loadExample()" title="Beispiel-Policy laden (Physician Access)">&#x25B6; Beispiel laden</button>
-  <button class="hbtn" id="csv-btn" onclick="App.triggerCSV()" title="Keine Mapping-Tabelle geladen">&#x1F4C4; Mapping-CSV laden<span class="mapping-status-dot" id="mappingStatusDot" data-state="none"></span></button>
+  <button class="hbtn hbtn-example" id="example-btn" onclick="App.loadExample()"
+          data-i18n-title="hdr.example.title" title="Beispiel-Policy laden (Physician Access)"><span data-i18n="hdr.example.btn">&#x25B6; Beispiel laden</span></button>
+  <button class="hbtn" id="csv-btn" onclick="App.triggerCSV()" title="Keine Mapping-Tabelle geladen"><span data-i18n="hdr.csv.btn">&#x1F4C4; Mapping-CSV laden</span><span class="mapping-status-dot" id="mappingStatusDot" data-state="none"></span></button>
   <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="App.loadCSV(this)">
-  <button class="hbtn" id="enf-btn" onclick="App.triggerEnforcement()">&#x1F4CA; Enforcement-CSV</button>
+  <button class="hbtn" id="enf-btn" onclick="App.triggerEnforcement()"><span data-i18n="hdr.enf.btn">&#x1F4CA; Enforcement-CSV</span></button>
   <input type="file" id="enf-input" accept=".csv" style="display:none" onchange="App.loadEnforcement(this)">
+  <div class="lang-switcher">
+    <button class="lang-btn active" data-lang="de" onclick="App.setLang('de')">DE</button>
+    <button class="lang-btn" data-lang="en" onclick="App.setLang('en')">EN</button>
+  </div>
   <button class="hbtn theme-toggle" id="theme-toggle" onclick="App.toggleTheme()" aria-label="Design: Hell (wechseln zu Dunkel)">&#x2600;&#xFE0F;</button>
 
 </header>
 
 <div class="tab-nav">
-  <button class="tab-btn active" id="tab-viz" onclick="App.switchTab('viz')">&#x1F4CA; Visualisierung</button>
-  <button class="tab-btn" id="tab-guide" onclick="App.switchTab('guide')">&#x1F4D6; XACML verstehen</button>
-  <button class="tab-btn" id="tab-kb" onclick="App.switchTab('kb')">&#x1F4DA; Knowledge Base</button>
+  <button class="tab-btn active" id="tab-viz" onclick="App.switchTab('viz')" data-i18n="tab.viz">&#x1F4CA; Visualisierung</button>
+  <button class="tab-btn" id="tab-guide" onclick="App.switchTab('guide')" data-i18n="tab.guide">&#x1F4D6; XACML verstehen</button>
+  <button class="tab-btn" id="tab-kb" onclick="App.switchTab('kb')" data-i18n="tab.kb">&#x1F4DA; Knowledge Base</button>
 </div>
 
 <div class="layout" id="layout-viz">
   <nav class="sidebar">
     <div class="sidebar-head">
       <span>Policies</span>
-      <button class="sb-clear-btn" id="sb-clear-btn" onclick="App.clearPolicies()" title="Alle Policies entfernen" aria-label="Alle Policies entfernen">&#x1F5D1;</button>
+      <button class="sb-clear-btn" id="sb-clear-btn" onclick="App.clearPolicies()"
+              data-i18n-title="sidebar.clearBtn.title" data-i18n-aria="sidebar.clearBtn.title"
+              title="Alle Policies entfernen" aria-label="Alle Policies entfernen">&#x1F5D1;</button>
     </div>
     <div class="sb-import-wrap">
-      <button class="sb-import-btn" onclick="App.openImportModal()">+ Policy importieren</button>
+      <button class="sb-import-btn" onclick="App.openImportModal()" data-i18n="sidebar.importBtn">+ Policy importieren</button>
     </div>
     <div class="sidebar-list" id="sidebar-list"></div>
   </nav>
   <div class="content-area" id="content-area">
     <div class="content-tab-nav">
-      <button class="content-tab active" id="ctab-viz" onclick="App.switchContentTab('viz')">&#x1F4CA; Visualizer</button>
-      <button class="content-tab" id="ctab-editor" onclick="App.switchContentTab('xml-editor')">&#x270F;&#xFE0F; XACML-Editor</button>
+      <button class="content-tab active" id="ctab-viz" onclick="App.switchContentTab('viz')" data-i18n="ctab.viz">&#x1F4CA; Visualizer</button>
+      <button class="content-tab" id="ctab-editor" onclick="App.switchContentTab('xml-editor')" data-i18n="ctab.editor">&#x270F;&#xFE0F; XACML-Editor</button>
     </div>
     <div class="content" id="content">
       <div class="empty-state">
@@ -142,18 +159,20 @@
     <div class="editor-panel" id="editor-panel" style="display:none">
       <div class="editor-hdr">
         <div class="editor-toolbar">
-          <button class="editor-btn" onclick="App.handleEditorUpdate()">&#x21BB; Visualizer aktualisieren</button>
-          <button class="editor-btn" onclick="App.handleBeautify()">&#x2728; Beautify</button>
-          <button class="editor-btn" onclick="App.handleDownload()">&#x2B07; Als XML herunterladen</button>
-          <button class="editor-btn editor-btn-reset" onclick="App.handleReset()">&#x21BA; Zur&#252;cksetzen</button>
+          <button class="editor-btn" onclick="App.handleEditorUpdate()" data-i18n="editor.update">&#x21BB; Visualizer aktualisieren</button>
+          <button class="editor-btn" onclick="App.handleBeautify()" data-i18n="editor.beautify">&#x2728; Beautify</button>
+          <button class="editor-btn" onclick="App.handleDownload()" data-i18n="editor.download">&#x2B07; Als XML herunterladen</button>
+          <button class="editor-btn editor-btn-reset" onclick="App.handleReset()" data-i18n="editor.reset">&#x21BA; Zur&#252;cksetzen</button>
           <span id="editorValidationStatus" class="editor-val-status"></span>
-          <button class="val-info-btn" id="editorValidationInfoBtn" style="display:none" onclick="App.openKbSection('kb-validation')" title="Validierungsregeln erkl&#228;rt (Knowledge Base)" aria-label="Validierungsregeln erkl&#228;rt">&#x2139;</button>
-          <span id="editorDirtyIndicator" class="editor-dirty" style="display:none">&#x25CF; Ungespeicherte &#196;nderungen</span>
+          <button class="val-info-btn" id="editorValidationInfoBtn" style="display:none" onclick="App.openKbSection('kb-validation')"
+                  data-i18n-title="editor.valInfo.title" data-i18n-aria="editor.valInfo.aria"
+                  title="Validierungsregeln erkl&#228;rt (Knowledge Base)" aria-label="Validierungsregeln erkl&#228;rt">&#x2139;</button>
+          <span id="editorDirtyIndicator" class="editor-dirty" style="display:none" data-i18n="editor.dirty">&#x25CF; Ungespeicherte &#196;nderungen</span>
         </div>
         <div class="editor-reset-confirm" id="editorResetConfirm" style="display:none">
-          <span class="editor-confirm-text">Alle &#196;nderungen verwerfen?</span>
-          <button class="editor-confirm-yes" onclick="App.confirmReset()">Ja</button>
-          <button class="editor-confirm-no" onclick="App.cancelReset()">Abbrechen</button>
+          <span class="editor-confirm-text" data-i18n="editor.reset.confirm">Alle &#196;nderungen verwerfen?</span>
+          <button class="editor-confirm-yes" onclick="App.confirmReset()" data-i18n="editor.reset.yes">Ja</button>
+          <button class="editor-confirm-no" onclick="App.cancelReset()" data-i18n="editor.reset.no">Abbrechen</button>
         </div>
         <div class="editor-error-bar" id="editor-error-bar" style="display:none">
           <span id="editorErrorMsg" class="editor-error-msg"></span>
@@ -163,13 +182,20 @@
         <div class="search-input-wrap">
           <input class="search-input" id="editor-search-input"
                  type="text" placeholder="&#x1F50D; Im Editor suchen&#x2026;"
+                 data-i18n-placeholder="editor.search.placeholder"
                  autocomplete="off" spellcheck="false">
           <button class="search-clear-btn" id="editor-search-clear"
-                  style="display:none" title="Suche leeren" aria-label="Suche leeren">&#x2715;</button>
+                  style="display:none"
+                  data-i18n-title="editor.search.clear.title" data-i18n-aria="editor.search.clear.aria"
+                  title="Suche leeren" aria-label="Suche leeren">&#x2715;</button>
         </div>
         <span class="editor-search-count" id="editor-search-count"></span>
-        <button class="editor-search-nav" id="editor-search-prev" title="Vorheriges Ergebnis" aria-label="Vorheriges Ergebnis">&#x2191;</button>
-        <button class="editor-search-nav" id="editor-search-next" title="N&#228;chstes Ergebnis" aria-label="N&#228;chstes Ergebnis">&#x2193;</button>
+        <button class="editor-search-nav" id="editor-search-prev"
+                data-i18n-title="editor.search.prev.title" data-i18n-aria="editor.search.prev.aria"
+                title="Vorheriges Ergebnis" aria-label="Vorheriges Ergebnis">&#x2191;</button>
+        <button class="editor-search-nav" id="editor-search-next"
+                data-i18n-title="editor.search.next.title" data-i18n-aria="editor.search.next.aria"
+                title="N&#228;chstes Ergebnis" aria-label="N&#228;chstes Ergebnis">&#x2193;</button>
       </div>
       <div class="editor-cm-wrap">
         <textarea id="xmlEditorTextarea"></textarea>
@@ -185,12 +211,12 @@
 <div class="mobile-hint" aria-hidden="true">
   <div class="mobile-hint-card">
     <div class="mobile-hint-icon">🖥️</div>
-    <h2 class="mobile-hint-title">Desktop empfohlen</h2>
-    <p class="mobile-hint-text">
+    <h2 class="mobile-hint-title" data-i18n="mobile.title">Desktop empfohlen</h2>
+    <p class="mobile-hint-text" data-i18n-html="mobile.text1">
       Der <strong>XACML Policy Atlas</strong> ist für größere Bildschirme ausgelegt
       und auf dem Smartphone oder kleinen Bildschirmen nicht nutzbar.
     </p>
-    <p class="mobile-hint-text">Bitte öffne die Seite auf einem Desktop- oder Laptop-Computer.</p>
+    <p class="mobile-hint-text" data-i18n="mobile.text2">Bitte öffne die Seite auf einem Desktop- oder Laptop-Computer.</p>
   </div>
 </div>
 
@@ -228,18 +254,20 @@
 <div class="modal-overlay" id="import-overlay" onclick="if(event.target===this)App.closeImportModal()">
   <div class="modal" id="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
     <div class="modal-hdr">
-      <span class="modal-title" id="import-modal-title">Policy importieren</span>
-      <button class="modal-close" onclick="App.closeImportModal()" aria-label="Dialog schlie&szlig;en">&#x2715;</button>
+      <span class="modal-title" id="import-modal-title" data-i18n="modal.title">Policy importieren</span>
+      <button class="modal-close" onclick="App.closeImportModal()"
+              data-i18n-aria="modal.close.aria" aria-label="Dialog schlie&szlig;en">&#x2715;</button>
     </div>
     <div class="modal-tabs">
-      <button class="modal-tab active" id="mtab-paste" onclick="App.switchImportTab('paste')">&#x1F4CB; XML einf&uuml;gen</button>
-      <button class="modal-tab" id="mtab-file" onclick="App.switchImportTab('file')">&#x1F4C1; Datei hochladen</button>
+      <button class="modal-tab active" id="mtab-paste" onclick="App.switchImportTab('paste')" data-i18n="modal.tab.paste">&#x1F4CB; XML einf&uuml;gen</button>
+      <button class="modal-tab" id="mtab-file" onclick="App.switchImportTab('file')" data-i18n="modal.tab.file">&#x1F4C1; Datei hochladen</button>
     </div>
     <div id="mtab-paste-body" class="modal-tab-body">
       <textarea class="import-textarea" id="import-textarea" rows="18"
+        data-i18n-placeholder="modal.textarea.placeholder"
         placeholder="XACML-Policy hier einf&#252;gen...&#10;&#10;Beispiel:&#10;&lt;PolicySet xmlns=&quot;urn:oasis:names:tc:xacml:3.0:core:schema:wd-17&quot; ...&gt;&#10;  ...&#10;&lt;/PolicySet&gt;"></textarea>
       <div class="import-error" id="import-paste-error" style="display:none"></div>
-      <button class="import-load-btn" onclick="App.importFromPaste()">&#x1F4E5; Laden</button>
+      <button class="import-load-btn" onclick="App.importFromPaste()" data-i18n="modal.load">&#x1F4E5; Laden</button>
     </div>
     <div id="mtab-file-body" class="modal-tab-body" style="display:none">
       <div class="import-dropzone" id="import-drop"
@@ -248,8 +276,8 @@
            ondrop="App.importDrop(event)"
            onclick="document.getElementById('import-file-input').click()">
         <div class="import-drop-icon">&#x1F4C2;</div>
-        <p class="import-drop-text">XML-Datei hier ablegen</p>
-        <button class="import-file-btn" onclick="event.stopPropagation();document.getElementById('import-file-input').click()">Oder Datei ausw&auml;hlen</button>
+        <p class="import-drop-text" data-i18n="modal.drop.text">XML-Datei hier ablegen</p>
+        <button class="import-file-btn" onclick="event.stopPropagation();document.getElementById('import-file-input').click()" data-i18n="modal.drop.btn">Oder Datei ausw&auml;hlen</button>
         <input type="file" id="import-file-input" accept="application/xml,text/xml,.xml" multiple style="display:none" onchange="App.importFromFiles(this)">
       </div>
       <div class="import-error" id="import-file-error" style="display:none"></div>

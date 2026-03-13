@@ -1,11 +1,12 @@
 'use strict';
 
 import { parseMarkdown } from './markdown.js';
+import { I18n } from './i18n.js';
 
 const SECTIONS = [
-  { id: 'kb-mapping-csv',     title: '1. Mapping-CSV',     file: 'content/kb-01-mapping-csv.md' },
-  { id: 'kb-enforcement-csv', title: '2. Enforcement-CSV', file: 'content/kb-02-enforcement-csv.md' },
-  { id: 'kb-validation',      title: '3. Validierungsregeln', file: 'content/kb-03-validation.md' },
+  { id: 'kb-mapping-csv',     titleKey: 'kb.s1.title', file: 'content/kb-01-mapping-csv.md' },
+  { id: 'kb-enforcement-csv', titleKey: 'kb.s2.title', file: 'content/kb-02-enforcement-csv.md' },
+  { id: 'kb-validation',      titleKey: 'kb.s3.title', file: 'content/kb-03-validation.md' },
 ];
 
 const KnowledgeBase = (() => {
@@ -14,6 +15,20 @@ const KnowledgeBase = (() => {
   let _initPromise = null;
   const _textCache = {};
 
+  // ── Fetch with lang fallback ────────────────────────────────────────────
+  async function _fetchSection(file) {
+    const langPath = I18n.mdPath(file);
+    if (langPath !== file) {
+      try {
+        const r = await fetch(langPath);
+        if (r.ok) return r.text();
+      } catch { /* fall through */ }
+    }
+    const r = await fetch(file);
+    if (!r.ok) throw new Error(`HTTP ${r.status} loading ${file}`);
+    return r.text();
+  }
+
   function init() {
     if (_initialized) return _initPromise || Promise.resolve();
     _initialized = true;
@@ -21,19 +36,16 @@ const KnowledgeBase = (() => {
     const container = document.getElementById('layout-kb');
     if (!container) return Promise.resolve();
 
-    container.innerHTML = '<div class="guide-loading">Inhalte werden geladen…</div>';
+    container.innerHTML = `<div class="guide-loading">${I18n.t('kb.loading')}</div>`;
 
-    _initPromise = Promise.all(SECTIONS.map(s => fetch(s.file).then(r => {
-      if (!r.ok) throw new Error(`HTTP ${r.status} beim Laden von ${s.file}`);
-      return r.text();
-    })))
+    _initPromise = Promise.all(SECTIONS.map(s => _fetchSection(s.file)))
       .then(texts => render(texts))
       .catch(err => {
         container.innerHTML = `<div class="guide-error">
-          <h3>Inhalte konnten nicht geladen werden</h3>
+          <h3>${I18n.t('kb.err.title')}</h3>
           <p>${err.message}</p>
           <p style="margin-top:10px;font-size:13px;color:var(--text-muted)">
-            Hinweis: Lokaler HTTP-Server erforderlich (z.&nbsp;B. <code>npx serve .</code>).
+            ${I18n.t('kb.err.hint')}
           </p>
         </div>`;
       });
@@ -68,16 +80,16 @@ const KnowledgeBase = (() => {
     // ToC
     const tocItems = SECTIONS.map(s =>
       `<li class="guide-toc-item" data-id="${s.id}">` +
-      `<a href="#${s.id}" class="guide-toc-link" data-id="${s.id}">${s.title}</a></li>`
+      `<a href="#${s.id}" class="guide-toc-link" data-id="${s.id}">${I18n.t(s.titleKey)}</a></li>`
     ).join('');
 
     const toc = `<nav class="guide-toc" id="kb-toc">
-      <div class="guide-toc-title">Inhalt</div>
+      <div class="guide-toc-title">${I18n.t('kb.toc.title')}</div>
       <div class="guide-search-wrap">
         <span class="guide-search-icon">⌕</span>
         <input type="search" class="guide-search" id="kb-search"
-               placeholder="Suche…" aria-label="Knowledge Base durchsuchen" autocomplete="off">
-        <button class="guide-search-clear" id="kb-search-clear" style="display:none" title="Suche leeren" aria-label="Suche leeren">&#x2715;</button>
+               placeholder="${I18n.t('kb.search.placeholder')}" aria-label="${I18n.t('kb.search.aria')}" autocomplete="off">
+        <button class="guide-search-clear" id="kb-search-clear" style="display:none" title="${I18n.t('kb.search.clear.title')}" aria-label="${I18n.t('kb.search.clear.aria')}">&#x2715;</button>
       </div>
       <ul class="guide-toc-list" id="kb-toc-list">${tocItems}</ul>
     </nav>`;
@@ -86,7 +98,7 @@ const KnowledgeBase = (() => {
     const accItems = SECTIONS.map((s, idx) => {
       const html   = parseMarkdown(markdownTexts[idx] || '');
       const numStr = String(idx + 1).padStart(2, '0');
-      const label  = s.title.replace(/^\d+\.\s*/, '');
+      const label  = I18n.t(s.titleKey).replace(/^\d+\.\s*/, '');
       return `<div class="guide-acc" id="${s.id}">
         <button class="guide-acc-hdr"
                 aria-expanded="false"
@@ -102,7 +114,7 @@ const KnowledgeBase = (() => {
     }).join('');
 
     const backToTop = `<button class="guide-back-top" id="kb-back-top"
-        title="Zurück nach oben" aria-label="Zurück nach oben"
+        title="${I18n.t('kb.backTop.title')}" aria-label="${I18n.t('kb.backTop.aria')}"
         onclick="window.scrollTo({top:0,behavior:'smooth'})">&#x2191;</button>`;
 
     const content = `<div class="guide-content" id="kb-content">${accItems}${backToTop}</div>`;
@@ -167,7 +179,7 @@ const KnowledgeBase = (() => {
         if (!tocItem || !acc) return;
 
         const matches = !q
-          || s.title.toLowerCase().includes(q)
+          || I18n.t(s.titleKey).toLowerCase().includes(q)
           || (_textCache[s.id] || '').includes(q);
 
         tocItem.style.display = matches ? '' : 'none';
@@ -220,8 +232,8 @@ const KnowledgeBase = (() => {
       .forEach(heading => {
         const btn = document.createElement('button');
         btn.className = 'heading-anchor-btn';
-        btn.title = 'Link zu diesem Abschnitt kopieren';
-        btn.setAttribute('aria-label', 'Abschnittslink kopieren');
+        btn.title = I18n.t('kb.anchor.title');
+        btn.setAttribute('aria-label', I18n.t('kb.anchor.aria'));
         btn.innerHTML = '<span class="heading-anchor-icon">#</span>';
         btn.addEventListener('click', () => {
           const url = `${location.origin}${location.pathname}#${heading.id}`;
@@ -240,6 +252,16 @@ const KnowledgeBase = (() => {
         heading.appendChild(btn);
       });
   }
+
+  // ── Reset on language change ───────────────────────────────────────────────
+  document.addEventListener('i18n:change', () => {
+    _initialized = false;
+    _initPromise = null;
+    const container = document.getElementById('layout-kb');
+    if (container && container.style.display !== 'none') {
+      init();
+    }
+  });
 
   return { init, openSection, get _initialized() { return _initialized; } };
 })();
