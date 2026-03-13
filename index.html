@@ -108,8 +108,8 @@
 <header>
   <h1><a href="/" onclick="event.preventDefault();App.switchTab('viz')" class="header-title-link">&#x1F510; XACML Policy Atlas – Viewer, Validator &amp; Editor</a></h1>
     <div class="header-notices">
-    <span class="header-notice">&#x26A0;&#xFE0F; For educational purposes only. Use at your own risk.</span>
-    <span class="header-notice">&#x1F512; All data is processed locally in your browser and is never uploaded.</span>
+    <span class="header-notice" data-i18n="hdr.notice.edu">&#x26A0;&#xFE0F; For educational purposes only. Use at your own risk.</span>
+    <span class="header-notice" data-i18n="hdr.notice.privacy">&#x1F512; All data is processed locally in your browser and is never uploaded.</span>
   </div>
   <button class="hbtn hbtn-example" id="example-btn" onclick="App.loadExample()"
           data-i18n-title="hdr.example.title" title="Beispiel-Policy laden (Physician Access)"><span data-i18n="hdr.example.btn">&#x25B6; Beispiel laden</span></button>
@@ -152,8 +152,8 @@
     <div class="content" id="content">
       <div class="empty-state">
         <div class="icon">&#x1F4C2;</div>
-        <p>Noch keine Policy geladen</p>
-        <button class="import-trigger-btn" onclick="App.openImportModal()">+ Policy importieren</button>
+        <p data-i18n="empty.text">Noch keine Policy geladen</p>
+        <button class="import-trigger-btn" onclick="App.openImportModal()" data-i18n="empty.import">+ Policy importieren</button>
       </div>
     </div>
     <div class="editor-panel" id="editor-panel" style="display:none">

@@ -16,6 +16,10 @@ const TRANSLATIONS = {
     // ── Page ──
     'page.title': 'XACML Policy Atlas – Viewer, Validator & Editor',
 
+    // ── Header notices ──
+    'hdr.notice.edu':     '⚠️ Nur für Bildungszwecke. Verwendung auf eigene Gefahr.',
+    'hdr.notice.privacy': '🔒 Alle Daten werden lokal im Browser verarbeitet und niemals hochgeladen.',
+
     // ── Header ──
     'hdr.example.title': 'Beispiel-Policy laden (Physician Access)',
     'hdr.example.btn':   '▶ Beispiel laden',
@@ -274,6 +278,10 @@ const TRANSLATIONS = {
   en: {
     // ── Page ──
     'page.title': 'XACML Policy Atlas – Viewer, Validator & Editor',
+
+    // ── Header notices ──
+    'hdr.notice.edu':     '⚠️ For educational purposes only. Use at your own risk.',
+    'hdr.notice.privacy': '🔒 All data is processed locally in your browser and is never uploaded.',
 
     // ── Header ──
     'hdr.example.title': 'Load example policy (Physician Access)',
