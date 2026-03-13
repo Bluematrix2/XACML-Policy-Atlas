@@ -976,6 +976,11 @@ const PolicyCreator = (() => {
     _previewTimer = setTimeout(_updatePreview, 300);
   }
 
+  function _cmHeight() {
+    // Match the visual preview height: viewport minus header (52px), tab bar (46px), preview header (~52px), padding
+    return Math.max(300, window.innerHeight - 200);
+  }
+
   function _saveAccState(vizDiv) {
     vizDiv.querySelectorAll('.acc-panel').forEach((panel, pi) => {
       const accBody = panel.querySelector('.acc-body');
@@ -1023,11 +1028,11 @@ const PolicyCreator = (() => {
           mode: 'xml', lineNumbers: true, readOnly: true,
           lineWrapping: false, theme: 'default', tabSize: 2,
         });
-        const cmEl = xmlPre.querySelector('.CodeMirror');
-        if (cmEl) { cmEl.style.height = 'auto'; cmEl.style.maxHeight = 'calc(100vh - 200px)'; }
+        _xmlCm.setSize(null, _cmHeight());
       }
       if (_xmlCm) {
         _xmlCm.setValue(xml);
+        _xmlCm.setSize(null, _cmHeight());
         _xmlCm.refresh();
       } else {
         xmlPre.textContent = xml;

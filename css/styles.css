@@ -2851,8 +2851,6 @@ footer a:hover { opacity: 1; text-decoration: none; }
   font-size: 0.875rem;
 }
 .creator-xml-pane .CodeMirror {
-  height: auto;
-  max-height: calc(100vh - 200px);
   font-size: 0.8125rem;
   font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 }
@@ -2874,5 +2872,5 @@ footer a:hover { opacity: 1; text-decoration: none; }
 @media (max-width: 960px) {
   .creator-main { grid-template-columns: 1fr; }
   .creator-right { position: static; }
-  .creator-xml-pane .CodeMirror { max-height: 300px; }
+  /* on mobile the height is managed by JS _cmHeight() returning 300 */
 }
