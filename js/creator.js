@@ -5,7 +5,7 @@
 //  Standard-Wizard: Typ → Basis-Info → Regeln → Review & Export
 // ================================================================
 
-import { esc } from './parser.js';
+import { esc, XACMLParser } from './parser.js';
 import { I18n } from './i18n.js';
 
 const COMBINING_ALGS = [
@@ -31,8 +31,9 @@ const DEFAULT_ATTR_IDS = {
 const SESSION_KEY = 'xacml-creator-state';
 
 const PolicyCreator = (() => {
-  let _initialized = false;
+  let _initialized  = false;
   let _previewTimer = null;
+  let _previewMode  = 'visual'; // 'visual' | 'xml'
 
   // ── Attribute ID options per target category (Standard mode) ──────────
   const ATTR_ID_OPTIONS = {
@@ -291,10 +292,14 @@ const PolicyCreator = (() => {
           <div class="creator-right">
             <div class="creator-preview" id="creator-preview">
               <div class="creator-preview-header">
-                <span class="creator-preview-title">${esc(I18n.t('creator.preview.title'))}</span>
+                <div class="creator-preview-tabs">
+                  <button class="creator-preview-tab${_previewMode === 'visual' ? ' active' : ''}" data-action="preview-mode" data-mode="visual">&#x1F333; ${esc(I18n.t('creator.preview.mode.visual'))}</button>
+                  <button class="creator-preview-tab${_previewMode === 'xml'    ? ' active' : ''}" data-action="preview-mode" data-mode="xml">&lt;/&gt; XML</button>
+                </div>
                 <button class="creator-copy-btn" id="creator-copy-btn"
                         title="${esc(I18n.t('creator.copy.title'))}">&#x1F4CB;</button>
               </div>
+              <div class="creator-visual-pre" id="creator-visual-pre"></div>
               <pre class="creator-xml-pre" id="creator-xml-pre"></pre>
             </div>
           </div>
@@ -306,6 +311,10 @@ const PolicyCreator = (() => {
     _renderFormStep();
     _renderNav();
     _updatePreview();
+
+    // Copy button only relevant in XML mode
+    const copyBtn = document.getElementById('creator-copy-btn');
+    if (copyBtn) copyBtn.style.display = _previewMode === 'xml' ? '' : 'none';
 
     container.addEventListener('click',  _handleClick);
     container.addEventListener('input',  _handleInput);
@@ -730,6 +739,18 @@ const PolicyCreator = (() => {
       return;
     }
 
+    const modeBtn = t.closest('[data-action="preview-mode"]');
+    if (modeBtn) {
+      _previewMode = modeBtn.dataset.mode;
+      document.querySelectorAll('.creator-preview-tab').forEach(b =>
+        b.classList.toggle('active', b.dataset.mode === _previewMode)
+      );
+      const copyBtn = document.getElementById('creator-copy-btn');
+      if (copyBtn) copyBtn.style.display = _previewMode === 'xml' ? '' : 'none';
+      _updatePreview();
+      return;
+    }
+
     if (t.id === 'creator-next'      || t.closest('#creator-next'))      { if (_canProceed() && _state.step < 4) { _state.step++; _saveState(); _refresh(); } return; }
     if (t.id === 'creator-back'      || t.closest('#creator-back'))      { if (_state.step > 1) { _state.step--; _saveState(); _refresh(); } return; }
     if (t.id === 'creator-add-rule'  || t.closest('#creator-add-rule'))  { _addRule(); return; }
@@ -950,9 +971,26 @@ const PolicyCreator = (() => {
   }
 
   function _updatePreview() {
-    const pre = document.getElementById('creator-xml-pre');
-    if (!pre) return;
-    pre.textContent = _generateXml();
+    const xml    = _generateXml();
+    const xmlPre = document.getElementById('creator-xml-pre');
+    const vizDiv = document.getElementById('creator-visual-pre');
+    if (!xmlPre || !vizDiv) return;
+
+    if (_previewMode === 'xml') {
+      xmlPre.style.display = '';
+      vizDiv.style.display = 'none';
+      xmlPre.textContent   = xml;
+    } else {
+      xmlPre.style.display = 'none';
+      vizDiv.style.display = '';
+      try {
+        const policy = XACMLParser.parse(xml, 'preview');
+        const TR = window.TreeRenderer;
+        vizDiv.innerHTML = TR ? TR.render(policy) : `<pre>${esc(xml)}</pre>`;
+      } catch {
+        vizDiv.innerHTML = `<pre class="creator-xml-pre">${esc(xml)}</pre>`;
+      }
+    }
   }
 
   function _refresh() {

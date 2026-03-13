@@ -2795,6 +2795,28 @@ footer a:hover { opacity: 1; text-decoration: none; }
   background: var(--bg-card);
   box-shadow: var(--shadow-sm);
 }
+.creator-preview-tabs {
+  display: flex;
+  gap: 2px;
+}
+.creator-preview-tab {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.creator-preview-tab:hover { color: var(--text-primary); }
+.creator-preview-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
 .creator-preview-header {
   display: flex;
   align-items: center;
@@ -2822,6 +2844,12 @@ footer a:hover { opacity: 1; text-decoration: none; }
   line-height: 1.5;
 }
 .creator-copy-btn:hover { background: var(--acc-hdr-hover); border-color: var(--accent); color: var(--accent); }
+.creator-visual-pre {
+  padding: var(--sp-2) var(--sp-3);
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+  font-size: 0.875rem;
+}
 .creator-xml-pre {
   padding: var(--sp-4);
   font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;

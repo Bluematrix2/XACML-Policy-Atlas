@@ -393,8 +393,10 @@ const TRANSLATIONS = {
     'creator.action.dl':         '↓ Als XML herunterladen',
 
     // ── Creator — preview ──
-    'creator.preview.title':     'XACML-Vorschau',
-    'creator.copy.title':        'XML in Zwischenablage kopieren',
+    'creator.preview.title':        'XACML-Vorschau',
+    'creator.preview.mode.visual':  'Visualisierung',
+    'creator.preview.mode.xml':     'XML',
+    'creator.copy.title':           'XML in Zwischenablage kopieren',
 
     // ── Creator — validation ──
     'creator.val.ok':            '✅ Validierung erfolgreich',
@@ -787,8 +789,10 @@ const TRANSLATIONS = {
     'creator.action.dl':         '↓ Download as XML',
 
     // ── Creator — preview ──
-    'creator.preview.title':     'XACML Preview',
-    'creator.copy.title':        'Copy XML to clipboard',
+    'creator.preview.title':        'XACML Preview',
+    'creator.preview.mode.visual':  'Visualization',
+    'creator.preview.mode.xml':     'XML',
+    'creator.copy.title':           'Copy XML to clipboard',
 
     // ── Creator — validation ──
     'creator.val.ok':            '✅ Validation successful',
