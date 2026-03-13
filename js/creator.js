@@ -29,7 +29,7 @@ const PolicyCreator = (() => {
       step: 1,
       policy: {
         id: '',
-        version: '1.0',
+        version: '3.0',
         description: '',
         combiningAlg: COMBINING_ALGS[0].value,
         rules: []
@@ -59,17 +59,23 @@ const PolicyCreator = (() => {
       .replace(/"/g, '&quot;');
   }
 
+  const XACML_NS = {
+    '2.0': 'urn:oasis:names:tc:xacml:2.0:policy:schema:os',
+    '3.0': 'urn:oasis:names:tc:xacml:3.0:core:schema:wd-17',
+  };
+
   function _generateXml() {
     const p   = _state.policy;
     const pid = _escXml(p.id || 'neue-policy');
-    const ver = _escXml(p.version || '1.0');
+    const ver = p.version === '2.0' ? '2.0' : '3.0';
+    const ns  = XACML_NS[ver];
     const alg = _escXml(p.combiningAlg || COMBINING_ALGS[0].value);
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<Policy xmlns="urn:oasis:names:tc:xacml:3.0:core:schema:wd-17"\n`;
+    xml += `<Policy xmlns="${ns}"\n`;
     xml += `        PolicyId="${pid}"\n`;
     xml += `        RuleCombiningAlgId="${alg}"\n`;
-    xml += `        Version="${ver}">\n`;
+    xml += `        Version="1.0">\n`;
 
     if (p.description.trim()) {
       xml += `\n  <Description>${_escXml(p.description)}</Description>\n`;
@@ -256,16 +262,24 @@ const PolicyCreator = (() => {
         <h3 class="creator-step-title">Schritt 2 &#x2014; Basis-Informationen</h3>
         <div class="creator-field">
           <label class="creator-label" for="f-policy-id">Policy-ID <span class="field-required">*</span></label>
-          <input class="creator-input" id="f-policy-id" type="text"
-                 data-field="id" placeholder="z.B. access-control-physicians"
-                 value="${esc(p.id)}" autocomplete="off" spellcheck="false">
+          <div class="creator-input-row">
+            <input class="creator-input" id="f-policy-id" type="text"
+                   data-field="id" placeholder="z.B. access-control-physicians"
+                   value="${esc(p.id)}" autocomplete="off" spellcheck="false">
+            <button class="creator-uuid-btn" data-action="gen-uuid"
+                    title="UUID v4 generieren" aria-label="UUID v4 generieren">
+              &#x1F3B2; UUID
+            </button>
+          </div>
           <span class="creator-hint">Eindeutige ID der Policy (keine Leerzeichen empfohlen)</span>
         </div>
         <div class="creator-field">
-          <label class="creator-label" for="f-policy-version">Version</label>
-          <input class="creator-input creator-input-sm" id="f-policy-version" type="text"
-                 data-field="version" placeholder="1.0"
-                 value="${esc(p.version)}" autocomplete="off">
+          <label class="creator-label" for="f-policy-version">Policy Version</label>
+          <select class="creator-select creator-select-sm" id="f-policy-version" data-field="version">
+            <option value="2.0"${p.version === '2.0' ? ' selected' : ''}>XACML 2.0</option>
+            <option value="3.0"${p.version === '3.0' ? ' selected' : ''}>XACML 3.0</option>
+          </select>
+          <span class="creator-hint">Bestimmt den XML-Namespace der generierten Policy.</span>
         </div>
         <div class="creator-field">
           <label class="creator-label" for="f-policy-desc">Beschreibung</label>
@@ -429,6 +443,11 @@ const PolicyCreator = (() => {
       return;
     }
 
+    if (t.dataset.action === 'gen-uuid' || t.closest('[data-action="gen-uuid"]')) {
+      _generateUuid();
+      return;
+    }
+
     if (t.id === 'creator-validate' || t.closest('#creator-validate')) { _doValidate(); return; }
     if (t.id === 'creator-viz'      || t.closest('#creator-viz'))      { _loadIntoVisualizer(); return; }
     if (t.id === 'creator-editor'   || t.closest('#creator-editor'))   { _openInEditor(); return; }
@@ -588,6 +607,25 @@ const PolicyCreator = (() => {
     a.download = name;
     a.click();
     URL.revokeObjectURL(a.href);
+  }
+
+  function _generateUuid() {
+    let uuid;
+    if (crypto && crypto.randomUUID) {
+      uuid = crypto.randomUUID();
+    } else {
+      // Fallback für ältere Browser
+      uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+    }
+    _state.policy.id = uuid;
+    _saveState();
+    const input = document.getElementById('f-policy-id');
+    if (input) input.value = uuid;
+    _schedulePreview();
+    _updateNextBtn();
   }
 
   function _copyXml() {
