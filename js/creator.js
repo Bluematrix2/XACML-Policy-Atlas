@@ -34,13 +34,32 @@ const PolicyCreator = (() => {
   let _initialized = false;
   let _previewTimer = null;
 
+  // ── Attribute ID options per target category (Standard mode) ──────────
+  const ATTR_ID_OPTIONS = {
+    subject: [
+      { value: 'urn:oasis:names:tc:xacml:1.0:subject:subject-id',                labelKey: 'creator.target.attrId.subject.id' },
+      { value: 'urn:oasis:names:tc:xacml:2.0:subject:role',                      labelKey: 'creator.target.attrId.subject.role' },
+      { value: 'urn:oasis:names:tc:xacml:1.0:subject:authn-locality:ip-address', labelKey: 'creator.target.attrId.subject.ip' },
+      { value: 'urn:oasis:names:tc:xacml:1.0:subject:authn-locality:dns-name',   labelKey: 'creator.target.attrId.subject.dns' },
+    ],
+    resource: [
+      { value: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',              labelKey: 'creator.target.attrId.resource.id' },
+      { value: 'http://hl7.org/fhir/resource-types',                             labelKey: 'creator.target.attrId.resource.fhir' },
+      { value: 'urn:oasis:names:tc:xacml:2.0:resource:target-namespace',         labelKey: 'creator.target.attrId.resource.ns' },
+    ],
+    action: [
+      { value: 'urn:oasis:names:tc:xacml:1.0:action:action-id',                  labelKey: 'creator.target.attrId.action.id' },
+      { value: 'urn:oasis:names:tc:xacml:1.0:action:implied-action',             labelKey: 'creator.target.attrId.action.implied' },
+    ],
+  };
+
   // ── State ──────────────────────────────────────────────────────────────
 
   function _defaultTarget() {
     return {
-      subject:  { value: '', attributeId: '' },
-      resource: { value: '', attributeId: '' },
-      action:   { value: '', attributeId: '' },
+      subject:  { value: '', attributeId: ATTR_ID_OPTIONS.subject[0].value },
+      resource: { value: '', attributeId: ATTR_ID_OPTIONS.resource[0].value },
+      action:   { value: '', attributeId: ATTR_ID_OPTIONS.action[0].value },
     };
   }
 
@@ -66,7 +85,17 @@ const PolicyCreator = (() => {
         const s = JSON.parse(raw);
         // Phase 2 migration: ensure all rules have a target object
         if (s.policy && Array.isArray(s.policy.rules)) {
-          s.policy.rules.forEach(r => { if (!r.target) r.target = _defaultTarget(); });
+          s.policy.rules.forEach(r => {
+            if (!r.target) {
+              r.target = _defaultTarget();
+            } else {
+              for (const cat of ['subject', 'resource', 'action']) {
+                if (!r.target[cat].attributeId) {
+                  r.target[cat].attributeId = ATTR_ID_OPTIONS[cat][0].value;
+                }
+              }
+            }
+          });
         }
         return s;
       }
@@ -456,6 +485,18 @@ const PolicyCreator = (() => {
       </div>`;
   }
 
+  function _attrIdSelectHtml(cat, ruleIdx, currentVal) {
+    const opts = ATTR_ID_OPTIONS[cat];
+    const sel  = currentVal || opts[0].value;
+    const options = opts.map(o =>
+      `<option value="${esc(o.value)}"${sel === o.value ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
+    ).join('');
+    return `<select class="creator-select creator-attrId-select"
+                    data-rule-idx="${ruleIdx}" data-target-cat="${cat}" data-target-prop="attributeId">
+              ${options}
+            </select>`;
+  }
+
   function _ruleCardHtml(r, i) {
     const n = i + 1;
     return `
@@ -511,34 +552,25 @@ const PolicyCreator = (() => {
             </div>
             <div class="creator-target-grid">
               <span class="creator-target-cat">${esc(I18n.t('creator.target.subject'))}</span>
+              ${_attrIdSelectHtml('subject', i, r.target ? r.target.subject.attributeId : '')}
               <input class="creator-input" type="text"
                      data-rule-idx="${i}" data-target-cat="subject" data-target-prop="value"
                      placeholder="${esc(I18n.t('creator.target.value.ph.subject'))}"
                      value="${esc(r.target ? r.target.subject.value : '')}" autocomplete="off">
-              <input class="creator-input creator-attrId-input" type="text"
-                     data-rule-idx="${i}" data-target-cat="subject" data-target-prop="attributeId"
-                     placeholder="${esc(DEFAULT_ATTR_IDS.subject)}"
-                     value="${esc(r.target ? r.target.subject.attributeId : '')}" autocomplete="off" spellcheck="false">
 
               <span class="creator-target-cat">${esc(I18n.t('creator.target.resource'))}</span>
+              ${_attrIdSelectHtml('resource', i, r.target ? r.target.resource.attributeId : '')}
               <input class="creator-input" type="text"
                      data-rule-idx="${i}" data-target-cat="resource" data-target-prop="value"
                      placeholder="${esc(I18n.t('creator.target.value.ph.resource'))}"
                      value="${esc(r.target ? r.target.resource.value : '')}" autocomplete="off">
-              <input class="creator-input creator-attrId-input" type="text"
-                     data-rule-idx="${i}" data-target-cat="resource" data-target-prop="attributeId"
-                     placeholder="${esc(DEFAULT_ATTR_IDS.resource)}"
-                     value="${esc(r.target ? r.target.resource.attributeId : '')}" autocomplete="off" spellcheck="false">
 
               <span class="creator-target-cat">${esc(I18n.t('creator.target.action'))}</span>
+              ${_attrIdSelectHtml('action', i, r.target ? r.target.action.attributeId : '')}
               <input class="creator-input" type="text"
                      data-rule-idx="${i}" data-target-cat="action" data-target-prop="value"
                      placeholder="${esc(I18n.t('creator.target.value.ph.action'))}"
                      value="${esc(r.target ? r.target.action.value : '')}" autocomplete="off">
-              <input class="creator-input creator-attrId-input" type="text"
-                     data-rule-idx="${i}" data-target-cat="action" data-target-prop="attributeId"
-                     placeholder="${esc(DEFAULT_ATTR_IDS.action)}"
-                     value="${esc(r.target ? r.target.action.attributeId : '')}" autocomplete="off" spellcheck="false">
             </div>
           </div>
         </div>
@@ -684,6 +716,18 @@ const PolicyCreator = (() => {
       const idx = parseInt(t.dataset.ruleIdx, 10);
       if (_state.policy.rules[idx]) {
         _state.policy.rules[idx][t.dataset.ruleField] = t.value;
+        _saveState(); _schedulePreview();
+      }
+      return;
+    }
+    const cat  = t.dataset.targetCat;
+    const prop = t.dataset.targetProp;
+    if (cat !== undefined && prop !== undefined) {
+      const idx = parseInt(t.dataset.ruleIdx, 10);
+      const r   = _state.policy.rules[idx];
+      if (r) {
+        if (!r.target) r.target = _defaultTarget();
+        if (r.target[cat]) r.target[cat][prop] = t.value;
         _saveState(); _schedulePreview();
       }
     }

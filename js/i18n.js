@@ -278,7 +278,7 @@ const TRANSLATIONS = {
     'kb.s3.title': '3. Validierungsregeln',
 
     // ── Creator tab ──
-    'tab.creator': '🛠️ Creator <span class="alpha-badge">ALPHA</span>',
+    'tab.creator': '🛠️ Creator',
 
     // ── Creator — shell ──
     'creator.subtitle':       'Erstelle eine XACML-Policy Schritt für Schritt — ohne XML-Kenntnisse.',
@@ -356,9 +356,18 @@ const TRANSLATIONS = {
     'creator.target.subject':           'Subject',
     'creator.target.resource':          'Resource',
     'creator.target.action':            'Action',
-    'creator.target.value.ph.subject':  'z.B. alice',
-    'creator.target.value.ph.resource': 'z.B. document.pdf',
-    'creator.target.value.ph.action':   'z.B. read',
+    'creator.target.value.ph.subject':  'z.B. Benutzerrolle, Servername',
+    'creator.target.value.ph.resource': 'z.B. Patient, Appointment',
+    'creator.target.value.ph.action':   'z.B. read, write',
+    'creator.target.attrId.subject.id':      'Subject-ID',
+    'creator.target.attrId.subject.role':    'Rolle',
+    'creator.target.attrId.subject.ip':      'IP-Adresse',
+    'creator.target.attrId.subject.dns':     'DNS-Name (CN)',
+    'creator.target.attrId.resource.id':     'Resource-ID',
+    'creator.target.attrId.resource.fhir':   'FHIR Resource Type',
+    'creator.target.attrId.resource.ns':     'Target-Namespace',
+    'creator.target.attrId.action.id':       'Action-ID',
+    'creator.target.attrId.action.implied':  'Implied Action',
 
     // ── Creator — nav & actions ──
     'creator.nav.back':          '← Zurück',
@@ -726,9 +735,18 @@ const TRANSLATIONS = {
     'creator.target.subject':           'Subject',
     'creator.target.resource':          'Resource',
     'creator.target.action':            'Action',
-    'creator.target.value.ph.subject':  'e.g. alice',
-    'creator.target.value.ph.resource': 'e.g. document.pdf',
-    'creator.target.value.ph.action':   'e.g. read',
+    'creator.target.value.ph.subject':  'z.B. UserRole, Servername',
+    'creator.target.value.ph.resource': 'z.B. Patient, Appointment',
+    'creator.target.value.ph.action':   'z.B. read, write',
+    'creator.target.attrId.subject.id':      'Subject-ID',
+    'creator.target.attrId.subject.role':    'Role',
+    'creator.target.attrId.subject.ip':      'IP Address',
+    'creator.target.attrId.subject.dns':     'DNS Name (CN)',
+    'creator.target.attrId.resource.id':     'Resource-ID',
+    'creator.target.attrId.resource.fhir':   'FHIR Resource Type',
+    'creator.target.attrId.resource.ns':     'Target Namespace',
+    'creator.target.attrId.action.id':       'Action-ID',
+    'creator.target.attrId.action.implied':  'Implied Action',
 
     // ── Creator — nav & actions ──
     'creator.nav.back':          '← Back',

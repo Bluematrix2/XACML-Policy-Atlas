@@ -2518,14 +2518,12 @@ footer a:hover { opacity: 1; text-decoration: none; }
   color: var(--text-secondary);
   white-space: nowrap;
 }
-.creator-attrId-input {
-  font-size: 0.75rem;
-  font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-  color: var(--text-muted);
+.creator-attrId-select {
+  font-size: 0.8rem;
 }
 @media (max-width: 960px) {
   .creator-target-grid { grid-template-columns: 5rem 1fr; }
-  .creator-attrId-input { grid-column: 2; }
+  .creator-attrId-select { grid-column: 2; }
 }
 
 .creator-add-rule-btn {
