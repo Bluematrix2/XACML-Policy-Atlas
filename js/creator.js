@@ -1,8 +1,9 @@
 'use strict';
 
 // ================================================================
-//  POLICY CREATOR — Phase 2 (Alpha)
+//  POLICY CREATOR — Phase 3 (Alpha)
 //  Standard-Wizard: Typ → Basis-Info → Regeln → Review & Export
+//  Phase 3: PolicySet-Support with embedded Policies
 // ================================================================
 
 import { esc, XACMLParser } from './parser.js';
@@ -13,6 +14,13 @@ const COMBINING_ALGS = [
   { labelKey: 'creator.alg.permit', value: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:permit-overrides' },
   { labelKey: 'creator.alg.first',  value: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:first-applicable' },
   { labelKey: 'creator.alg.only',   value: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:only-one-applicable' },
+];
+
+const PS_COMBINING_ALGS = [
+  { labelKey: 'creator.alg.deny',   value: 'urn:oasis:names:tc:xacml:1.0:policy-combining-algorithm:deny-overrides' },
+  { labelKey: 'creator.alg.permit', value: 'urn:oasis:names:tc:xacml:1.0:policy-combining-algorithm:permit-overrides' },
+  { labelKey: 'creator.alg.first',  value: 'urn:oasis:names:tc:xacml:1.0:policy-combining-algorithm:first-applicable' },
+  { labelKey: 'creator.alg.only',   value: 'urn:oasis:names:tc:xacml:1.0:policy-combining-algorithm:only-one-applicable' },
 ];
 
 const XACML_NS = {
@@ -102,9 +110,21 @@ const PolicyCreator = (() => {
 
   let _state = _loadState();
 
+  function _defaultPsPolicy() {
+    return {
+      id: '',
+      version: '3.0',
+      description: '',
+      combiningAlg: COMBINING_ALGS[0].value,
+      target: _defaultTarget(),
+      rules: [],
+    };
+  }
+
   function _defaultState() {
     return {
       step: 1,
+      rootType: 'Policy',
       policy: {
         id: '',
         version: '3.0',
@@ -112,7 +132,15 @@ const PolicyCreator = (() => {
         combiningAlg: COMBINING_ALGS[0].value,
         target: _defaultTarget(),
         rules: []
-      }
+      },
+      policySet: {
+        id: '',
+        version: '3.0',
+        description: '',
+        combiningAlg: PS_COMBINING_ALGS[0].value,
+        target: _defaultTarget(),
+        policies: [],
+      },
     };
   }
 
@@ -121,13 +149,28 @@ const PolicyCreator = (() => {
       const raw = sessionStorage.getItem(SESSION_KEY);
       if (raw) {
         const s = JSON.parse(raw);
-        // Migrate targets to new multi-match format
+        // Migrate policy targets
         if (s.policy) {
           s.policy.target = _migrateTarget(s.policy.target);
           if (Array.isArray(s.policy.rules)) {
             s.policy.rules.forEach(r => { r.target = _migrateTarget(r.target); });
           }
         }
+        // Migrate policySet targets
+        if (s.policySet) {
+          s.policySet.target = _migrateTarget(s.policySet.target);
+          if (Array.isArray(s.policySet.policies)) {
+            s.policySet.policies.forEach(p => {
+              p.target = _migrateTarget(p.target);
+              if (Array.isArray(p.rules)) {
+                p.rules.forEach(r => { r.target = _migrateTarget(r.target); });
+              }
+            });
+          }
+        } else {
+          s.policySet = _defaultState().policySet;
+        }
+        if (!s.rootType) s.rootType = 'Policy';
         return s;
       }
     } catch { /* ignore */ }
@@ -148,41 +191,81 @@ const PolicyCreator = (() => {
       .replace(/"/g, '&quot;');
   }
 
-  function _generateXml() {
-    const p   = _state.policy;
-    const pid = _escXml(p.id || 'neue-policy');
-    const ver = p.version === '2.0' ? '2.0' : '3.0';
-    const ns  = XACML_NS[ver];
-    const alg = _escXml(p.combiningAlg || COMBINING_ALGS[0].value);
+  function _generatePolicyXml(p, ver, indent, includeNs) {
+    const pid  = _escXml(p.id || 'neue-policy');
+    const alg  = _escXml(p.combiningAlg || COMBINING_ALGS[0].value);
+    const ns   = XACML_NS[ver] || XACML_NS['3.0'];
+    const i1   = indent + '  ';   // inside policy
+    const i2   = indent + '    '; // inside rule
 
-    let xml = `<Policy xmlns="${ns}"\n`;
-    xml += `        PolicyId="${pid}"\n`;
-    xml += `        RuleCombiningAlgId="${alg}"\n`;
-    xml += `        Version="1.0">\n`;
+    const nsAttr = includeNs ? ` xmlns="${ns}"` : '';
+    let xml = `${indent}<Policy${nsAttr}\n`;
+    xml += `${indent}        PolicyId="${pid}"\n`;
+    xml += `${indent}        RuleCombiningAlgId="${alg}"\n`;
+    xml += `${indent}        Version="1.0">\n`;
 
-    if (p.description.trim()) {
-      xml += `\n  <Description>${_escXml(p.description)}</Description>\n`;
+    if (p.description && p.description.trim()) {
+      xml += `\n${i1}<Description>${_escXml(p.description)}</Description>\n`;
     }
 
-    const pTargetXml = ver === '2.0' ? _policyTargetXml20(p.target) : _policyTargetXml30(p.target);
+    const pTargetXml = ver === '2.0' ? _targetXml20(p.target, i1) : _targetXml30(p.target, i1);
     if (pTargetXml) xml += '\n' + pTargetXml + '\n';
 
-    if (p.rules.length === 0) {
-      xml += `\n  <!-- ${I18n.t('creator.rules.empty').replace(/[<>]/g, '')} -->\n`;
+    if (!p.rules || p.rules.length === 0) {
+      xml += `\n${i1}<!-- ${I18n.t('creator.rules.empty').replace(/[<>]/g, '')} -->\n`;
     } else {
       for (const r of p.rules) {
-        xml += `\n  <Rule Effect="${r.effect}" RuleId="${_escXml(r.id)}">\n`;
-        if (r.description.trim()) {
-          xml += `    <Description>${_escXml(r.description)}</Description>\n`;
+        xml += `\n${i1}<Rule Effect="${r.effect}" RuleId="${_escXml(r.id)}">\n`;
+        if (r.description && r.description.trim()) {
+          xml += `${i2}<Description>${_escXml(r.description)}</Description>\n`;
         }
-        const targetXml = ver === '2.0' ? _ruleTargetXml20(r.target) : _ruleTargetXml30(r.target);
+        const targetXml = ver === '2.0' ? _targetXml20(r.target, i2) : _targetXml30(r.target, i2);
         if (targetXml) xml += targetXml + '\n';
-        xml += `  </Rule>\n`;
+        xml += `${i1}</Rule>\n`;
       }
     }
 
-    xml += `\n</Policy>`;
+    xml += `\n${indent}</Policy>`;
     return xml;
+  }
+
+  function _generatePolicySetXml() {
+    const ps  = _state.policySet;
+    const ver = ps.version === '2.0' ? '2.0' : '3.0';
+    const ns  = XACML_NS[ver];
+    const pid = _escXml(ps.id || 'neue-policyset');
+    const alg = _escXml(ps.combiningAlg || PS_COMBINING_ALGS[0].value);
+
+    let xml = `<PolicySet xmlns="${ns}"\n`;
+    xml += `           PolicySetId="${pid}"\n`;
+    xml += `           PolicyCombiningAlgId="${alg}"\n`;
+    xml += `           Version="1.0">\n`;
+
+    if (ps.description && ps.description.trim()) {
+      xml += `\n  <Description>${_escXml(ps.description)}</Description>\n`;
+    }
+
+    const psTargetXml = ver === '2.0' ? _targetXml20(ps.target, '  ') : _targetXml30(ps.target, '  ');
+    if (psTargetXml) xml += '\n' + psTargetXml + '\n';
+
+    if (!ps.policies || ps.policies.length === 0) {
+      xml += `\n  <!-- Keine eingebetteten Policies -->\n`;
+    } else {
+      for (const p of ps.policies) {
+        const pVer = p.version === '2.0' ? '2.0' : '3.0';
+        xml += '\n' + _generatePolicyXml(p, pVer, '  ', false) + '\n';
+      }
+    }
+
+    xml += `\n</PolicySet>`;
+    return xml;
+  }
+
+  function _generateXml() {
+    if (_state.rootType === 'PolicySet') return _generatePolicySetXml();
+    const p   = _state.policy;
+    const ver = p.version === '2.0' ? '2.0' : '3.0';
+    return _generatePolicyXml(p, ver, '', true);
   }
 
   function _targetXml20(target, ind) {
@@ -244,14 +327,19 @@ const PolicyCreator = (() => {
     return `${ind}<Target>\n${i1}<AnyOf>\n${allOfs}\n${i1}</AnyOf>\n${ind}</Target>`;
   }
 
-  function _ruleTargetXml20(target)   { return _targetXml20(target, '    '); }
-  function _ruleTargetXml30(target)   { return _targetXml30(target, '    '); }
-  function _policyTargetXml20(target) { return _targetXml20(target, '  '); }
-  function _policyTargetXml30(target) { return _targetXml30(target, '  '); }
-
   // ── Step validation ────────────────────────────────────────────────────
 
   function _canProceed() {
+    if (_state.rootType === 'PolicySet') {
+      const ps = _state.policySet;
+      if (_state.step === 1) return true;
+      if (_state.step === 2) return ps.id.trim() !== '';
+      if (_state.step === 3) {
+        return ps.policies.length > 0 &&
+               ps.policies.every(p => p.id.trim() !== '' && p.rules.length > 0 && p.rules.every(r => r.id.trim() !== ''));
+      }
+      return true;
+    }
     const p = _state.policy;
     if (_state.step === 1) return true;
     if (_state.step === 2) return p.id.trim() !== '';
@@ -422,6 +510,7 @@ const PolicyCreator = (() => {
   // ── Step 1: Typ ────────────────────────────────────────────────────────
 
   function _step1Html() {
+    const isPS = _state.rootType === 'PolicySet';
     return `
       <div class="creator-step-content">
         <div class="creator-step-hdr">
@@ -430,16 +519,16 @@ const PolicyCreator = (() => {
         <div class="creator-step-body">
           <p class="creator-step-desc">${esc(I18n.t('creator.s1.desc'))}</p>
           <div class="creator-type-cards">
-            <label class="creator-type-card selected">
-              <input type="radio" name="root-type" value="Policy" checked style="display:none">
+            <label class="creator-type-card${!isPS ? ' selected' : ''}">
+              <input type="radio" name="root-type" value="Policy"${!isPS ? ' checked' : ''} style="display:none">
               <div class="type-card-icon">&#x1F4C4;</div>
               <div class="type-card-label">${esc(I18n.t('creator.type.policy.label'))}</div>
               <div class="type-card-desc">${esc(I18n.t('creator.type.policy.desc'))}</div>
             </label>
-            <label class="creator-type-card disabled" title="${esc(I18n.t('creator.type.policyset.title'))}">
-              <input type="radio" name="root-type" value="PolicySet" disabled style="display:none">
+            <label class="creator-type-card${isPS ? ' selected' : ''}">
+              <input type="radio" name="root-type" value="PolicySet"${isPS ? ' checked' : ''} style="display:none">
               <div class="type-card-icon">&#x1F4C1;</div>
-              <div class="type-card-label">${esc(I18n.t('creator.type.policyset.label'))} <span class="phase-badge">Phase 3</span></div>
+              <div class="type-card-label">${esc(I18n.t('creator.type.policyset.label'))}</div>
               <div class="type-card-desc">${esc(I18n.t('creator.type.policyset.desc'))}</div>
             </label>
           </div>
@@ -450,6 +539,7 @@ const PolicyCreator = (() => {
   // ── Step 2: Basis-Info ─────────────────────────────────────────────────
 
   function _step2Html() {
+    if (_state.rootType === 'PolicySet') return _psStep2Html();
     const p = _state.policy;
     const algOptions = COMBINING_ALGS.map(a =>
       `<option value="${esc(a.value)}"${p.combiningAlg === a.value ? ' selected' : ''}>${esc(I18n.t(a.labelKey))}</option>`
@@ -516,6 +606,7 @@ const PolicyCreator = (() => {
   // ── Step 3: Regeln ─────────────────────────────────────────────────────
 
   function _step3Html() {
+    if (_state.rootType === 'PolicySet') return _psStep3Html();
     const rules = _state.policy.rules;
     const rulesHtml = rules.length === 0
       ? `<div class="creator-empty-rules">${esc(I18n.t('creator.rules.empty'))}</div>`
@@ -557,14 +648,23 @@ const PolicyCreator = (() => {
       </div>`;
   }
 
-  function _targetSectionHtml(target, scope, ruleIdx) {
+  function _targetSectionHtml(target, scope, ruleIdx, psPolicyIdx) {
     const t  = target || _defaultTarget();
     const ri = ruleIdx !== undefined ? ruleIdx : '';
-    const sa = scope === 'rule'
-      ? `data-target-scope="rule" data-target-rule-idx="${ri}"`
-      : `data-target-scope="policy"`;
-    const labelKey = scope === 'policy' ? 'creator.ptarget.section' : 'creator.target.section';
-    const hintKey  = scope === 'policy' ? 'creator.ptarget.hint'    : 'creator.target.hint';
+    const pi = psPolicyIdx !== undefined ? ` data-ps-policy-idx="${psPolicyIdx}"` : '';
+    let sa;
+    if (scope === 'policy')    sa = `data-target-scope="policy"`;
+    else if (scope === 'rule') sa = `data-target-scope="rule" data-target-rule-idx="${ri}"`;
+    else if (scope === 'ps')   sa = `data-target-scope="ps"`;
+    else if (scope === 'ps-policy') sa = `data-target-scope="ps-policy"${pi}`;
+    else if (scope === 'ps-rule')   sa = `data-target-scope="ps-rule" data-target-rule-idx="${ri}"${pi}`;
+    else sa = `data-target-scope="policy"`;
+    const labelKey = (scope === 'policy' || scope === 'ps' || scope === 'ps-policy')
+      ? 'creator.ptarget.section' : 'creator.target.section';
+    const hintKey = scope === 'policy'    ? 'creator.ptarget.hint'
+      : scope === 'ps'                    ? 'creator.ps.ptarget.hint'
+      : scope === 'ps-policy'             ? 'creator.ptarget.hint'
+      : 'creator.target.hint';
 
     const groups = t.groups || [];
     const groupsHtml = groups.map((g, gi) => {
@@ -651,6 +751,7 @@ const PolicyCreator = (() => {
   // ── Step 4: Review ─────────────────────────────────────────────────────
 
   function _step4Html() {
+    if (_state.rootType === 'PolicySet') return _psStep4Html();
     const p   = _state.policy;
     const alg = COMBINING_ALGS.find(a => a.value === p.combiningAlg);
     const algLabel = alg ? I18n.t(alg.labelKey) : p.combiningAlg;
@@ -727,6 +828,268 @@ const PolicyCreator = (() => {
       </div>`;
   }
 
+  // ── PolicySet HTML Builders ─────────────────────────────────────────────
+
+  function _psStep2Html() {
+    const ps = _state.policySet;
+    const algOptions = PS_COMBINING_ALGS.map(a =>
+      `<option value="${esc(a.value)}"${ps.combiningAlg === a.value ? ' selected' : ''}>${esc(I18n.t(a.labelKey))}</option>`
+    ).join('');
+    return `
+      <div class="creator-step-content">
+        <div class="creator-step-hdr">
+          <h3 class="creator-step-title">${esc(I18n.t('creator.s2.title'))}</h3>
+        </div>
+        <div class="creator-step-body">
+          <div class="creator-field">
+            <label class="creator-label" for="f-ps-id">
+              ${esc(I18n.t('creator.ps.field.id.label'))} <span class="field-required">*</span>
+            </label>
+            <div class="creator-input-row">
+              <input class="creator-input" id="f-ps-id" type="text"
+                     data-ps-field="id" placeholder="${esc(I18n.t('creator.ps.field.id.ph'))}"
+                     value="${esc(ps.id)}" autocomplete="off" spellcheck="false">
+              <button class="creator-uuid-btn" data-action="gen-ps-uuid"
+                      title="${esc(I18n.t('creator.ps.uuid.title'))}"
+                      aria-label="${esc(I18n.t('creator.ps.uuid.aria'))}">
+                &#x1F3B2; UUID
+              </button>
+            </div>
+            <span class="creator-hint">${esc(I18n.t('creator.ps.field.id.hint'))}</span>
+          </div>
+          <div class="creator-field">
+            <label class="creator-label" for="f-ps-version">${esc(I18n.t('creator.field.ver.label'))}</label>
+            <select class="creator-select creator-select-sm" id="f-ps-version" data-ps-field="version">
+              <option value="2.0"${ps.version === '2.0' ? ' selected' : ''}>XACML 2.0</option>
+              <option value="3.0"${ps.version === '3.0' ? ' selected' : ''}>XACML 3.0</option>
+            </select>
+            <span class="creator-hint">${esc(I18n.t('creator.field.ver.hint'))}</span>
+          </div>
+          <div class="creator-field">
+            <label class="creator-label" for="f-ps-desc">${esc(I18n.t('creator.field.desc.label'))}</label>
+            <textarea class="creator-textarea" id="f-ps-desc" rows="3"
+                      data-ps-field="description"
+                      placeholder="${esc(I18n.t('creator.field.desc.ph'))}">${esc(ps.description)}</textarea>
+          </div>
+          <div class="creator-field">
+            <label class="creator-label" for="f-ps-alg">${esc(I18n.t('creator.field.alg.label'))}</label>
+            <select class="creator-select" id="f-ps-alg" data-ps-field="combiningAlg">
+              ${algOptions}
+            </select>
+            <span class="creator-hint">${esc(I18n.t('creator.ps.field.alg.hint'))}</span>
+          </div>
+          ${_targetSectionHtml(ps.target, 'ps')}
+        </div>
+      </div>`;
+  }
+
+  function _psStep3Html() {
+    const policies = _state.policySet.policies;
+    const policiesHtml = policies.length === 0
+      ? `<div class="creator-empty-rules">${esc(I18n.t('creator.ps.policy.empty'))}</div>`
+      : policies.map((p, pi) => _psPolicyCardHtml(p, pi)).join('');
+    return `
+      <div class="creator-step-content">
+        <div class="creator-step-hdr">
+          <h3 class="creator-step-title">${esc(I18n.t('creator.s3.title'))}</h3>
+        </div>
+        <div class="creator-step-body">
+          <p class="creator-step-desc">${esc(I18n.t('creator.ps.s3.desc'))}</p>
+          <div class="creator-ps-policies-list" id="creator-ps-policies-list">
+            ${policiesHtml}
+          </div>
+          <button class="creator-add-rule-btn" id="creator-ps-add-policy" data-action="ps-add-policy">
+            ${esc(I18n.t('creator.ps.policy.add'))}
+          </button>
+        </div>
+      </div>`;
+  }
+
+  function _psStep4Html() {
+    const ps  = _state.policySet;
+    const alg = PS_COMBINING_ALGS.find(a => a.value === ps.combiningAlg);
+    const algLabel = alg ? I18n.t(alg.labelKey) : ps.combiningAlg;
+    const policyRows = ps.policies.map(p => {
+      const pAlg = COMBINING_ALGS.find(a => a.value === p.combiningAlg);
+      const pAlgLabel = pAlg ? I18n.t(pAlg.labelKey) : p.combiningAlg;
+      return `<tr>
+        <td>${esc(p.id || '\u2014')}</td>
+        <td>XACML ${esc(p.version)}</td>
+        <td>${p.rules.length}</td>
+        <td>${esc(pAlgLabel)}</td>
+      </tr>`;
+    }).join('');
+    return `
+      <div class="creator-step-content">
+        <div class="creator-step-hdr">
+          <h3 class="creator-step-title">${esc(I18n.t('creator.s4.title'))}</h3>
+        </div>
+        <div class="creator-step-body">
+          <p class="creator-step-desc">${esc(I18n.t('creator.s4.desc'))}</p>
+          <div class="creator-summary">
+            <div class="creator-summary-row">
+              <span class="creator-summary-key">${esc(I18n.t('creator.ps.summary.id'))}</span>
+              <span class="creator-summary-val">${esc(ps.id || '\u2014')}</span>
+            </div>
+            <div class="creator-summary-row">
+              <span class="creator-summary-key">${esc(I18n.t('creator.summary.version'))}</span>
+              <span class="creator-summary-val">XACML ${esc(ps.version || '3.0')}</span>
+            </div>
+            <div class="creator-summary-row">
+              <span class="creator-summary-key">${esc(I18n.t('creator.summary.alg'))}</span>
+              <span class="creator-summary-val">${esc(algLabel)}</span>
+            </div>
+            <div class="creator-summary-row">
+              <span class="creator-summary-key">${esc(I18n.t('creator.ps.summary.policies'))}</span>
+              <span class="creator-summary-val">${ps.policies.length}</span>
+            </div>
+          </div>
+          ${ps.policies.length > 0 ? `
+          <table class="creator-rules-table">
+            <thead>
+              <tr>
+                <th>${esc(I18n.t('creator.ps.field.id.label'))}</th>
+                <th>${esc(I18n.t('creator.summary.version'))}</th>
+                <th>${esc(I18n.t('creator.summary.rules'))}</th>
+                <th>${esc(I18n.t('creator.summary.alg'))}</th>
+              </tr>
+            </thead>
+            <tbody>${policyRows}</tbody>
+          </table>` : ''}
+          <div class="creator-val-result" id="creator-val-result" style="display:none"></div>
+        </div>
+      </div>`;
+  }
+
+  function _psPolicyCardHtml(p, pi) {
+    const n = pi + 1;
+    const algOptions = COMBINING_ALGS.map(a =>
+      `<option value="${esc(a.value)}"${p.combiningAlg === a.value ? ' selected' : ''}>${esc(I18n.t(a.labelKey))}</option>`
+    ).join('');
+    const rulesHtml = p.rules.length === 0
+      ? `<div class="creator-empty-rules">${esc(I18n.t('creator.rules.empty'))}</div>`
+      : p.rules.map((r, ri) => _psRuleCardHtml(r, ri, pi)).join('');
+    return `
+      <div class="creator-ps-policy-card" data-ps-policy-idx="${pi}">
+        <div class="creator-ps-policy-hdr">
+          <button class="creator-ps-toggle" data-action="ps-toggle-policy" data-ps-policy-idx="${pi}"
+                  aria-expanded="true" title="${esc(I18n.t('creator.ps.policy.toggle'))}">&#x25BC;</button>
+          <span class="creator-ps-policy-num">${esc(I18n.t('creator.ps.policy.num', { n }))}</span>
+          <span class="creator-ps-policy-id-preview">${esc(p.id || '\u2014')}</span>
+          <button class="creator-ps-policy-del" data-action="ps-del-policy" data-ps-policy-idx="${pi}"
+                  title="${esc(I18n.t('creator.ps.policy.del.title'))}"
+                  aria-label="${esc(I18n.t('creator.ps.policy.del.aria', { n }))}">&#x2715;</button>
+        </div>
+        <div class="creator-ps-policy-body">
+          <div class="creator-field-row">
+            <div class="creator-field creator-field-grow">
+              <label class="creator-label" for="f-ps-policy-id-${pi}">
+                ${esc(I18n.t('creator.field.id.label'))} <span class="field-required">*</span>
+              </label>
+              <div class="creator-input-row">
+                <input class="creator-input" id="f-ps-policy-id-${pi}" type="text"
+                       data-ps-policy-idx="${pi}" data-ps-policy-field="id"
+                       placeholder="${esc(I18n.t('creator.field.id.ph'))}"
+                       value="${esc(p.id)}" autocomplete="off" spellcheck="false">
+                <button class="creator-uuid-btn" data-action="gen-ps-policy-uuid" data-ps-policy-idx="${pi}"
+                        title="${esc(I18n.t('creator.uuid.title'))}"
+                        aria-label="${esc(I18n.t('creator.uuid.aria'))}">
+                  &#x1F3B2; UUID
+                </button>
+              </div>
+            </div>
+            <div class="creator-field creator-field-sm">
+              <label class="creator-label" for="f-ps-policy-ver-${pi}">${esc(I18n.t('creator.field.ver.label'))}</label>
+              <select class="creator-select creator-select-sm" id="f-ps-policy-ver-${pi}"
+                      data-ps-policy-idx="${pi}" data-ps-policy-field="version">
+                <option value="2.0"${p.version === '2.0' ? ' selected' : ''}>XACML 2.0</option>
+                <option value="3.0"${p.version === '3.0' ? ' selected' : ''}>XACML 3.0</option>
+              </select>
+            </div>
+          </div>
+          <div class="creator-field">
+            <label class="creator-label" for="f-ps-policy-desc-${pi}">${esc(I18n.t('creator.field.desc.label'))}</label>
+            <input class="creator-input" id="f-ps-policy-desc-${pi}" type="text"
+                   data-ps-policy-idx="${pi}" data-ps-policy-field="description"
+                   placeholder="${esc(I18n.t('creator.field.desc.ph'))}"
+                   value="${esc(p.description)}" autocomplete="off">
+          </div>
+          <div class="creator-field">
+            <label class="creator-label" for="f-ps-policy-alg-${pi}">${esc(I18n.t('creator.field.alg.label'))}</label>
+            <select class="creator-select" id="f-ps-policy-alg-${pi}"
+                    data-ps-policy-idx="${pi}" data-ps-policy-field="combiningAlg">
+              ${algOptions}
+            </select>
+          </div>
+          ${_targetSectionHtml(p.target, 'ps-policy', undefined, pi)}
+          <div class="creator-ps-rules-section">
+            <div class="creator-ps-rules-hdr">${esc(I18n.t('creator.ps.rules.title'))}</div>
+            <div class="creator-ps-rules-list" data-ps-policy-idx="${pi}">
+              ${rulesHtml}
+            </div>
+            <button class="creator-add-rule-btn creator-add-rule-btn-sm" data-action="ps-add-rule" data-ps-policy-idx="${pi}">
+              ${esc(I18n.t('creator.rule.add'))}
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function _psRuleCardHtml(r, ri, pi) {
+    const n = ri + 1;
+    return `
+      <div class="creator-rule-card" data-rule-idx="${ri}">
+        <div class="rule-card-hdr">
+          <span class="rule-card-num">${esc(I18n.t('creator.rule.num', { n }))}</span>
+          <button class="rule-delete-btn" data-action="ps-del-rule"
+                  data-ps-policy-idx="${pi}" data-ps-rule-idx="${ri}"
+                  title="${esc(I18n.t('creator.rule.delete.title'))}"
+                  aria-label="${esc(I18n.t('creator.rule.delete.aria', { n }))}">&#x2715;</button>
+        </div>
+        <div class="creator-rule-fields">
+          <div class="creator-field-row">
+            <div class="creator-field creator-field-grow">
+              <label class="creator-label" for="f-ps-rule-id-${pi}-${ri}">
+                ${esc(I18n.t('creator.rule.id.label'))} <span class="field-required">*</span>
+              </label>
+              <div class="creator-input-row">
+                <input class="creator-input" id="f-ps-rule-id-${pi}-${ri}" type="text"
+                       data-ps-policy-idx="${pi}" data-ps-rule-idx="${ri}" data-ps-rule-field="id"
+                       placeholder="${esc(I18n.t('creator.rule.id.ph'))}"
+                       value="${esc(r.id)}" autocomplete="off" spellcheck="false">
+                <button class="creator-uuid-btn" data-action="gen-ps-rule-uuid"
+                        data-ps-policy-idx="${pi}" data-ps-rule-idx="${ri}"
+                        title="${esc(I18n.t('creator.rule.id.uuid.title'))}"
+                        aria-label="${esc(I18n.t('creator.rule.id.uuid.aria'))}">
+                  &#x1F3B2; UUID
+                </button>
+              </div>
+            </div>
+            <div class="creator-field creator-field-sm">
+              <label class="creator-label" for="f-ps-rule-effect-${pi}-${ri}">
+                ${esc(I18n.t('creator.rule.effect.label'))}
+              </label>
+              <select class="creator-select" id="f-ps-rule-effect-${pi}-${ri}"
+                      data-ps-policy-idx="${pi}" data-ps-rule-idx="${ri}" data-ps-rule-field="effect">
+                <option value="Permit"${r.effect === 'Permit' ? ' selected' : ''}>&#x2705; Permit</option>
+                <option value="Deny"${r.effect === 'Deny' ? ' selected' : ''}>&#x274C; Deny</option>
+              </select>
+            </div>
+          </div>
+          <div class="creator-field">
+            <label class="creator-label" for="f-ps-rule-desc-${pi}-${ri}">
+              ${esc(I18n.t('creator.rule.desc.label'))}
+            </label>
+            <input class="creator-input" id="f-ps-rule-desc-${pi}-${ri}" type="text"
+                   data-ps-policy-idx="${pi}" data-ps-rule-idx="${ri}" data-ps-rule-field="description"
+                   placeholder="${esc(I18n.t('creator.rule.desc.ph'))}"
+                   value="${esc(r.description)}" autocomplete="off">
+          </div>
+          ${_targetSectionHtml(r.target, 'ps-rule', ri, pi)}
+        </div>
+      </div>`;
+  }
+
   // ── Event Handling ─────────────────────────────────────────────────────
 
   function _handleClick(e) {
@@ -768,38 +1131,59 @@ const PolicyCreator = (() => {
     if (t.id === 'creator-editor'    || t.closest('#creator-editor'))    { _openInEditor(); return; }
     if (t.id === 'creator-dl'        || t.closest('#creator-dl'))        { _download(); return; }
 
-    const deleteBtn   = t.closest('[data-action="delete-rule"]');
+    const deleteBtn = t.closest('[data-action="delete-rule"]');
     if (deleteBtn) { _deleteRule(parseInt(deleteBtn.dataset.idx, 10)); return; }
 
+    // PS actions
+    if (t.closest('[data-action="ps-add-policy"]'))    { _psAddPolicy(); return; }
+    const psPolicyDelBtn = t.closest('[data-action="ps-del-policy"]');
+    if (psPolicyDelBtn) { _psDeletePolicy(parseInt(psPolicyDelBtn.dataset.psPolicyIdx, 10)); return; }
+    const psPolicyToggleBtn = t.closest('[data-action="ps-toggle-policy"]');
+    if (psPolicyToggleBtn) { _psTogglePolicy(parseInt(psPolicyToggleBtn.dataset.psPolicyIdx, 10)); return; }
+    const psAddRuleBtn = t.closest('[data-action="ps-add-rule"]');
+    if (psAddRuleBtn) { _psAddRule(parseInt(psAddRuleBtn.dataset.psPolicyIdx, 10)); return; }
+    const psDelRuleBtn = t.closest('[data-action="ps-del-rule"]');
+    if (psDelRuleBtn) { _psDeleteRule(parseInt(psDelRuleBtn.dataset.psPolicyIdx, 10), parseInt(psDelRuleBtn.dataset.psRuleIdx, 10)); return; }
+    if (t.closest('[data-action="gen-ps-uuid"]'))       { _psGenerateUuid(); return; }
+    const psPolicyUuidBtn = t.closest('[data-action="gen-ps-policy-uuid"]');
+    if (psPolicyUuidBtn) { _psGeneratePolicyUuid(parseInt(psPolicyUuidBtn.dataset.psPolicyIdx, 10)); return; }
+    const psRuleUuidBtn = t.closest('[data-action="gen-ps-rule-uuid"]');
+    if (psRuleUuidBtn) { _psGenerateRuleUuid(parseInt(psRuleUuidBtn.dataset.psPolicyIdx, 10), parseInt(psRuleUuidBtn.dataset.psRuleIdx, 10)); return; }
+
+    // Target match/group actions — extract psPolicyIdx for PS scopes
     const addMatchBtn = t.closest('[data-action="add-match"]');
     if (addMatchBtn) {
       const scope = addMatchBtn.dataset.targetScope;
-      const rIdx  = scope === 'rule' ? parseInt(addMatchBtn.dataset.targetRuleIdx, 10) : undefined;
-      _addMatch(scope, rIdx, parseInt(addMatchBtn.dataset.groupIdx, 10));
+      const rIdx  = addMatchBtn.dataset.targetRuleIdx !== undefined ? parseInt(addMatchBtn.dataset.targetRuleIdx, 10) : undefined;
+      const piIdx = addMatchBtn.dataset.psPolicyIdx !== undefined ? parseInt(addMatchBtn.dataset.psPolicyIdx, 10) : undefined;
+      _addMatch(scope, rIdx, parseInt(addMatchBtn.dataset.groupIdx, 10), piIdx);
       return;
     }
 
     const delMatchBtn = t.closest('[data-action="del-match"]');
     if (delMatchBtn) {
       const scope = delMatchBtn.dataset.targetScope;
-      const rIdx  = scope === 'rule' ? parseInt(delMatchBtn.dataset.targetRuleIdx, 10) : undefined;
-      _deleteMatch(scope, rIdx, parseInt(delMatchBtn.dataset.groupIdx, 10), parseInt(delMatchBtn.dataset.matchIdx, 10));
+      const rIdx  = delMatchBtn.dataset.targetRuleIdx !== undefined ? parseInt(delMatchBtn.dataset.targetRuleIdx, 10) : undefined;
+      const piIdx = delMatchBtn.dataset.psPolicyIdx !== undefined ? parseInt(delMatchBtn.dataset.psPolicyIdx, 10) : undefined;
+      _deleteMatch(scope, rIdx, parseInt(delMatchBtn.dataset.groupIdx, 10), parseInt(delMatchBtn.dataset.matchIdx, 10), piIdx);
       return;
     }
 
     const addGroupBtn = t.closest('[data-action="add-group"]');
     if (addGroupBtn) {
       const scope = addGroupBtn.dataset.targetScope;
-      const rIdx  = scope === 'rule' ? parseInt(addGroupBtn.dataset.targetRuleIdx, 10) : undefined;
-      _addGroup(scope, rIdx);
+      const rIdx  = addGroupBtn.dataset.targetRuleIdx !== undefined ? parseInt(addGroupBtn.dataset.targetRuleIdx, 10) : undefined;
+      const piIdx = addGroupBtn.dataset.psPolicyIdx !== undefined ? parseInt(addGroupBtn.dataset.psPolicyIdx, 10) : undefined;
+      _addGroup(scope, rIdx, piIdx);
       return;
     }
 
     const delGroupBtn = t.closest('[data-action="del-group"]');
     if (delGroupBtn) {
       const scope = delGroupBtn.dataset.targetScope;
-      const rIdx  = scope === 'rule' ? parseInt(delGroupBtn.dataset.targetRuleIdx, 10) : undefined;
-      _deleteGroup(scope, rIdx, parseInt(delGroupBtn.dataset.groupIdx, 10));
+      const rIdx  = delGroupBtn.dataset.targetRuleIdx !== undefined ? parseInt(delGroupBtn.dataset.targetRuleIdx, 10) : undefined;
+      const piIdx = delGroupBtn.dataset.psPolicyIdx !== undefined ? parseInt(delGroupBtn.dataset.psPolicyIdx, 10) : undefined;
+      _deleteGroup(scope, rIdx, parseInt(delGroupBtn.dataset.groupIdx, 10), piIdx);
       return;
     }
 
@@ -810,72 +1194,89 @@ const PolicyCreator = (() => {
 
   // ── Target helpers ─────────────────────────────────────────────────────
 
-  function _targetFromEl(el) {
-    const scope = el.dataset.targetScope;
-    if (scope === 'policy') return _state.policy.target;
-    if (scope === 'rule') {
-      const idx = parseInt(el.dataset.targetRuleIdx, 10);
-      return _state.policy.rules[idx] ? _state.policy.rules[idx].target : null;
-    }
+  function _getTarget(scope, psPolicyIdx, ruleIdx) {
+    if (scope === 'policy')    return _state.policy.target;
+    if (scope === 'rule')      return _state.policy.rules[ruleIdx]?.target ?? null;
+    if (scope === 'ps')        return _state.policySet.target;
+    if (scope === 'ps-policy') return _state.policySet.policies[psPolicyIdx]?.target ?? null;
+    if (scope === 'ps-rule')   return _state.policySet.policies[psPolicyIdx]?.rules[ruleIdx]?.target ?? null;
     return null;
   }
 
-  function _addMatch(scope, ruleIdx, groupIdx) {
-    const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
+  function _targetFromEl(el) {
+    const scope = el.dataset.targetScope;
+    const pi = el.dataset.psPolicyIdx !== undefined ? parseInt(el.dataset.psPolicyIdx, 10) : undefined;
+    const ri = el.dataset.targetRuleIdx !== undefined ? parseInt(el.dataset.targetRuleIdx, 10) : undefined;
+    return _getTarget(scope, pi, ri);
+  }
+
+  function _addMatch(scope, ruleIdx, groupIdx, psPolicyIdx) {
+    const target = _getTarget(scope, psPolicyIdx, ruleIdx);
     if (!target || !target.groups[groupIdx]) return;
     target.groups[groupIdx].matches.push(_defaultMatchRow('subject'));
     _saveState(); _schedulePreview();
-    _reRenderTargetSection(scope, ruleIdx);
+    _reRenderTargetSection(scope, ruleIdx, psPolicyIdx);
   }
 
-  function _deleteMatch(scope, ruleIdx, groupIdx, matchIdx) {
-    const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
+  function _deleteMatch(scope, ruleIdx, groupIdx, matchIdx, psPolicyIdx) {
+    const target = _getTarget(scope, psPolicyIdx, ruleIdx);
     if (!target || !target.groups[groupIdx]) return;
     const g = target.groups[groupIdx];
-    if (g.matches.length <= 1) return; // keep at least 1 row per group
+    if (g.matches.length <= 1) return;
     g.matches.splice(matchIdx, 1);
     _saveState(); _schedulePreview();
-    _reRenderTargetSection(scope, ruleIdx);
+    _reRenderTargetSection(scope, ruleIdx, psPolicyIdx);
   }
 
-  function _addGroup(scope, ruleIdx) {
-    const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
+  function _addGroup(scope, ruleIdx, psPolicyIdx) {
+    const target = _getTarget(scope, psPolicyIdx, ruleIdx);
     if (!target) return;
     target.groups.push({ matches: [_defaultMatchRow('subject')] });
     _saveState(); _schedulePreview();
-    _reRenderTargetSection(scope, ruleIdx);
+    _reRenderTargetSection(scope, ruleIdx, psPolicyIdx);
   }
 
-  function _deleteGroup(scope, ruleIdx, groupIdx) {
-    const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
-    if (!target || target.groups.length <= 1) return; // keep at least 1 group
+  function _deleteGroup(scope, ruleIdx, groupIdx, psPolicyIdx) {
+    const target = _getTarget(scope, psPolicyIdx, ruleIdx);
+    if (!target || target.groups.length <= 1) return;
     target.groups.splice(groupIdx, 1);
     _saveState(); _schedulePreview();
-    _reRenderTargetSection(scope, ruleIdx);
+    _reRenderTargetSection(scope, ruleIdx, psPolicyIdx);
   }
 
-  function _reRenderTargetSection(scope, ruleIdx) {
+  function _reRenderTargetSection(scope, ruleIdx, psPolicyIdx) {
     let section;
-    if (scope === 'policy') {
+    if (scope === 'policy' || scope === 'ps') {
       section = document.querySelector('#creator-form-area .creator-target-section');
-    } else {
+    } else if (scope === 'rule') {
       const card = document.querySelector(`.creator-rule-card[data-rule-idx="${ruleIdx}"]`);
       if (card) section = card.querySelector('.creator-target-section');
+    } else if (scope === 'ps-policy') {
+      const card = document.querySelector(`.creator-ps-policy-card[data-ps-policy-idx="${psPolicyIdx}"]`);
+      if (card) section = card.querySelector('.creator-ps-policy-body > .creator-target-section');
+    } else if (scope === 'ps-rule') {
+      const psCard = document.querySelector(`.creator-ps-policy-card[data-ps-policy-idx="${psPolicyIdx}"]`);
+      if (psCard) {
+        const rCard = psCard.querySelector(`.creator-rule-card[data-rule-idx="${ruleIdx}"]`);
+        if (rCard) section = rCard.querySelector('.creator-target-section');
+      }
     }
     if (!section) return;
-    const target = scope === 'policy' ? _state.policy.target : _state.policy.rules[ruleIdx]?.target;
+    const target = _getTarget(scope, psPolicyIdx, ruleIdx);
     const tmp = document.createElement('div');
-    tmp.innerHTML = _targetSectionHtml(target, scope, ruleIdx);
+    tmp.innerHTML = _targetSectionHtml(target, scope, ruleIdx, psPolicyIdx);
     section.replaceWith(tmp.firstElementChild);
   }
 
   function _handleInput(e) {
     const t = e.target;
+    // Policy-level fields
     if (t.dataset.field !== undefined) {
       _state.policy[t.dataset.field] = t.value;
       _saveState(); _schedulePreview(); _updateNextBtn();
       return;
     }
+    // Policy rule fields
     if (t.dataset.ruleField !== undefined) {
       const idx = parseInt(t.dataset.ruleIdx, 10);
       if (_state.policy.rules[idx]) {
@@ -884,6 +1285,39 @@ const PolicyCreator = (() => {
       }
       return;
     }
+    // PolicySet top-level fields
+    if (t.dataset.psField !== undefined) {
+      _state.policySet[t.dataset.psField] = t.value;
+      _saveState(); _schedulePreview(); _updateNextBtn();
+      return;
+    }
+    // PolicySet embedded-policy fields
+    if (t.dataset.psPolicyField !== undefined && t.dataset.psPolicyIdx !== undefined) {
+      const pi = parseInt(t.dataset.psPolicyIdx, 10);
+      if (_state.policySet.policies[pi]) {
+        _state.policySet.policies[pi][t.dataset.psPolicyField] = t.value;
+        if (t.dataset.psPolicyField === 'id') {
+          const card = document.querySelector(`.creator-ps-policy-card[data-ps-policy-idx="${pi}"]`);
+          if (card) {
+            const preview = card.querySelector('.creator-ps-policy-id-preview');
+            if (preview) preview.textContent = t.value || '\u2014';
+          }
+        }
+        _saveState(); _schedulePreview(); _updateNextBtn();
+      }
+      return;
+    }
+    // PolicySet embedded-policy rule fields
+    if (t.dataset.psRuleField !== undefined && t.dataset.psPolicyIdx !== undefined && t.dataset.psRuleIdx !== undefined) {
+      const pi = parseInt(t.dataset.psPolicyIdx, 10);
+      const ri = parseInt(t.dataset.psRuleIdx, 10);
+      if (_state.policySet.policies[pi]?.rules[ri]) {
+        _state.policySet.policies[pi].rules[ri][t.dataset.psRuleField] = t.value;
+        _saveState(); _schedulePreview(); _updateNextBtn();
+      }
+      return;
+    }
+    // Target match value (works for all scopes via _targetFromEl)
     if (t.dataset.matchProp === 'value') {
       const target = _targetFromEl(t);
       const gi = parseInt(t.dataset.groupIdx, 10);
@@ -897,11 +1331,23 @@ const PolicyCreator = (() => {
 
   function _handleChange(e) {
     const t = e.target;
+    // Root type selection
+    if (t.name === 'root-type') {
+      _state.rootType = t.value;
+      _saveState();
+      document.querySelectorAll('.creator-type-card').forEach(c => {
+        const inp = c.querySelector('input[type=radio]');
+        c.classList.toggle('selected', inp?.value === t.value);
+      });
+      return;
+    }
+    // Policy-level fields
     if (t.dataset.field !== undefined) {
       _state.policy[t.dataset.field] = t.value;
       _saveState(); _schedulePreview();
       return;
     }
+    // Policy rule fields
     if (t.dataset.ruleField !== undefined) {
       const idx = parseInt(t.dataset.ruleIdx, 10);
       if (_state.policy.rules[idx]) {
@@ -910,6 +1356,32 @@ const PolicyCreator = (() => {
       }
       return;
     }
+    // PolicySet top-level fields
+    if (t.dataset.psField !== undefined) {
+      _state.policySet[t.dataset.psField] = t.value;
+      _saveState(); _schedulePreview(); _updateNextBtn();
+      return;
+    }
+    // PolicySet embedded-policy fields
+    if (t.dataset.psPolicyField !== undefined && t.dataset.psPolicyIdx !== undefined) {
+      const pi = parseInt(t.dataset.psPolicyIdx, 10);
+      if (_state.policySet.policies[pi]) {
+        _state.policySet.policies[pi][t.dataset.psPolicyField] = t.value;
+        _saveState(); _schedulePreview();
+      }
+      return;
+    }
+    // PolicySet embedded-policy rule fields
+    if (t.dataset.psRuleField !== undefined && t.dataset.psPolicyIdx !== undefined && t.dataset.psRuleIdx !== undefined) {
+      const pi = parseInt(t.dataset.psPolicyIdx, 10);
+      const ri = parseInt(t.dataset.psRuleIdx, 10);
+      if (_state.policySet.policies[pi]?.rules[ri]) {
+        _state.policySet.policies[pi].rules[ri][t.dataset.psRuleField] = t.value;
+        _saveState(); _schedulePreview();
+      }
+      return;
+    }
+    // Target match properties (cat, attributeId — works for all scopes via _targetFromEl)
     const matchProp = t.dataset.matchProp;
     if (matchProp !== undefined) {
       const target = _targetFromEl(t);
@@ -1100,9 +1572,15 @@ const PolicyCreator = (() => {
     resultEl.style.display = '';
   }
 
+  function _rootId() {
+    return _state.rootType === 'PolicySet'
+      ? (_state.policySet.id || 'neue-policyset')
+      : (_state.policy.id || 'neue-policy');
+  }
+
   function _loadIntoVisualizer() {
     const xml  = _generateXml();
-    const name = `creator-${_state.policy.id || 'neue-policy'}.xml`;
+    const name = `creator-${_rootId()}.xml`;
     if (window.App && window.App.loadCreatorXml) {
       window.App.loadCreatorXml(xml, name);
     }
@@ -1110,7 +1588,7 @@ const PolicyCreator = (() => {
 
   function _openInEditor() {
     const xml  = _generateXml();
-    const name = `creator-${_state.policy.id || 'neue-policy'}.xml`;
+    const name = `creator-${_rootId()}.xml`;
     if (window.App && window.App.loadCreatorXmlIntoEditor) {
       window.App.loadCreatorXmlIntoEditor(xml, name);
     }
@@ -1119,7 +1597,7 @@ const PolicyCreator = (() => {
   function _download() {
     const xml  = _generateXml();
     const ts   = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-    const name = `xacml-${_state.policy.id || 'neue-policy'}_${ts}.xml`;
+    const name = `xacml-${_rootId()}_${ts}.xml`;
     const blob = new Blob([xml], { type: 'application/xml' });
     const a    = document.createElement('a');
     a.href     = URL.createObjectURL(blob);
@@ -1165,6 +1643,119 @@ const PolicyCreator = (() => {
     _state.policy.rules[idx].id = uuid;
     _saveState();
     const input = document.getElementById(`f-rule-id-${idx}`);
+    if (input) input.value = uuid;
+    _schedulePreview();
+    _updateNextBtn();
+  }
+
+  // ── PolicySet Management ────────────────────────────────────────────────
+
+  function _psAddPolicy() {
+    const n = _state.policySet.policies.length + 1;
+    _state.policySet.policies.push(_defaultPsPolicy());
+    _state.policySet.policies[n - 1].id = `embedded-policy-${n}`;
+    _state.policySet.policies[n - 1].version = _state.policySet.version;
+    _saveState();
+    _psReRenderPolicies();
+    _schedulePreview();
+    _updateNextBtn();
+  }
+
+  function _psDeletePolicy(pi) {
+    _state.policySet.policies.splice(pi, 1);
+    _saveState();
+    _psReRenderPolicies();
+    _schedulePreview();
+    _updateNextBtn();
+  }
+
+  function _psTogglePolicy(pi) {
+    const card = document.querySelector(`.creator-ps-policy-card[data-ps-policy-idx="${pi}"]`);
+    if (!card) return;
+    const body = card.querySelector('.creator-ps-policy-body');
+    const btn  = card.querySelector('[data-action="ps-toggle-policy"]');
+    const isOpen = !body?.classList.contains('closed');
+    body?.classList.toggle('closed', isOpen);
+    if (btn) {
+      btn.innerHTML = isOpen ? '&#x25B6;' : '&#x25BC;';
+      btn.setAttribute('aria-expanded', String(!isOpen));
+    }
+  }
+
+  function _psAddRule(pi) {
+    const policy = _state.policySet.policies[pi];
+    if (!policy) return;
+    const n = policy.rules.length + 1;
+    policy.rules.push({ id: `rule-${n}`, effect: 'Permit', description: '', target: _defaultTarget() });
+    _saveState();
+    _psReRenderRules(pi);
+    _schedulePreview();
+    _updateNextBtn();
+  }
+
+  function _psDeleteRule(pi, ri) {
+    const policy = _state.policySet.policies[pi];
+    if (!policy) return;
+    policy.rules.splice(ri, 1);
+    _saveState();
+    _psReRenderRules(pi);
+    _schedulePreview();
+    _updateNextBtn();
+  }
+
+  function _psReRenderRules(pi) {
+    const container = document.querySelector(`.creator-ps-rules-list[data-ps-policy-idx="${pi}"]`);
+    if (!container) return;
+    const policy = _state.policySet.policies[pi];
+    if (!policy) return;
+    container.innerHTML = policy.rules.length === 0
+      ? `<div class="creator-empty-rules">${esc(I18n.t('creator.rules.empty'))}</div>`
+      : policy.rules.map((r, ri) => _psRuleCardHtml(r, ri, pi)).join('');
+  }
+
+  function _psReRenderPolicies() {
+    const list = document.getElementById('creator-ps-policies-list');
+    if (!list) return;
+    const policies = _state.policySet.policies;
+    list.innerHTML = policies.length === 0
+      ? `<div class="creator-empty-rules">${esc(I18n.t('creator.ps.policy.empty'))}</div>`
+      : policies.map((p, pi) => _psPolicyCardHtml(p, pi)).join('');
+  }
+
+  function _psGenerateUuid() {
+    const uuid = _makeUuid();
+    _state.policySet.id = uuid;
+    _saveState();
+    const input = document.getElementById('f-ps-id');
+    if (input) input.value = uuid;
+    _schedulePreview();
+    _updateNextBtn();
+  }
+
+  function _psGeneratePolicyUuid(pi) {
+    const policy = _state.policySet.policies[pi];
+    if (!policy) return;
+    const uuid = _makeUuid();
+    policy.id = uuid;
+    _saveState();
+    const input = document.getElementById(`f-ps-policy-id-${pi}`);
+    if (input) input.value = uuid;
+    const card = document.querySelector(`.creator-ps-policy-card[data-ps-policy-idx="${pi}"]`);
+    if (card) {
+      const preview = card.querySelector('.creator-ps-policy-id-preview');
+      if (preview) preview.textContent = uuid;
+    }
+    _schedulePreview();
+    _updateNextBtn();
+  }
+
+  function _psGenerateRuleUuid(pi, ri) {
+    const policy = _state.policySet.policies[pi];
+    if (!policy?.rules[ri]) return;
+    const uuid = _makeUuid();
+    policy.rules[ri].id = uuid;
+    _saveState();
+    const input = document.getElementById(`f-ps-rule-id-${pi}-${ri}`);
     if (input) input.value = uuid;
     _schedulePreview();
     _updateNextBtn();

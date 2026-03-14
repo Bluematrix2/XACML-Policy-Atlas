@@ -406,6 +406,27 @@ const TRANSLATIONS = {
 
     // ── Creator — toast ──
     'creator.toast.viz':         '✅ Policy im Visualizer geladen',
+
+    // ── Creator — Phase 3: PolicySet ──
+    'creator.type.policyset.desc':   'Gruppiert mehrere Policies. Enthält 1–N eingebettete Policies mit eigenen Regeln.',
+    'creator.type.policyset.title':  '',
+    'creator.ps.field.id.label':     'PolicySet-ID',
+    'creator.ps.field.id.ph':        'z.B. hospital-access-policies',
+    'creator.ps.field.id.hint':      'Eindeutige ID des PolicySet (keine Leerzeichen empfohlen)',
+    'creator.ps.field.alg.hint':     'Bestimmt, welche eingebettete Policy gewinnt wenn mehrere zutreffen.',
+    'creator.ps.uuid.title':         'UUID v4 für PolicySet-ID generieren',
+    'creator.ps.uuid.aria':          'UUID v4 für PolicySet-ID generieren',
+    'creator.ps.ptarget.hint':       'Schränkt das gesamte PolicySet auf bestimmte Anfragen ein. Leer = keine Einschränkung.',
+    'creator.ps.s3.desc':            'Füge eine oder mehrere Policies zum PolicySet hinzu. Jede Policy enthält eigene Regeln.',
+    'creator.ps.policy.empty':       'Noch keine Policies. Klicke auf „+ Policy hinzufügen".',
+    'creator.ps.policy.add':         '+ Policy hinzufügen',
+    'creator.ps.policy.num':         'Policy {n}',
+    'creator.ps.policy.del.title':   'Policy entfernen',
+    'creator.ps.policy.del.aria':    'Policy {n} entfernen',
+    'creator.ps.policy.toggle':      'Policy ein-/ausklappen',
+    'creator.ps.rules.title':        'Regeln dieser Policy',
+    'creator.ps.summary.id':         'PolicySet-ID',
+    'creator.ps.summary.policies':   'Eingebettete Policies',
   },
 
   en: {
@@ -802,6 +823,27 @@ const TRANSLATIONS = {
 
     // ── Creator — toast ──
     'creator.toast.viz':         '✅ Policy loaded in Visualizer',
+
+    // ── Creator — Phase 3: PolicySet ──
+    'creator.type.policyset.desc':   'Groups multiple policies. Contains 1–N embedded policies with their own rules.',
+    'creator.type.policyset.title':  '',
+    'creator.ps.field.id.label':     'PolicySet ID',
+    'creator.ps.field.id.ph':        'e.g. hospital-access-policies',
+    'creator.ps.field.id.hint':      'Unique ID for the PolicySet (no spaces recommended)',
+    'creator.ps.field.alg.hint':     'Determines which embedded policy wins when multiple apply.',
+    'creator.ps.uuid.title':         'Generate UUID v4 for PolicySet ID',
+    'creator.ps.uuid.aria':          'Generate UUID v4 for PolicySet ID',
+    'creator.ps.ptarget.hint':       'Restricts the entire PolicySet to specific requests. Empty = no restriction.',
+    'creator.ps.s3.desc':            'Add one or more policies to the PolicySet. Each policy contains its own rules.',
+    'creator.ps.policy.empty':       'No policies yet. Click "+ Add Policy".',
+    'creator.ps.policy.add':         '+ Add Policy',
+    'creator.ps.policy.num':         'Policy {n}',
+    'creator.ps.policy.del.title':   'Remove policy',
+    'creator.ps.policy.del.aria':    'Remove policy {n}',
+    'creator.ps.policy.toggle':      'Expand/collapse policy',
+    'creator.ps.rules.title':        'Rules of this Policy',
+    'creator.ps.summary.id':         'PolicySet ID',
+    'creator.ps.summary.policies':   'Embedded Policies',
   }
 };
 

@@ -2868,6 +2868,114 @@ footer a:hover { opacity: 1; text-decoration: none; }
   margin: 0;
 }
 
+/* ── Phase 3: PolicySet policy cards ── */
+.creator-ps-policies-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.creator-ps-policy-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.creator-ps-policy-hdr {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--acc-hdr-bg);
+  border-bottom: 1px solid var(--border);
+  cursor: default;
+}
+
+.creator-ps-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  padding: 2px 4px;
+  border-radius: var(--radius);
+  transition: color 0.15s;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.creator-ps-toggle:hover { color: var(--accent); }
+
+.creator-ps-policy-num {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.creator-ps-policy-id-preview {
+  flex: 1;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creator-ps-policy-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.creator-ps-policy-del:hover {
+  color: var(--deny-border);
+  background: var(--deny-bg);
+}
+
+.creator-ps-policy-body {
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.creator-ps-policy-body.closed { display: none; }
+
+.creator-ps-rules-section {
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-3);
+  margin-top: var(--sp-1);
+}
+.creator-ps-rules-hdr {
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--sp-2);
+}
+.creator-ps-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+/* Smaller add-rule button inside PS policy cards */
+.creator-add-rule-btn-sm {
+  font-size: 0.8125rem;
+  padding: 6px 12px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 960px) {
   .creator-main { grid-template-columns: 1fr; }
