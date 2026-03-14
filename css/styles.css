@@ -2891,22 +2891,18 @@ footer a:hover { opacity: 1; text-decoration: none; }
   padding: var(--sp-2) var(--sp-4);
   background: var(--acc-hdr-bg);
   border-bottom: 1px solid var(--border);
-  cursor: default;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
 }
+.creator-ps-policy-hdr:hover { background: var(--acc-hdr-hover); }
 
 .creator-ps-toggle {
-  background: none;
-  border: none;
-  cursor: pointer;
   color: var(--text-secondary);
   font-size: 0.7rem;
-  padding: 2px 4px;
-  border-radius: var(--radius);
-  transition: color 0.15s;
   line-height: 1;
   flex-shrink: 0;
 }
-.creator-ps-toggle:hover { color: var(--accent); }
 
 .creator-ps-policy-num {
   font-weight: 700;

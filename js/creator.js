@@ -973,9 +973,9 @@ const PolicyCreator = (() => {
       : p.rules.map((r, ri) => _psRuleCardHtml(r, ri, pi)).join('');
     return `
       <div class="creator-ps-policy-card" data-ps-policy-idx="${pi}">
-        <div class="creator-ps-policy-hdr">
-          <button class="creator-ps-toggle" data-action="ps-toggle-policy" data-ps-policy-idx="${pi}"
-                  aria-expanded="true" title="${esc(I18n.t('creator.ps.policy.toggle'))}">&#x25BC;</button>
+        <div class="creator-ps-policy-hdr" data-action="ps-toggle-policy" data-ps-policy-idx="${pi}"
+             role="button" aria-expanded="true" title="${esc(I18n.t('creator.ps.policy.toggle'))}">
+          <span class="creator-ps-toggle" aria-hidden="true">&#x25BC;</span>
           <span class="creator-ps-policy-num">${esc(I18n.t('creator.ps.policy.num', { n }))}</span>
           <span class="creator-ps-policy-id-preview">${esc(p.id || '\u2014')}</span>
           <button class="creator-ps-policy-del" data-action="ps-del-policy" data-ps-policy-idx="${pi}"
@@ -1680,14 +1680,13 @@ const PolicyCreator = (() => {
     const card = document.querySelector(`.creator-ps-policy-card[data-ps-policy-idx="${pi}"]`);
     if (!card) return;
     const body = card.querySelector('.creator-ps-policy-body');
-    const btn  = card.querySelector('[data-action="ps-toggle-policy"]');
+    const hdr  = card.querySelector('.creator-ps-policy-hdr');
+    const icon = card.querySelector('.creator-ps-toggle');
     const isOpen = !body?.classList.contains('closed');
     body?.classList.toggle('closed', isOpen);
     if (isOpen) _psPolicyCollapsed.add(pi); else _psPolicyCollapsed.delete(pi);
-    if (btn) {
-      btn.innerHTML = isOpen ? '&#x25B6;' : '&#x25BC;';
-      btn.setAttribute('aria-expanded', String(!isOpen));
-    }
+    if (icon) icon.innerHTML = isOpen ? '&#x25B6;' : '&#x25BC;';
+    if (hdr)  hdr.setAttribute('aria-expanded', String(!isOpen));
   }
 
   function _psAddRule(pi) {
@@ -1733,8 +1732,10 @@ const PolicyCreator = (() => {
       const card = list.querySelector(`.creator-ps-policy-card[data-ps-policy-idx="${pi}"]`);
       if (!card) return;
       card.querySelector('.creator-ps-policy-body')?.classList.add('closed');
-      const btn = card.querySelector('[data-action="ps-toggle-policy"]');
-      if (btn) { btn.innerHTML = '&#x25B6;'; btn.setAttribute('aria-expanded', 'false'); }
+      const icon = card.querySelector('.creator-ps-toggle');
+      if (icon) icon.innerHTML = '&#x25B6;';
+      const hdr = card.querySelector('.creator-ps-policy-hdr');
+      if (hdr) hdr.setAttribute('aria-expanded', 'false');
     });
   }
 
