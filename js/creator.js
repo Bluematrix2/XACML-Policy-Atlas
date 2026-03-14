@@ -49,6 +49,12 @@ const CONDITION_DATA_TYPES = [
   { label: 'anyURI',   value: 'http://www.w3.org/2001/XMLSchema#anyURI' },
   { label: 'date',     value: 'http://www.w3.org/2001/XMLSchema#date' },
   { label: 'dateTime', value: 'http://www.w3.org/2001/XMLSchema#dateTime' },
+  { label: 'ST (HL7)',  value: 'urn:hl7-org:v3#ST' },
+  { label: 'BL (HL7)',  value: 'urn:hl7-org:v3#BL' },
+  { label: 'INT (HL7)', value: 'urn:hl7-org:v3#INT' },
+  { label: 'TS (HL7)',  value: 'urn:hl7-org:v3#TS' },
+  { label: 'CE (HL7)',  value: 'urn:hl7-org:v3#CE' },
+  { label: 'CS (HL7)',  value: 'urn:hl7-org:v3#CS' },
 ];
 
 // Maps dataType → matching "one-and-only" bag function (for Condition Arg1 wrapper Apply)
@@ -90,6 +96,12 @@ const MATCH_DATATYPE_OPTIONS = [
   { label: 'date',      value: 'http://www.w3.org/2001/XMLSchema#date' },
   { label: 'CV (HL7)',  value: 'urn:hl7-org:v3#CV' },
   { label: 'II (HL7)',  value: 'urn:hl7-org:v3#II' },
+  { label: 'ST (HL7)',  value: 'urn:hl7-org:v3#ST' },
+  { label: 'BL (HL7)',  value: 'urn:hl7-org:v3#BL' },
+  { label: 'INT (HL7)', value: 'urn:hl7-org:v3#INT' },
+  { label: 'TS (HL7)',  value: 'urn:hl7-org:v3#TS' },
+  { label: 'CE (HL7)',  value: 'urn:hl7-org:v3#CE' },
+  { label: 'CS (HL7)',  value: 'urn:hl7-org:v3#CS' },
 ];
 
 const SESSION_KEY = 'xacml-creator-state';
@@ -1935,7 +1947,7 @@ const PolicyCreator = (() => {
             if (ci2) { ci2.style.display = ''; ci2.value = ''; ci2.focus(); }
           } else {
             m.dataType = t.value;
-            if (t.value === 'urn:hl7-org:v3#CV')      m.valueType = 'cv';
+            if (t.value === 'urn:hl7-org:v3#CV' || t.value === 'urn:hl7-org:v3#CE')  m.valueType = 'cv';
             else if (t.value === 'urn:hl7-org:v3#II')  m.valueType = 'ii';
             else if (t.value !== '')                    m.valueType = 'simple';
             const adv = t.closest('.creator-target-adv');
