@@ -432,9 +432,23 @@ const TRANSLATIONS = {
     'creator.target.attrId.custom':    'Freitext...',
     'creator.target.attrId.custom.ph': 'z.B. urn:custom:attribute-id',
 
+    // ── Creator — Target Advanced (MatchId / DataType) ──
+    'creator.target.adv.title':            'Erweiterte Match-Optionen (MatchId, DataType)',
+    'creator.target.matchId.label':        'Match-Funktion',
+    'creator.target.matchId.default':      'Standard (string-equal)',
+    'creator.target.matchId.custom.ph':    'urn:hl7-org:v3:function:CV-equal',
+    'creator.target.dataType.label':       'DataType',
+    'creator.target.dataType.default':     'Standard (string)',
+    'creator.target.dataType.custom.ph':   'urn:hl7-org:v3#CV',
+    'creator.target.cv.code.ph':           'code, z.B. Physician',
+    'creator.target.cv.sys.ph':            'codeSystem, z.B. 2.99.999',
+    'creator.target.ii.root.ph':           'root, z.B. *',
+
     // ── Creator — Phase 4: Conditions ──
     'creator.condition.add':           '+ Bedingung hinzufügen (optional)',
-    'creator.condition.title':         'Bedingung (Apply)',
+    'creator.condition.title':         'Bedingungen (Condition)',
+    'creator.condition.item.add':      'Bedingung hinzufügen',
+    'creator.condition.item.num':      'Bedingung {n}',
     'creator.condition.fn':            'Funktion',
     'creator.condition.fn.ph':         'urn:oasis:names:tc:xacml:1.0:function:...',
     'creator.condition.fn.custom':     'Freitext...',
@@ -870,9 +884,23 @@ const TRANSLATIONS = {
     'creator.target.attrId.custom':    'Custom...',
     'creator.target.attrId.custom.ph': 'e.g. urn:custom:attribute-id',
 
+    // ── Creator — Target Advanced (MatchId / DataType) ──
+    'creator.target.adv.title':            'Advanced match options (MatchId, DataType)',
+    'creator.target.matchId.label':        'Match Function',
+    'creator.target.matchId.default':      'Default (string-equal)',
+    'creator.target.matchId.custom.ph':    'urn:hl7-org:v3:function:CV-equal',
+    'creator.target.dataType.label':       'DataType',
+    'creator.target.dataType.default':     'Default (string)',
+    'creator.target.dataType.custom.ph':   'urn:hl7-org:v3#CV',
+    'creator.target.cv.code.ph':           'code, e.g. Physician',
+    'creator.target.cv.sys.ph':            'codeSystem, e.g. 2.99.999',
+    'creator.target.ii.root.ph':           'root, e.g. *',
+
     // ── Creator — Phase 4: Conditions ──
     'creator.condition.add':           '+ Add Condition (optional)',
-    'creator.condition.title':         'Condition (Apply)',
+    'creator.condition.title':         'Conditions',
+    'creator.condition.item.add':      'Add condition',
+    'creator.condition.item.num':      'Condition {n}',
     'creator.condition.fn':            'Function',
     'creator.condition.fn.ph':         'urn:oasis:names:tc:xacml:1.0:function:...',
     'creator.condition.fn.custom':     'Custom...',

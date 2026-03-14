@@ -2580,7 +2580,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
 }
 .creator-target-row {
   display: grid;
-  grid-template-columns: 5.5rem 1fr 1.6fr 1.75rem;
+  grid-template-columns: 5.5rem 1fr 1.6fr auto;
   gap: var(--sp-1) var(--sp-2);
   align-items: center;
 }
@@ -2624,7 +2624,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
   font-size: 0.8rem;
 }
 @media (max-width: 960px) {
-  .creator-target-row { grid-template-columns: 5rem 1fr 1.75rem; }
+  .creator-target-row { grid-template-columns: 5rem 1fr auto; }
   .creator-attrId-select { grid-column: 2; }
 }
 
@@ -3065,6 +3065,143 @@ footer a:hover { opacity: 1; text-decoration: none; }
   flex-shrink: 0;
   padding-top: 6px;
   font-size: 0.8125rem;
+}
+
+/* ── Target Advanced (MatchId / DataType) ── */
+.creator-target-match-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.creator-match-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.creator-match-adv-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 0;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.creator-match-adv-btn:hover,
+.creator-match-adv-btn.active {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--acc-hdr-hover);
+}
+.creator-target-adv {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.creator-target-adv-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.creator-target-cv-fields {
+  display: flex;
+  gap: var(--sp-1);
+  flex: 1;
+}
+.creator-target-cv-fields .creator-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Multiple Conditions ── */
+.creator-condition-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.creator-condition-item {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-1);
+}
+.creator-condition-item-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-2);
+}
+.creator-condition-item-num {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.creator-cond-connector {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 2px 0 var(--sp-1);
+  letter-spacing: 0.08em;
+}
+.creator-cond-op-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+.creator-cond-op-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.creator-cond-op-btn {
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+.creator-cond-op-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.creator-cond-op-btn.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+.creator-add-condition-item-btn {
+  font-size: 0.8rem;
+  padding: 3px 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.creator-add-condition-item-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ── Responsive ── */

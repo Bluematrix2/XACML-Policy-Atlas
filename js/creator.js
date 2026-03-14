@@ -74,6 +74,24 @@ const DEFAULT_ATTR_IDS = {
   action:   'urn:oasis:names:tc:xacml:1.0:action:action-id',
 };
 
+const MATCH_ID_OPTIONS = [
+  { label: 'string-equal',    value: 'urn:oasis:names:tc:xacml:1.0:function:string-equal' },
+  { label: 'anyURI-equal',    value: 'urn:oasis:names:tc:xacml:1.0:function:anyURI-equal' },
+  { label: 'integer-equal',   value: 'urn:oasis:names:tc:xacml:1.0:function:integer-equal' },
+  { label: 'date-equal',      value: 'urn:oasis:names:tc:xacml:1.0:function:date-equal' },
+  { label: 'CV-equal (HL7)',  value: 'urn:hl7-org:v3:function:CV-equal' },
+  { label: 'II-equal (HL7)',  value: 'urn:hl7-org:v3:function:II-equal' },
+];
+
+const MATCH_DATATYPE_OPTIONS = [
+  { label: 'string',    value: 'http://www.w3.org/2001/XMLSchema#string' },
+  { label: 'anyURI',    value: 'http://www.w3.org/2001/XMLSchema#anyURI' },
+  { label: 'integer',   value: 'http://www.w3.org/2001/XMLSchema#integer' },
+  { label: 'date',      value: 'http://www.w3.org/2001/XMLSchema#date' },
+  { label: 'CV (HL7)',  value: 'urn:hl7-org:v3#CV' },
+  { label: 'II (HL7)',  value: 'urn:hl7-org:v3#II' },
+];
+
 const SESSION_KEY = 'xacml-creator-state';
 
 const PolicyCreator = (() => {
@@ -111,7 +129,17 @@ const PolicyCreator = (() => {
   // ── State ──────────────────────────────────────────────────────────────
 
   function _defaultMatchRow(cat) {
-    return { cat: cat || 'subject', attributeId: ATTR_ID_OPTIONS[cat || 'subject'][0].value, value: '' };
+    return {
+      cat:          cat || 'subject',
+      attributeId:  ATTR_ID_OPTIONS[cat || 'subject'][0].value,
+      matchId:      '',
+      dataType:     '',
+      valueType:    'simple',
+      value:        '',
+      cvCode:       '',
+      cvCodeSystem: '',
+      iiRoot:       '',
+    };
   }
 
   function _defaultTarget() {
@@ -160,6 +188,14 @@ const PolicyCreator = (() => {
     };
   }
 
+  function _migrateRuleConditions(r) {
+    if (!('conditions' in r)) {
+      r.conditions = r.condition != null ? [r.condition] : [];
+      delete r.condition;
+    }
+    if (!('conditionOp' in r)) r.conditionOp = 'AND';
+  }
+
   let _state = _loadState();
 
   function _defaultPsPolicy() {
@@ -205,7 +241,7 @@ const PolicyCreator = (() => {
         if (s.policy) {
           s.policy.target = _migrateTarget(s.policy.target);
           if (Array.isArray(s.policy.rules)) {
-            s.policy.rules.forEach(r => { r.target = _migrateTarget(r.target); if (!('condition' in r)) r.condition = null; });
+            s.policy.rules.forEach(r => { r.target = _migrateTarget(r.target); _migrateRuleConditions(r); });
           }
         }
         // Migrate policySet targets
@@ -215,7 +251,7 @@ const PolicyCreator = (() => {
             s.policySet.policies.forEach(p => {
               p.target = _migrateTarget(p.target);
               if (Array.isArray(p.rules)) {
-                p.rules.forEach(r => { r.target = _migrateTarget(r.target); if (!('condition' in r)) r.condition = null; });
+                p.rules.forEach(r => { r.target = _migrateTarget(r.target); _migrateRuleConditions(r); });
               }
             });
           }
@@ -273,7 +309,7 @@ const PolicyCreator = (() => {
         }
         const targetXml = ver === '2.0' ? _targetXml20(r.target, i2) : _targetXml30(r.target, i2);
         if (targetXml) xml += targetXml + '\n';
-        const condXml = _conditionXml(r.condition, ver, i2);
+        const condXml = _conditionXml(r.conditions, r.conditionOp, ver, i2);
         if (condXml) xml += condXml + '\n';
         xml += `${i1}</Rule>\n`;
       }
@@ -322,10 +358,28 @@ const PolicyCreator = (() => {
     return _generatePolicyXml(p, ver, '', true);
   }
 
+  function _matchHasValue(m) {
+    const vt = m.valueType || 'simple';
+    if (vt === 'cv') return (m.cvCode || '').trim() !== '' || (m.cvCodeSystem || '').trim() !== '';
+    if (vt === 'ii') return (m.iiRoot || '').trim() !== '';
+    return (m.value || '').trim() !== '';
+  }
+
+  function _matchValueXml(m, ind) {
+    const dt = _escXml(m.dataType || DATA_TYPE_STRING);
+    const vt = m.valueType || 'simple';
+    if (vt === 'cv') {
+      return `${ind}<AttributeValue DataType="${dt}"><CodedValue xmlns="urn:hl7-org:v3" code="${_escXml(m.cvCode || '')}" codeSystem="${_escXml(m.cvCodeSystem || '')}" /></AttributeValue>`;
+    }
+    if (vt === 'ii') {
+      return `${ind}<AttributeValue DataType="${dt}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><InstanceIdentifier xmlns="urn:hl7-org:v3" xsi:type="II" root="${_escXml(m.iiRoot || '')}" /></AttributeValue>`;
+    }
+    return `${ind}<AttributeValue DataType="${dt}">${_escXml((m.value || '').trim())}</AttributeValue>`;
+  }
+
   function _targetXml20(target, ind) {
     if (!target || !Array.isArray(target.groups)) return '';
-    // Flatten all matches from all groups for XACML 2.0 (each match = separate element = OR within cat)
-    const allMatches = target.groups.flatMap(g => g.matches.filter(m => m.value.trim()));
+    const allMatches = target.groups.flatMap(g => g.matches.filter(_matchHasValue));
     if (!allMatches.length) return '';
     const i1 = ind, i2 = ind + '  ', i3 = ind + '    ', i4 = ind + '      ';
     const CAT_META = {
@@ -341,11 +395,13 @@ const PolicyCreator = (() => {
       if (!ms.length) continue;
       const meta = CAT_META[cat];
       const innerHtml = ms.map(m => {
-        const aid = _escXml(m.attributeId || DEFAULT_ATTR_IDS[cat]);
+        const aid  = _escXml(m.attributeId || DEFAULT_ATTR_IDS[cat]);
+        const mId  = _escXml(m.matchId || MATCH_ID_STR_EQ);
+        const mDt  = _escXml(m.dataType || DATA_TYPE_STRING);
         return `${i2}<${meta.inner}>\n` +
-               `${i3}<${meta.match} MatchId="${MATCH_ID_STR_EQ}">\n` +
-               `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(m.value.trim())}</AttributeValue>\n` +
-               `${i4}<${meta.des} AttributeId="${aid}" DataType="${DATA_TYPE_STRING}"/>\n` +
+               `${i3}<${meta.match} MatchId="${mId}">\n` +
+               _matchValueXml(m, i4) + '\n' +
+               `${i4}<${meta.des} AttributeId="${aid}" DataType="${mDt}"/>\n` +
                `${i3}</${meta.match}>\n` +
                `${i2}</${meta.inner}>`;
       }).join('\n');
@@ -357,7 +413,7 @@ const PolicyCreator = (() => {
 
   function _targetXml30(target, ind) {
     if (!target || !Array.isArray(target.groups)) return '';
-    const activeGroups = target.groups.filter(g => g.matches.some(m => m.value.trim()));
+    const activeGroups = target.groups.filter(g => g.matches.some(_matchHasValue));
     if (!activeGroups.length) return '';
     const i1 = ind + '  ', i2 = ind + '    ', i3 = ind + '      ', i4 = ind + '        ';
     const CAT_URI = {
@@ -368,14 +424,15 @@ const PolicyCreator = (() => {
     const matchXml = m => {
       const aid  = _escXml(m.attributeId || DEFAULT_ATTR_IDS[m.cat]);
       const catU = _escXml(CAT_URI[m.cat] || CAT_URI.subject);
-      return `${i3}<Match MatchId="${MATCH_ID_STR_EQ}">\n` +
-             `${i4}<AttributeValue DataType="${DATA_TYPE_STRING}">${_escXml(m.value.trim())}</AttributeValue>\n` +
-             `${i4}<AttributeDesignator Category="${catU}" AttributeId="${aid}" DataType="${DATA_TYPE_STRING}" MustBePresent="false"/>\n` +
+      const mId  = _escXml(m.matchId || MATCH_ID_STR_EQ);
+      const mDt  = _escXml(m.dataType || DATA_TYPE_STRING);
+      return `${i3}<Match MatchId="${mId}">\n` +
+             _matchValueXml(m, i4) + '\n' +
+             `${i4}<AttributeDesignator Category="${catU}" AttributeId="${aid}" DataType="${mDt}" MustBePresent="false"/>\n` +
              `${i3}</Match>`;
     };
-    // Each group → one <AllOf> (AND within group), all AllOf inside one <AnyOf> (OR between groups)
     const allOfs = activeGroups.map(g => {
-      const lines = g.matches.filter(m => m.value.trim()).map(matchXml).join('\n');
+      const lines = g.matches.filter(_matchHasValue).map(matchXml).join('\n');
       return `${i2}<AllOf>\n${lines}\n${i2}</AllOf>`;
     }).join('\n');
     return `${ind}<Target>\n${i1}<AnyOf>\n${allOfs}\n${i1}</AnyOf>\n${ind}</Target>`;
@@ -383,35 +440,90 @@ const PolicyCreator = (() => {
 
   // ── Condition XML & HTML ────────────────────────────────────────────────
 
-  function _conditionXml(c, ver, ind) {
-    if (!c) return '';
-    const fnId   = c.functionId === '__custom__' ? (c.functionCustom || '') : c.functionId;
+  const _COND_DES_TAG = {
+    'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject': 'SubjectAttributeDesignator',
+    'urn:oasis:names:tc:xacml:3.0:attribute-category:resource':     'ResourceAttributeDesignator',
+    'urn:oasis:names:tc:xacml:3.0:attribute-category:action':       'ActionAttributeDesignator',
+  };
+
+  function _condFnId(c) {
+    return c.functionId === '__custom__' ? (c.functionCustom || '') : c.functionId;
+  }
+
+  // Generates the inner <Apply> block for a single condition (without <Condition> wrapper)
+  function _condApplyBlock20(c, ind) {
+    const fnId = _condFnId(c);
+    if (!fnId || !fnId.trim()) return '';
+    const i1 = ind + '  ', i2 = ind + '    ';
     const attrId = _escXml(c.arg1AttrId || '');
-    const oaoFn  = ONE_AND_ONLY_FN[c.arg1DataType] || ONE_AND_ONLY_FN['http://www.w3.org/2001/XMLSchema#string'];
-    if (!fnId) return '';
-    const i1 = ind + '  ', i2 = ind + '    ', i3 = ind + '      ';
+    const oaoFn  = ONE_AND_ONLY_FN[c.arg1DataType] || ONE_AND_ONLY_FN[CONDITION_DATA_TYPES[0].value];
+    const desTag = _COND_DES_TAG[c.arg1Cat] || 'SubjectAttributeDesignator';
+    return `${ind}<Apply FunctionId="${_escXml(fnId)}">\n` +
+           `${i1}<Apply FunctionId="${_escXml(oaoFn)}">\n` +
+           `${i2}<${desTag} AttributeId="${attrId}" DataType="${_escXml(c.arg1DataType)}" MustBePresent="false"/>\n` +
+           `${i1}</Apply>\n` +
+           `${i1}<AttributeValue DataType="${_escXml(c.arg2DataType)}">${_escXml(c.arg2Value)}</AttributeValue>\n` +
+           `${ind}</Apply>`;
+  }
+
+  function _condApplyBlock30(c, ind) {
+    const fnId = _condFnId(c);
+    if (!fnId || !fnId.trim()) return '';
+    const i1 = ind + '  ', i2 = ind + '    ';
+    const attrId = _escXml(c.arg1AttrId || '');
+    const oaoFn  = ONE_AND_ONLY_FN[c.arg1DataType] || ONE_AND_ONLY_FN[CONDITION_DATA_TYPES[0].value];
+    return `${ind}<Apply FunctionId="${_escXml(fnId)}">\n` +
+           `${i1}<Apply FunctionId="${_escXml(oaoFn)}">\n` +
+           `${i2}<AttributeDesignator Category="${_escXml(c.arg1Cat)}" AttributeId="${attrId}" DataType="${_escXml(c.arg1DataType)}" MustBePresent="false"/>\n` +
+           `${i1}</Apply>\n` +
+           `${i1}<AttributeValue DataType="${_escXml(c.arg2DataType)}">${_escXml(c.arg2Value)}</AttributeValue>\n` +
+           `${ind}</Apply>`;
+  }
+
+  function _conditionXml(conditions, conditionOp, ver, ind) {
+    if (!conditions || conditions.length === 0) return '';
+    const active = conditions.filter(c => (_condFnId(c) || '').trim());
+    if (!active.length) return '';
+    const i1 = ind + '  ', i2 = ind + '    ';
+
+    if (active.length === 1) {
+      const c    = active[0];
+      const fnId = _escXml(_condFnId(c));
+      const attrId = _escXml(c.arg1AttrId || '');
+      const oaoFn  = ONE_AND_ONLY_FN[c.arg1DataType] || ONE_AND_ONLY_FN[CONDITION_DATA_TYPES[0].value];
+      if (ver === '2.0') {
+        const desTag = _COND_DES_TAG[c.arg1Cat] || 'SubjectAttributeDesignator';
+        return `${ind}<Condition FunctionId="${fnId}">\n` +
+               `${i1}<Apply FunctionId="${_escXml(oaoFn)}">\n` +
+               `${i2}<${desTag} AttributeId="${attrId}" DataType="${_escXml(c.arg1DataType)}" MustBePresent="false"/>\n` +
+               `${i1}</Apply>\n` +
+               `${i1}<AttributeValue DataType="${_escXml(c.arg2DataType)}">${_escXml(c.arg2Value)}</AttributeValue>\n` +
+               `${ind}</Condition>`;
+      } else {
+        return `${ind}<Condition>\n` +
+               `${i1}<Apply FunctionId="${fnId}">\n` +
+               `${i2}<Apply FunctionId="${_escXml(oaoFn)}">\n` +
+               `${i2}  <AttributeDesignator Category="${_escXml(c.arg1Cat)}" AttributeId="${attrId}" DataType="${_escXml(c.arg1DataType)}" MustBePresent="false"/>\n` +
+               `${i2}</Apply>\n` +
+               `${i2}<AttributeValue DataType="${_escXml(c.arg2DataType)}">${_escXml(c.arg2Value)}</AttributeValue>\n` +
+               `${i1}</Apply>\n` +
+               `${ind}</Condition>`;
+      }
+    }
+
+    // Multiple conditions: wrap in AND / OR Apply
+    const combineFn = conditionOp === 'OR'
+      ? 'urn:oasis:names:tc:xacml:1.0:function:or'
+      : 'urn:oasis:names:tc:xacml:1.0:function:and';
 
     if (ver === '2.0') {
-      const desTag = {
-        'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject': 'SubjectAttributeDesignator',
-        'urn:oasis:names:tc:xacml:3.0:attribute-category:resource':     'ResourceAttributeDesignator',
-        'urn:oasis:names:tc:xacml:3.0:attribute-category:action':       'ActionAttributeDesignator',
-      }[c.arg1Cat] || 'SubjectAttributeDesignator';
-      return `${ind}<Condition FunctionId="${_escXml(fnId)}">\n` +
-             `${i1}<Apply FunctionId="${_escXml(oaoFn)}">\n` +
-             `${i2}<${desTag} AttributeId="${attrId}" DataType="${_escXml(c.arg1DataType)}" MustBePresent="false"/>\n` +
-             `${i1}</Apply>\n` +
-             `${i1}<AttributeValue DataType="${_escXml(c.arg2DataType)}">${_escXml(c.arg2Value)}</AttributeValue>\n` +
-             `${ind}</Condition>`;
+      const blocks = active.map(c => _condApplyBlock20(c, i2)).filter(Boolean).join('\n');
+      if (!blocks) return '';
+      return `${ind}<Condition FunctionId="${_escXml(combineFn)}">\n${blocks}\n${ind}</Condition>`;
     } else {
-      return `${ind}<Condition>\n` +
-             `${i1}<Apply FunctionId="${_escXml(fnId)}">\n` +
-             `${i2}<Apply FunctionId="${_escXml(oaoFn)}">\n` +
-             `${i3}<AttributeDesignator Category="${_escXml(c.arg1Cat)}" AttributeId="${attrId}" DataType="${_escXml(c.arg1DataType)}" MustBePresent="false"/>\n` +
-             `${i2}</Apply>\n` +
-             `${i2}<AttributeValue DataType="${_escXml(c.arg2DataType)}">${_escXml(c.arg2Value)}</AttributeValue>\n` +
-             `${i1}</Apply>\n` +
-             `${ind}</Condition>`;
+      const blocks = active.map(c => _condApplyBlock30(c, i2)).filter(Boolean).join('\n');
+      if (!blocks) return '';
+      return `${ind}<Condition>\n${i1}<Apply FunctionId="${_escXml(combineFn)}">\n${blocks}\n${i1}</Apply>\n${ind}</Condition>`;
     }
   }
 
@@ -428,15 +540,25 @@ const PolicyCreator = (() => {
   function _addCondition(scope, ruleIdx, psPolicyIdx) {
     const rule = _getRule(scope, ruleIdx, psPolicyIdx);
     if (!rule) return;
-    rule.condition = _defaultCondition();
+    if (!rule.conditions) rule.conditions = [];
+    if (!rule.conditionOp) rule.conditionOp = 'AND';
+    rule.conditions.push(_defaultCondition());
     _saveState(); _schedulePreview();
     _reRenderConditionSection(scope, ruleIdx, psPolicyIdx);
   }
 
-  function _removeCondition(scope, ruleIdx, psPolicyIdx) {
+  function _removeConditionItem(scope, ruleIdx, conditionIdx, psPolicyIdx) {
+    const rule = _getRule(scope, ruleIdx, psPolicyIdx);
+    if (!rule || !rule.conditions) return;
+    rule.conditions.splice(conditionIdx, 1);
+    _saveState(); _schedulePreview();
+    _reRenderConditionSection(scope, ruleIdx, psPolicyIdx);
+  }
+
+  function _setConditionOp(scope, ruleIdx, op, psPolicyIdx) {
     const rule = _getRule(scope, ruleIdx, psPolicyIdx);
     if (!rule) return;
-    rule.condition = null;
+    rule.conditionOp = op;
     _saveState(); _schedulePreview();
     _reRenderConditionSection(scope, ruleIdx, psPolicyIdx);
   }
@@ -461,40 +583,31 @@ const PolicyCreator = (() => {
     section.replaceWith(tmp.firstElementChild);
   }
 
-  function _conditionSectionHtml(rule, scope, ruleIdx, psPolicyIdx) {
-    const piAttr = psPolicyIdx !== undefined ? ` data-cond-ps-policy-idx="${psPolicyIdx}"` : '';
-    const riAttr = ruleIdx !== undefined ? ` data-cond-rule-idx="${ruleIdx}"` : '';
-    const sa     = `data-cond-scope="${scope}"${riAttr}${piAttr}`;
-    const cond   = rule.condition;
-
-    if (!cond) {
-      return `<div class="creator-condition-section">
-        <button class="creator-add-condition-btn" data-action="add-condition" ${sa}>
-          ${esc(I18n.t('creator.condition.add'))}
-        </button>
-      </div>`;
-    }
-
-    const isCustomFn = cond.functionId === '__custom__';
+  function _conditionItemHtml(c, ci, conditionOp, totalCount, sa) {
+    const isCustomFn = c.functionId === '__custom__';
     const fnOpts = CONDITION_FUNCTIONS.map(f =>
-      `<option value="${esc(f.value)}"${!isCustomFn && cond.functionId === f.value ? ' selected' : ''}>${esc(f.label)}</option>`
+      `<option value="${esc(f.value)}"${!isCustomFn && c.functionId === f.value ? ' selected' : ''}>${esc(f.label)}</option>`
     ).join('') + `<option value="__custom__"${isCustomFn ? ' selected' : ''}>${esc(I18n.t('creator.condition.fn.custom'))}</option>`;
 
-    const catOpts = CONDITION_CATEGORIES.map(c =>
-      `<option value="${esc(c.value)}"${cond.arg1Cat === c.value ? ' selected' : ''}>${esc(c.label)}</option>`
+    const catOpts = CONDITION_CATEGORIES.map(cat =>
+      `<option value="${esc(cat.value)}"${c.arg1Cat === cat.value ? ' selected' : ''}>${esc(cat.label)}</option>`
     ).join('');
-
     const dt1Opts = CONDITION_DATA_TYPES.map(d =>
-      `<option value="${esc(d.value)}"${cond.arg1DataType === d.value ? ' selected' : ''}>${esc(d.label)}</option>`
+      `<option value="${esc(d.value)}"${c.arg1DataType === d.value ? ' selected' : ''}>${esc(d.label)}</option>`
     ).join('');
     const dt2Opts = CONDITION_DATA_TYPES.map(d =>
-      `<option value="${esc(d.value)}"${cond.arg2DataType === d.value ? ' selected' : ''}>${esc(d.label)}</option>`
+      `<option value="${esc(d.value)}"${c.arg2DataType === d.value ? ' selected' : ''}>${esc(d.label)}</option>`
     ).join('');
 
-    return `<div class="creator-condition-section creator-condition-active">
-      <div class="creator-condition-hdr">
-        <span class="creator-condition-title">&#x1F9EE; ${esc(I18n.t('creator.condition.title'))}</span>
-        <button class="creator-condition-remove" data-action="remove-condition" ${sa}
+    const connector = ci < totalCount - 1
+      ? `<div class="creator-cond-connector">${esc(conditionOp === 'OR' ? I18n.t('creator.target.op.or') : I18n.t('creator.target.op.and'))}</div>`
+      : '';
+
+    return `<div class="creator-condition-item" data-cond-item-idx="${ci}">
+      <div class="creator-condition-item-hdr">
+        <span class="creator-condition-item-num">${esc(I18n.t('creator.condition.item.num', { n: ci + 1 }))}</span>
+        <button class="creator-condition-remove" data-action="remove-condition-item"
+                data-cond-item-idx="${ci}" ${sa}
                 title="${esc(I18n.t('creator.condition.remove.title'))}"
                 aria-label="${esc(I18n.t('creator.condition.remove.aria'))}">&#x2715;</button>
       </div>
@@ -502,11 +615,11 @@ const PolicyCreator = (() => {
         <div class="creator-condition-row">
           <label class="creator-label creator-condition-label">${esc(I18n.t('creator.condition.fn'))}</label>
           <div class="creator-attrId-wrap">
-            <select class="creator-select" data-cond-field="functionId" ${sa}>${fnOpts}</select>
+            <select class="creator-select" data-cond-field="functionId" data-cond-item-idx="${ci}" ${sa}>${fnOpts}</select>
             <input class="creator-input creator-attrId-custom" type="text"
-                   data-cond-field="functionCustom" ${sa}
+                   data-cond-field="functionCustom" data-cond-item-idx="${ci}" ${sa}
                    placeholder="${esc(I18n.t('creator.condition.fn.ph'))}"
-                   value="${esc(cond.functionCustom)}" autocomplete="off"
+                   value="${esc(c.functionCustom)}" autocomplete="off"
                    style="${isCustomFn ? '' : 'display:none'}">
           </div>
         </div>
@@ -514,18 +627,18 @@ const PolicyCreator = (() => {
           <div class="creator-condition-group-label">${esc(I18n.t('creator.condition.arg1'))}</div>
           <div class="creator-condition-row">
             <label class="creator-label creator-condition-label">${esc(I18n.t('creator.condition.arg1.cat'))}</label>
-            <select class="creator-select" data-cond-field="arg1Cat" ${sa}>${catOpts}</select>
+            <select class="creator-select" data-cond-field="arg1Cat" data-cond-item-idx="${ci}" ${sa}>${catOpts}</select>
           </div>
           <div class="creator-condition-row">
             <label class="creator-label creator-condition-label">${esc(I18n.t('creator.condition.arg1.attrId'))}</label>
             <input class="creator-input" type="text"
-                   data-cond-field="arg1AttrId" ${sa}
+                   data-cond-field="arg1AttrId" data-cond-item-idx="${ci}" ${sa}
                    placeholder="${esc(I18n.t('creator.condition.arg1.attrId.ph'))}"
-                   value="${esc(cond.arg1AttrId)}" autocomplete="off">
+                   value="${esc(c.arg1AttrId)}" autocomplete="off">
           </div>
           <div class="creator-condition-row">
             <label class="creator-label creator-condition-label">${esc(I18n.t('creator.condition.arg1.dt'))}</label>
-            <select class="creator-select" data-cond-field="arg1DataType" ${sa}>${dt1Opts}</select>
+            <select class="creator-select" data-cond-field="arg1DataType" data-cond-item-idx="${ci}" ${sa}>${dt1Opts}</select>
           </div>
         </div>
         <div class="creator-condition-group">
@@ -533,15 +646,58 @@ const PolicyCreator = (() => {
           <div class="creator-condition-row">
             <label class="creator-label creator-condition-label">${esc(I18n.t('creator.condition.arg2'))}</label>
             <input class="creator-input" type="text"
-                   data-cond-field="arg2Value" ${sa}
+                   data-cond-field="arg2Value" data-cond-item-idx="${ci}" ${sa}
                    placeholder="${esc(I18n.t('creator.condition.arg2.val.ph'))}"
-                   value="${esc(cond.arg2Value)}" autocomplete="off">
+                   value="${esc(c.arg2Value)}" autocomplete="off">
           </div>
           <div class="creator-condition-row">
             <label class="creator-label creator-condition-label">${esc(I18n.t('creator.condition.arg2.dt'))}</label>
-            <select class="creator-select" data-cond-field="arg2DataType" ${sa}>${dt2Opts}</select>
+            <select class="creator-select" data-cond-field="arg2DataType" data-cond-item-idx="${ci}" ${sa}>${dt2Opts}</select>
           </div>
         </div>
+      </div>
+    </div>${connector}`;
+  }
+
+  function _conditionSectionHtml(rule, scope, ruleIdx, psPolicyIdx) {
+    const piAttr = psPolicyIdx !== undefined ? ` data-cond-ps-policy-idx="${psPolicyIdx}"` : '';
+    const riAttr = ruleIdx !== undefined ? ` data-cond-rule-idx="${ruleIdx}"` : '';
+    const sa     = `data-cond-scope="${scope}"${riAttr}${piAttr}`;
+    const conditions  = rule.conditions || [];
+    const conditionOp = rule.conditionOp || 'AND';
+
+    if (conditions.length === 0) {
+      return `<div class="creator-condition-section">
+        <button class="creator-add-condition-btn" data-action="add-condition" ${sa}>
+          ${esc(I18n.t('creator.condition.add'))}
+        </button>
+      </div>`;
+    }
+
+    const opToggle = conditions.length >= 2
+      ? `<div class="creator-cond-op-wrap">
+          <span class="creator-cond-op-label">${esc(I18n.t('creator.target.op.label'))}</span>
+          <button class="creator-cond-op-btn${conditionOp === 'AND' ? ' active' : ''}"
+                  data-action="set-condition-op" data-cond-op="AND" ${sa}>${esc(I18n.t('creator.target.op.and'))}</button>
+          <button class="creator-cond-op-btn${conditionOp === 'OR' ? ' active' : ''}"
+                  data-action="set-condition-op" data-cond-op="OR" ${sa}>${esc(I18n.t('creator.target.op.or'))}</button>
+        </div>`
+      : '';
+
+    const itemsHtml = conditions.map((c, ci) =>
+      _conditionItemHtml(c, ci, conditionOp, conditions.length, sa)
+    ).join('');
+
+    return `<div class="creator-condition-section creator-condition-active">
+      <div class="creator-condition-hdr">
+        <span class="creator-condition-title">&#x1F9EE; ${esc(I18n.t('creator.condition.title'))}</span>
+        ${opToggle}
+        <button class="creator-add-condition-item-btn" data-action="add-condition" ${sa}>
+          + ${esc(I18n.t('creator.condition.item.add'))}
+        </button>
+      </div>
+      <div class="creator-condition-items">
+        ${itemsHtml}
       </div>
     </div>`;
   }
@@ -852,28 +1008,98 @@ const PolicyCreator = (() => {
     const catOpts = ['subject', 'resource', 'action'].map(c =>
       `<option value="${c}"${m.cat === c ? ' selected' : ''}>${esc(I18n.t(`creator.target.${c}`))}</option>`
     ).join('');
-    const knownOpts  = ATTR_ID_OPTIONS[m.cat] || ATTR_ID_OPTIONS.subject;
-    const isCustom   = !knownOpts.find(o => o.value === m.attributeId);
-    const attrOpts   = knownOpts.map(o =>
-      `<option value="${esc(o.value)}"${!isCustom && m.attributeId === o.value ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
-    ).join('') + `<option value="__custom__"${isCustom ? ' selected' : ''}>${esc(I18n.t('creator.target.attrId.custom'))}</option>`;
-    return `<div class="creator-target-row" data-match-idx="${mi}">
+    const knownOpts = ATTR_ID_OPTIONS[m.cat] || ATTR_ID_OPTIONS.subject;
+    const isCustomAttr = !knownOpts.find(o => o.value === m.attributeId);
+    const attrOpts = knownOpts.map(o =>
+      `<option value="${esc(o.value)}"${!isCustomAttr && m.attributeId === o.value ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
+    ).join('') + `<option value="__custom__"${isCustomAttr ? ' selected' : ''}>${esc(I18n.t('creator.target.attrId.custom'))}</option>`;
+
+    // Advanced: MatchId
+    const isCustomMatchId = m.matchId && !MATCH_ID_OPTIONS.find(o => o.value === m.matchId);
+    const matchIdOpts =
+      `<option value=""${!m.matchId ? ' selected' : ''}>${esc(I18n.t('creator.target.matchId.default'))}</option>` +
+      MATCH_ID_OPTIONS.map(o =>
+        `<option value="${esc(o.value)}"${!isCustomMatchId && m.matchId === o.value ? ' selected' : ''}>${esc(o.label)}</option>`
+      ).join('') +
+      `<option value="__custom__"${isCustomMatchId ? ' selected' : ''}>${esc(I18n.t('creator.target.attrId.custom'))}</option>`;
+
+    // Advanced: DataType
+    const isCustomDataType = m.dataType && !MATCH_DATATYPE_OPTIONS.find(o => o.value === m.dataType);
+    const dataTypeOpts =
+      `<option value=""${!m.dataType ? ' selected' : ''}>${esc(I18n.t('creator.target.dataType.default'))}</option>` +
+      MATCH_DATATYPE_OPTIONS.map(o =>
+        `<option value="${esc(o.value)}"${!isCustomDataType && m.dataType === o.value ? ' selected' : ''}>${esc(o.label)}</option>`
+      ).join('') +
+      `<option value="__custom__"${isCustomDataType ? ' selected' : ''}>${esc(I18n.t('creator.target.attrId.custom'))}</option>`;
+
+    // Value area depends on valueType
+    const vt = m.valueType || 'simple';
+    let valueAreaHtml;
+    if (vt === 'cv') {
+      valueAreaHtml =
+        `<div class="creator-target-cv-fields">` +
+        `<input class="creator-input" type="text" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="cvCode"` +
+        ` placeholder="${esc(I18n.t('creator.target.cv.code.ph'))}" value="${esc(m.cvCode || '')}" autocomplete="off">` +
+        `<input class="creator-input" type="text" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="cvCodeSystem"` +
+        ` placeholder="${esc(I18n.t('creator.target.cv.sys.ph'))}" value="${esc(m.cvCodeSystem || '')}" autocomplete="off">` +
+        `</div>`;
+    } else if (vt === 'ii') {
+      valueAreaHtml =
+        `<input class="creator-input" type="text" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="iiRoot"` +
+        ` placeholder="${esc(I18n.t('creator.target.ii.root.ph'))}" value="${esc(m.iiRoot || '')}" autocomplete="off">`;
+    } else {
+      valueAreaHtml =
+        `<input class="creator-input" type="text" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="value"` +
+        ` placeholder="${esc(I18n.t(`creator.target.value.ph.${m.cat}`))}" value="${esc(m.value)}" autocomplete="off">`;
+    }
+
+    const hasAdv = !!(m.matchId || m.dataType || (m.valueType && m.valueType !== 'simple'));
+
+    return `<div class="creator-target-match-wrap">
+      <div class="creator-target-row" data-match-idx="${mi}">
         <select class="creator-select creator-cat-select" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="cat">${catOpts}</select>
         <div class="creator-attrId-wrap">
           <select class="creator-select creator-attrId-select" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="attributeId">${attrOpts}</select>
           <input class="creator-input creator-attrId-custom" type="text" ${sa}
                  data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="attributeId-custom"
                  placeholder="${esc(I18n.t('creator.target.attrId.custom.ph'))}"
-                 value="${esc(isCustom ? m.attributeId : '')}" autocomplete="off"
-                 style="${isCustom ? '' : 'display:none'}">
+                 value="${esc(isCustomAttr ? m.attributeId : '')}" autocomplete="off"
+                 style="${isCustomAttr ? '' : 'display:none'}">
         </div>
-        <input class="creator-input" type="text" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="value"
-               placeholder="${esc(I18n.t(`creator.target.value.ph.${m.cat}`))}"
-               value="${esc(m.value)}" autocomplete="off">
-        <button class="creator-match-del-btn" data-action="del-match" ${sa} data-group-idx="${gi}" data-match-idx="${mi}"
-                title="${esc(I18n.t('creator.target.match.del.title'))}"
-                aria-label="${esc(I18n.t('creator.target.match.del.aria'))}">&#x2715;</button>
-      </div>`;
+        ${valueAreaHtml}
+        <div class="creator-match-actions">
+          <button class="creator-match-adv-btn${hasAdv ? ' active' : ''}" data-action="toggle-match-adv"
+                  title="${esc(I18n.t('creator.target.adv.title'))}" aria-expanded="${hasAdv}">&#x2699;&#xFE0F;</button>
+          <button class="creator-match-del-btn" data-action="del-match" ${sa} data-group-idx="${gi}" data-match-idx="${mi}"
+                  title="${esc(I18n.t('creator.target.match.del.title'))}"
+                  aria-label="${esc(I18n.t('creator.target.match.del.aria'))}">&#x2715;</button>
+        </div>
+      </div>
+      <div class="creator-target-adv" style="${hasAdv ? '' : 'display:none'}">
+        <div class="creator-target-adv-row">
+          <label class="creator-label creator-condition-label">${esc(I18n.t('creator.target.matchId.label'))}</label>
+          <div class="creator-attrId-wrap">
+            <select class="creator-select" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="matchId">${matchIdOpts}</select>
+            <input class="creator-input creator-attrId-custom" type="text" ${sa}
+                   data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="matchId-custom"
+                   placeholder="${esc(I18n.t('creator.target.matchId.custom.ph'))}"
+                   value="${esc(isCustomMatchId ? m.matchId : '')}" autocomplete="off"
+                   style="${isCustomMatchId ? '' : 'display:none'}">
+          </div>
+        </div>
+        <div class="creator-target-adv-row">
+          <label class="creator-label creator-condition-label">${esc(I18n.t('creator.target.dataType.label'))}</label>
+          <div class="creator-attrId-wrap">
+            <select class="creator-select" ${sa} data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="dataType">${dataTypeOpts}</select>
+            <input class="creator-input creator-attrId-custom" type="text" ${sa}
+                   data-group-idx="${gi}" data-match-idx="${mi}" data-match-prop="dataType-custom"
+                   placeholder="${esc(I18n.t('creator.target.dataType.custom.ph'))}"
+                   value="${esc(isCustomDataType ? m.dataType : '')}" autocomplete="off"
+                   style="${isCustomDataType ? '' : 'display:none'}">
+          </div>
+        </div>
+      </div>
+    </div>`;
   }
 
   function _targetSectionHtml(target, scope, ruleIdx, psPolicyIdx) {
@@ -1426,9 +1652,25 @@ const PolicyCreator = (() => {
       _addCondition(addCondBtn.dataset.condScope, _condIdxFrom(addCondBtn, 'condRuleIdx'), _condIdxFrom(addCondBtn, 'condPsPolicyIdx'));
       return;
     }
-    const removeCondBtn = t.closest('[data-action="remove-condition"]');
-    if (removeCondBtn) {
-      _removeCondition(removeCondBtn.dataset.condScope, _condIdxFrom(removeCondBtn, 'condRuleIdx'), _condIdxFrom(removeCondBtn, 'condPsPolicyIdx'));
+    const removeCondItemBtn = t.closest('[data-action="remove-condition-item"]');
+    if (removeCondItemBtn) {
+      _removeConditionItem(
+        removeCondItemBtn.dataset.condScope,
+        _condIdxFrom(removeCondItemBtn, 'condRuleIdx'),
+        parseInt(removeCondItemBtn.dataset.condItemIdx, 10),
+        _condIdxFrom(removeCondItemBtn, 'condPsPolicyIdx')
+      );
+      return;
+    }
+    const setCondOpBtn = t.closest('[data-action="set-condition-op"]');
+    if (setCondOpBtn) {
+      _setConditionOp(setCondOpBtn.dataset.condScope, _condIdxFrom(setCondOpBtn, 'condRuleIdx'), setCondOpBtn.dataset.condOp, _condIdxFrom(setCondOpBtn, 'condPsPolicyIdx'));
+      return;
+    }
+    const toggleMatchAdvBtn = t.closest('[data-action="toggle-match-adv"]');
+    if (toggleMatchAdvBtn) {
+      const adv = toggleMatchAdvBtn.closest('.creator-target-match-wrap')?.querySelector('.creator-target-adv');
+      if (adv) adv.style.display = adv.style.display === 'none' ? '' : 'none';
       return;
     }
   }
@@ -1558,32 +1800,30 @@ const PolicyCreator = (() => {
       }
       return;
     }
-    // Target match value (works for all scopes via _targetFromEl)
-    if (t.dataset.matchProp === 'value') {
+    // Target match text inputs (value, attributeId-custom, matchId-custom, dataType-custom, cvCode, cvCodeSystem, iiRoot)
+    const matchPropInp = t.dataset.matchProp;
+    if (matchPropInp !== undefined && t.tagName === 'INPUT') {
       const target = _targetFromEl(t);
       const gi = parseInt(t.dataset.groupIdx, 10);
       const mi = parseInt(t.dataset.matchIdx, 10);
       if (target && target.groups[gi] && target.groups[gi].matches[mi]) {
-        target.groups[gi].matches[mi].value = t.value;
-        _saveState(); _schedulePreview();
-      }
-      return;
-    }
-    // Target attributeId custom free-text input
-    if (t.dataset.matchProp === 'attributeId-custom') {
-      const target = _targetFromEl(t);
-      const gi = parseInt(t.dataset.groupIdx, 10);
-      const mi = parseInt(t.dataset.matchIdx, 10);
-      if (target && target.groups[gi] && target.groups[gi].matches[mi]) {
-        target.groups[gi].matches[mi].attributeId = t.value;
+        const m = target.groups[gi].matches[mi];
+        if (matchPropInp === 'attributeId-custom') m.attributeId = t.value;
+        else if (matchPropInp === 'matchId-custom') m.matchId = t.value;
+        else if (matchPropInp === 'dataType-custom') m.dataType = t.value;
+        else m[matchPropInp] = t.value;
         _saveState(); _schedulePreview();
       }
       return;
     }
     // Condition field inputs
-    if (t.dataset.condField !== undefined) {
+    if (t.dataset.condField !== undefined && t.dataset.condItemIdx !== undefined) {
       const rule = _getRule(t.dataset.condScope, _condIdxFrom(t, 'condRuleIdx'), _condIdxFrom(t, 'condPsPolicyIdx'));
-      if (rule && rule.condition) { rule.condition[t.dataset.condField] = t.value; _saveState(); _schedulePreview(); }
+      const ci = parseInt(t.dataset.condItemIdx, 10);
+      if (rule && rule.conditions && rule.conditions[ci]) {
+        rule.conditions[ci][t.dataset.condField] = t.value;
+        _saveState(); _schedulePreview();
+      }
     }
   }
 
@@ -1639,11 +1879,12 @@ const PolicyCreator = (() => {
       }
       return;
     }
-    // Condition field selects
-    if (t.dataset.condField !== undefined) {
+    // Condition field selects (now array-based, needs data-cond-item-idx)
+    if (t.dataset.condField !== undefined && t.dataset.condItemIdx !== undefined) {
       const rule = _getRule(t.dataset.condScope, _condIdxFrom(t, 'condRuleIdx'), _condIdxFrom(t, 'condPsPolicyIdx'));
-      if (rule && rule.condition) {
-        rule.condition[t.dataset.condField] = t.value;
+      const ci = parseInt(t.dataset.condItemIdx, 10);
+      if (rule && rule.conditions && rule.conditions[ci]) {
+        rule.conditions[ci][t.dataset.condField] = t.value;
         if (t.dataset.condField === 'functionId') {
           const customInput = t.closest('.creator-condition-row')?.querySelector('input[data-cond-field="functionCustom"]');
           if (customInput) customInput.style.display = t.value === '__custom__' ? '' : 'none';
@@ -1652,41 +1893,78 @@ const PolicyCreator = (() => {
       }
       return;
     }
-    // Target match properties (cat, attributeId — works for all scopes via _targetFromEl)
+    // Target match properties (cat, attributeId, matchId, dataType — works for all scopes via _targetFromEl)
     const matchProp = t.dataset.matchProp;
     if (matchProp !== undefined) {
       const target = _targetFromEl(t);
       const gi = parseInt(t.dataset.groupIdx, 10);
       const mi = parseInt(t.dataset.matchIdx, 10);
       if (target && target.groups[gi] && target.groups[gi].matches[mi]) {
+        const m = target.groups[gi].matches[mi];
+        const scope = t.dataset.targetScope;
+        const rIdx  = t.dataset.targetRuleIdx !== undefined ? parseInt(t.dataset.targetRuleIdx, 10) : undefined;
+        const piIdx = t.dataset.psPolicyIdx !== undefined ? parseInt(t.dataset.psPolicyIdx, 10) : undefined;
+
         if (matchProp === 'attributeId' && t.value === '__custom__') {
-          // Switch to free-text: clear state, reveal custom input
-          target.groups[gi].matches[mi].attributeId = '';
+          m.attributeId = '';
           const row = t.closest('.creator-target-row');
           const customInput = row?.querySelector('.creator-attrId-custom');
           if (customInput) { customInput.style.display = ''; customInput.value = ''; customInput.focus(); }
         } else if (matchProp === 'attributeId') {
-          target.groups[gi].matches[mi].attributeId = t.value;
+          m.attributeId = t.value;
           const row = t.closest('.creator-target-row');
-          row?.querySelector('.creator-attrId-custom')?.style && (row.querySelector('.creator-attrId-custom').style.display = 'none');
-        } else {
-          target.groups[gi].matches[mi][matchProp] = t.value;
-          if (matchProp === 'cat') {
-            target.groups[gi].matches[mi].attributeId = ATTR_ID_OPTIONS[t.value][0].value;
-            const row = t.closest('.creator-target-row');
-            if (row) {
-              const attrSel = row.querySelector('.creator-attrId-select');
-              if (attrSel) {
-                attrSel.innerHTML = ATTR_ID_OPTIONS[t.value].map((o, oi) =>
-                  `<option value="${esc(o.value)}"${oi === 0 ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
-                ).join('') + `<option value="__custom__">${esc(I18n.t('creator.target.attrId.custom'))}</option>`;
-              }
-              const customInput = row.querySelector('.creator-attrId-custom');
-              if (customInput) { customInput.style.display = 'none'; customInput.value = ''; }
-              const valInput = row.querySelector('input[data-match-prop="value"]');
-              if (valInput) valInput.placeholder = I18n.t(`creator.target.value.ph.${t.value}`);
+          row?.querySelector('.creator-attrId-custom') && (row.querySelector('.creator-attrId-custom').style.display = 'none');
+        } else if (matchProp === 'matchId') {
+          if (t.value === '__custom__') {
+            m.matchId = '';
+            const adv = t.closest('.creator-target-adv');
+            const ci2 = adv?.querySelector('input[data-match-prop="matchId-custom"]');
+            if (ci2) { ci2.style.display = ''; ci2.value = ''; ci2.focus(); }
+          } else {
+            m.matchId = t.value;
+            const adv = t.closest('.creator-target-adv');
+            const ci2 = adv?.querySelector('input[data-match-prop="matchId-custom"]');
+            if (ci2) ci2.style.display = 'none';
+          }
+        } else if (matchProp === 'dataType') {
+          const prevVT = m.valueType || 'simple';
+          if (t.value === '__custom__') {
+            m.dataType = '';
+            const adv = t.closest('.creator-target-adv');
+            const ci2 = adv?.querySelector('input[data-match-prop="dataType-custom"]');
+            if (ci2) { ci2.style.display = ''; ci2.value = ''; ci2.focus(); }
+          } else {
+            m.dataType = t.value;
+            if (t.value === 'urn:hl7-org:v3#CV')      m.valueType = 'cv';
+            else if (t.value === 'urn:hl7-org:v3#II')  m.valueType = 'ii';
+            else if (t.value !== '')                    m.valueType = 'simple';
+            const adv = t.closest('.creator-target-adv');
+            const ci2 = adv?.querySelector('input[data-match-prop="dataType-custom"]');
+            if (ci2) ci2.style.display = 'none';
+            if (m.valueType !== prevVT) {
+              _saveState(); _schedulePreview();
+              _reRenderTargetSection(scope, rIdx, piIdx);
+              return;
             }
           }
+        } else if (matchProp === 'cat') {
+          m.cat = t.value;
+          m.attributeId = ATTR_ID_OPTIONS[t.value][0].value;
+          const row = t.closest('.creator-target-row');
+          if (row) {
+            const attrSel = row.querySelector('.creator-attrId-select');
+            if (attrSel) {
+              attrSel.innerHTML = ATTR_ID_OPTIONS[t.value].map((o, oi) =>
+                `<option value="${esc(o.value)}"${oi === 0 ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
+              ).join('') + `<option value="__custom__">${esc(I18n.t('creator.target.attrId.custom'))}</option>`;
+            }
+            const customInput = row.querySelector('.creator-attrId-custom');
+            if (customInput) { customInput.style.display = 'none'; customInput.value = ''; }
+            const valInput = row.querySelector('input[data-match-prop="value"]');
+            if (valInput) valInput.placeholder = I18n.t(`creator.target.value.ph.${t.value}`);
+          }
+        } else {
+          m[matchProp] = t.value;
         }
         _saveState(); _schedulePreview();
       }
@@ -1697,7 +1975,7 @@ const PolicyCreator = (() => {
 
   function _addRule() {
     const n = _state.policy.rules.length + 1;
-    _state.policy.rules.push({ id: `rule-${n}`, effect: 'Permit', description: '', target: _defaultTarget(), condition: null });
+    _state.policy.rules.push({ id: `rule-${n}`, effect: 'Permit', description: '', target: _defaultTarget(), conditions: [], conditionOp: 'AND' });
     _saveState();
     _reRenderRules();
     _schedulePreview();
@@ -1976,7 +2254,7 @@ const PolicyCreator = (() => {
     const policy = _state.policySet.policies[pi];
     if (!policy) return;
     const n = policy.rules.length + 1;
-    policy.rules.push({ id: `rule-${n}`, effect: 'Permit', description: '', target: _defaultTarget(), condition: null });
+    policy.rules.push({ id: `rule-${n}`, effect: 'Permit', description: '', target: _defaultTarget(), conditions: [], conditionOp: 'AND' });
     _saveState();
     _psReRenderRules(pi);
     _schedulePreview();
