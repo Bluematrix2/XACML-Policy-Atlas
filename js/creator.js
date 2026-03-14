@@ -49,12 +49,12 @@ const CONDITION_DATA_TYPES = [
   { label: 'anyURI',   value: 'http://www.w3.org/2001/XMLSchema#anyURI' },
   { label: 'date',     value: 'http://www.w3.org/2001/XMLSchema#date' },
   { label: 'dateTime', value: 'http://www.w3.org/2001/XMLSchema#dateTime' },
-  { label: 'ST (HL7)',  value: 'urn:hl7-org:v3#ST' },
-  { label: 'BL (HL7)',  value: 'urn:hl7-org:v3#BL' },
-  { label: 'INT (HL7)', value: 'urn:hl7-org:v3#INT' },
-  { label: 'TS (HL7)',  value: 'urn:hl7-org:v3#TS' },
-  { label: 'CE (HL7)',  value: 'urn:hl7-org:v3#CE' },
-  { label: 'CS (HL7)',  value: 'urn:hl7-org:v3#CS' },
+  { label: 'ST (HL7) – Simple Text',              value: 'urn:hl7-org:v3#ST' },
+  { label: 'BL (HL7) – Boolean',                  value: 'urn:hl7-org:v3#BL' },
+  { label: 'INT (HL7) – Integer',                 value: 'urn:hl7-org:v3#INT' },
+  { label: 'TS (HL7) – Timestamp',                value: 'urn:hl7-org:v3#TS' },
+  { label: 'CE (HL7) – Coded with Equivalents',   value: 'urn:hl7-org:v3#CE' },
+  { label: 'CS (HL7) – Coded Simple Value',       value: 'urn:hl7-org:v3#CS' },
 ];
 
 // Maps dataType → matching "one-and-only" bag function (for Condition Arg1 wrapper Apply)
@@ -85,8 +85,8 @@ const MATCH_ID_OPTIONS = [
   { label: 'anyURI-equal',    value: 'urn:oasis:names:tc:xacml:1.0:function:anyURI-equal' },
   { label: 'integer-equal',   value: 'urn:oasis:names:tc:xacml:1.0:function:integer-equal' },
   { label: 'date-equal',      value: 'urn:oasis:names:tc:xacml:1.0:function:date-equal' },
-  { label: 'CV-equal (HL7)',  value: 'urn:hl7-org:v3:function:CV-equal' },
-  { label: 'II-equal (HL7)',  value: 'urn:hl7-org:v3:function:II-equal' },
+  { label: 'CV-equal (HL7) – Coded Value',         value: 'urn:hl7-org:v3:function:CV-equal' },
+  { label: 'II-equal (HL7) – Instance Identifier', value: 'urn:hl7-org:v3:function:II-equal' },
 ];
 
 const MATCH_DATATYPE_OPTIONS = [
@@ -94,14 +94,14 @@ const MATCH_DATATYPE_OPTIONS = [
   { label: 'anyURI',    value: 'http://www.w3.org/2001/XMLSchema#anyURI' },
   { label: 'integer',   value: 'http://www.w3.org/2001/XMLSchema#integer' },
   { label: 'date',      value: 'http://www.w3.org/2001/XMLSchema#date' },
-  { label: 'CV (HL7)',  value: 'urn:hl7-org:v3#CV' },
-  { label: 'II (HL7)',  value: 'urn:hl7-org:v3#II' },
-  { label: 'ST (HL7)',  value: 'urn:hl7-org:v3#ST' },
-  { label: 'BL (HL7)',  value: 'urn:hl7-org:v3#BL' },
-  { label: 'INT (HL7)', value: 'urn:hl7-org:v3#INT' },
-  { label: 'TS (HL7)',  value: 'urn:hl7-org:v3#TS' },
-  { label: 'CE (HL7)',  value: 'urn:hl7-org:v3#CE' },
-  { label: 'CS (HL7)',  value: 'urn:hl7-org:v3#CS' },
+  { label: 'CV (HL7) – Coded Value',               value: 'urn:hl7-org:v3#CV' },
+  { label: 'II (HL7) – Instance Identifier',       value: 'urn:hl7-org:v3#II' },
+  { label: 'ST (HL7) – Simple Text',               value: 'urn:hl7-org:v3#ST' },
+  { label: 'BL (HL7) – Boolean',                   value: 'urn:hl7-org:v3#BL' },
+  { label: 'INT (HL7) – Integer',                  value: 'urn:hl7-org:v3#INT' },
+  { label: 'TS (HL7) – Timestamp',                 value: 'urn:hl7-org:v3#TS' },
+  { label: 'CE (HL7) – Coded with Equivalents',    value: 'urn:hl7-org:v3#CE' },
+  { label: 'CS (HL7) – Coded Simple Value',        value: 'urn:hl7-org:v3#CS' },
 ];
 
 const SESSION_KEY = 'xacml-creator-state';
