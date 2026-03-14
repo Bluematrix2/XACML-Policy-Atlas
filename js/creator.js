@@ -48,6 +48,8 @@ const PolicyCreator = (() => {
     closedPolicies: new Set(), // policy-panel indices that are closed
     openRules:      new Map(), // policyIdx → Set<ruleIdx> of opened rule bodies
   };
+  // Track which PS policy cards are collapsed (by index)
+  const _psPolicyCollapsed = new Set();
 
   // ── Attribute ID options per target category (Standard mode) ──────────
   const ATTR_ID_OPTIONS = {
@@ -1663,6 +1665,11 @@ const PolicyCreator = (() => {
 
   function _psDeletePolicy(pi) {
     _state.policySet.policies.splice(pi, 1);
+    // Shift collapsed indices: remove deleted, decrement those above it
+    _psPolicyCollapsed.delete(pi);
+    for (const idx of [..._psPolicyCollapsed]) {
+      if (idx > pi) { _psPolicyCollapsed.delete(idx); _psPolicyCollapsed.add(idx - 1); }
+    }
     _saveState();
     _psReRenderPolicies();
     _schedulePreview();
@@ -1676,6 +1683,7 @@ const PolicyCreator = (() => {
     const btn  = card.querySelector('[data-action="ps-toggle-policy"]');
     const isOpen = !body?.classList.contains('closed');
     body?.classList.toggle('closed', isOpen);
+    if (isOpen) _psPolicyCollapsed.add(pi); else _psPolicyCollapsed.delete(pi);
     if (btn) {
       btn.innerHTML = isOpen ? '&#x25B6;' : '&#x25BC;';
       btn.setAttribute('aria-expanded', String(!isOpen));
@@ -1720,6 +1728,14 @@ const PolicyCreator = (() => {
     list.innerHTML = policies.length === 0
       ? `<div class="creator-empty-rules">${esc(I18n.t('creator.ps.policy.empty'))}</div>`
       : policies.map((p, pi) => _psPolicyCardHtml(p, pi)).join('');
+    // Restore collapsed state
+    _psPolicyCollapsed.forEach(pi => {
+      const card = list.querySelector(`.creator-ps-policy-card[data-ps-policy-idx="${pi}"]`);
+      if (!card) return;
+      card.querySelector('.creator-ps-policy-body')?.classList.add('closed');
+      const btn = card.querySelector('[data-action="ps-toggle-policy"]');
+      if (btn) { btn.innerHTML = '&#x25B6;'; btn.setAttribute('aria-expanded', 'false'); }
+    });
   }
 
   function _psGenerateUuid() {
