@@ -690,7 +690,7 @@ const PolicyCreator = (() => {
 
     return `<div class="creator-condition-section creator-condition-active">
       <div class="creator-condition-hdr">
-        <span class="creator-condition-title">&#x1F9EE; ${esc(I18n.t('creator.condition.title'))}</span>
+        <span class="creator-condition-title">${esc(I18n.t('creator.condition.title'))}</span>
         ${opToggle}
         <button class="creator-add-condition-item-btn" data-action="add-condition" ${sa}>
           + ${esc(I18n.t('creator.condition.item.add'))}
@@ -762,7 +762,7 @@ const PolicyCreator = (() => {
             <div class="creator-preview" id="creator-preview">
               <div class="creator-preview-header">
                 <div class="creator-preview-tabs">
-                  <button class="creator-preview-tab${_previewMode === 'visual' ? ' active' : ''}" data-action="preview-mode" data-mode="visual">&#x1F333; ${esc(I18n.t('creator.preview.mode.visual'))}</button>
+                  <button class="creator-preview-tab${_previewMode === 'visual' ? ' active' : ''}" data-action="preview-mode" data-mode="visual">${esc(I18n.t('creator.preview.mode.visual'))}</button>
                   <button class="creator-preview-tab${_previewMode === 'xml'    ? ' active' : ''}" data-action="preview-mode" data-mode="xml">&lt;/&gt; XML</button>
                 </div>
                 <button class="creator-copy-btn" id="creator-copy-btn"
