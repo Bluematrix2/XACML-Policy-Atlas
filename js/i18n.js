@@ -427,6 +427,27 @@ const TRANSLATIONS = {
     'creator.ps.rules.title':        'Regeln dieser Policy',
     'creator.ps.summary.id':         'PolicySet-ID',
     'creator.ps.summary.policies':   'Eingebettete Policies',
+
+    // ── Creator — Phase 4: Freitext-AttributeId ──
+    'creator.target.attrId.custom':    'Freitext...',
+    'creator.target.attrId.custom.ph': 'z.B. urn:custom:attribute-id',
+
+    // ── Creator — Phase 4: Conditions ──
+    'creator.condition.add':           '+ Bedingung hinzufügen (optional)',
+    'creator.condition.title':         'Bedingung (Apply)',
+    'creator.condition.fn':            'Funktion',
+    'creator.condition.fn.ph':         'urn:oasis:names:tc:xacml:1.0:function:...',
+    'creator.condition.fn.custom':     '✏️ Freitext...',
+    'creator.condition.arg1':          'Arg 1 — AttributeDesignator',
+    'creator.condition.arg1.cat':      'Kategorie',
+    'creator.condition.arg1.attrId':   'AttributeId',
+    'creator.condition.arg1.attrId.ph':'AttributeId URN',
+    'creator.condition.arg1.dt':       'Datentyp',
+    'creator.condition.arg2':          'Arg 2 — Wert (Literal)',
+    'creator.condition.arg2.val.ph':   'z.B. Physician',
+    'creator.condition.arg2.dt':       'Datentyp',
+    'creator.condition.remove.title':  'Bedingung entfernen',
+    'creator.condition.remove.aria':   'Bedingung entfernen',
   },
 
   en: {
@@ -844,6 +865,27 @@ const TRANSLATIONS = {
     'creator.ps.rules.title':        'Rules of this Policy',
     'creator.ps.summary.id':         'PolicySet ID',
     'creator.ps.summary.policies':   'Embedded Policies',
+
+    // ── Creator — Phase 4: Freitext-AttributeId ──
+    'creator.target.attrId.custom':    'Custom...',
+    'creator.target.attrId.custom.ph': 'e.g. urn:custom:attribute-id',
+
+    // ── Creator — Phase 4: Conditions ──
+    'creator.condition.add':           '+ Add Condition (optional)',
+    'creator.condition.title':         'Condition (Apply)',
+    'creator.condition.fn':            'Function',
+    'creator.condition.fn.ph':         'urn:oasis:names:tc:xacml:1.0:function:...',
+    'creator.condition.fn.custom':     '✏️ Custom...',
+    'creator.condition.arg1':          'Arg 1 — AttributeDesignator',
+    'creator.condition.arg1.cat':      'Category',
+    'creator.condition.arg1.attrId':   'AttributeId',
+    'creator.condition.arg1.attrId.ph':'AttributeId URN',
+    'creator.condition.arg1.dt':       'Data Type',
+    'creator.condition.arg2':          'Arg 2 — Value (Literal)',
+    'creator.condition.arg2.val.ph':   'e.g. Physician',
+    'creator.condition.arg2.dt':       'Data Type',
+    'creator.condition.remove.title':  'Remove condition',
+    'creator.condition.remove.aria':   'Remove condition',
   }
 };
 
