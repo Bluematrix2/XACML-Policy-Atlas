@@ -2210,7 +2210,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
 /* ── Two-column layout: 40 % form / 60 % preview ── */
 .creator-main {
   display: grid;
-  grid-template-columns: 2fr 3fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   gap: var(--sp-6);
   align-items: start;
 }
@@ -2787,6 +2787,7 @@ footer a:hover { opacity: 1; text-decoration: none; }
 .creator-right {
   position: sticky;
   top: calc(52px + 46px + var(--sp-6));
+  min-width: 0; /* prevent fr-column from expanding due to content */
 }
 .creator-preview {
   border: 1px solid var(--border);
@@ -2846,13 +2847,18 @@ footer a:hover { opacity: 1; text-decoration: none; }
 .creator-copy-btn:hover { background: var(--acc-hdr-hover); border-color: var(--accent); color: var(--accent); }
 .creator-visual-pre {
   padding: var(--sp-2) var(--sp-3);
+  overflow-x: auto;
   overflow-y: auto;
   max-height: calc(100vh - 200px);
   font-size: 0.875rem;
 }
+.creator-xml-pane {
+  overflow: hidden; /* CodeMirror manages its own internal scroll */
+}
 .creator-xml-pane .CodeMirror {
   font-size: 0.8125rem;
   font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  line-height: 1.6;
 }
 /* fallback for when CodeMirror is unavailable */
 .creator-xml-pre {

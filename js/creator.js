@@ -2062,12 +2062,14 @@ const PolicyCreator = (() => {
         _xmlCm = window.CodeMirror(xmlPre, {
           mode: 'xml', lineNumbers: true, readOnly: true,
           lineWrapping: false, theme: 'default', tabSize: 2,
+          extraKeys: {},
         });
-        _xmlCm.setSize(null, _cmHeight());
       }
       if (_xmlCm) {
         _xmlCm.setValue(xml);
-        _xmlCm.setSize(null, _cmHeight());
+        // Use container width explicitly so CodeMirror doesn't expand beyond its column
+        const w = xmlPre.parentElement?.clientWidth || '100%';
+        _xmlCm.setSize(w || '100%', _cmHeight());
         _xmlCm.refresh();
       } else {
         xmlPre.textContent = xml;
