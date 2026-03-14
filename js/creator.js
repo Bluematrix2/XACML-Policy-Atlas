@@ -1141,7 +1141,7 @@ const PolicyCreator = (() => {
     return `
         <div class="creator-target-section">
           <div class="creator-target-hdr">
-            <span class="creator-target-hdr-label">&#x1F3AF; ${esc(I18n.t(labelKey))}</span>
+            <span class="creator-target-hdr-label">${esc(I18n.t(labelKey))}</span>
             <span class="creator-hint">${esc(I18n.t(hintKey))}</span>
           </div>
           <div class="creator-target-groups">${groupsHtml}</div>
