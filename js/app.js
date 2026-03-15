@@ -1038,7 +1038,11 @@ const App = (() => {
     const result = validatePolicy(xmlString);
     if (!result.valid) {
       const e = result.errors[0];
-      return { success: false, error: I18n.t('editor.err.line', { line: e.line || '?' }) };
+      // XML parse errors have a line number; XACML semantic errors do not
+      const msg = e.line
+        ? I18n.t('editor.err.line', { line: e.line })
+        : e.message;
+      return { success: false, error: msg };
     }
     return { success: true, filename };
   }
