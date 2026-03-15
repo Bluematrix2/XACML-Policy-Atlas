@@ -104,7 +104,8 @@ const MATCH_DATATYPE_OPTIONS = [
   { label: 'CS (HL7) – Coded Simple Value',        value: 'urn:hl7-org:v3#CS' },
 ];
 
-const SESSION_KEY = 'xacml-creator-state';
+const SESSION_KEY       = 'xacml-creator-state';
+const SESSION_MAX_BYTES = 524288; // 512 KB
 
 const PolicyCreator = (() => {
   let _initialized  = false;
@@ -278,7 +279,11 @@ const PolicyCreator = (() => {
   }
 
   function _saveState() {
-    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(_state)); } catch { /* ignore */ }
+    try {
+      const json = JSON.stringify(_state);
+      if (json.length > SESSION_MAX_BYTES) return;
+      sessionStorage.setItem(SESSION_KEY, json);
+    } catch { /* ignore */ }
   }
 
   // ── XML Generation ─────────────────────────────────────────────────────
