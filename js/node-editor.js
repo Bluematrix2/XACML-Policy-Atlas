@@ -575,6 +575,33 @@ const NodeEditor = (() => {
     _emit();
   }
 
+  // ── Connection highlight helpers ───────────────────────────────────────
+
+  function _highlightConnectTargets(fromId) {
+    const fromNode = _nodes.find(n => n.id === fromId);
+    if (!fromNode) return;
+    const validTypes = ALLOWED_TARGETS[fromNode.type] || [];
+    _nodes.forEach(n => {
+      const el = document.getElementById(`ne-node-${n.id}`);
+      if (!el) return;
+      if (n.id === fromId) {
+        el.classList.add('ne-conn-source');
+      } else if (validTypes.includes(n.type)) {
+        el.classList.add('ne-conn-valid');
+      } else {
+        el.classList.add('ne-conn-invalid');
+      }
+    });
+  }
+
+  function _clearConnectHighlights() {
+    _wrap.querySelectorAll(
+      '.ne-conn-source,.ne-conn-valid,.ne-conn-invalid,.ne-conn-hover'
+    ).forEach(el => el.classList.remove(
+      'ne-conn-source','ne-conn-valid','ne-conn-invalid','ne-conn-hover'
+    ));
+  }
+
   // ── Event handlers ─────────────────────────────────────────────────────
 
   function _onMouseDown(e) {
@@ -586,6 +613,7 @@ const NodeEditor = (() => {
       const pos = _s2c(e.clientX, e.clientY);
       _dragConn = { fromId: pout.dataset.pout, curX: pos.x, curY: pos.y };
       if (_tempEdgePath) _tempEdgePath.style.display = '';
+      _highlightConnectTargets(_dragConn.fromId);
       return;
     }
 
@@ -652,6 +680,11 @@ const NodeEditor = (() => {
         const p1 = _portPos(fn, 'out');
         _tempEdgePath.setAttribute('d', _bezier(p1.x, p1.y, pos.x, pos.y));
       }
+
+      // Highlight the node currently hovered (if it's a valid target)
+      _wrap.querySelectorAll('.ne-conn-hover').forEach(el => el.classList.remove('ne-conn-hover'));
+      const hovEl = document.elementFromPoint(e.clientX, e.clientY)?.closest('.ne-conn-valid');
+      if (hovEl) hovEl.classList.add('ne-conn-hover');
     }
   }
 
@@ -673,9 +706,15 @@ const NodeEditor = (() => {
         _tempEdgePath.style.display = 'none';
         _tempEdgePath.setAttribute('d', '');
       }
-      const pin = e.target.closest('[data-pin]');
-      if (pin && pin.dataset.pin !== _dragConn.fromId) {
-        _addEdge(_dragConn.fromId, pin.dataset.pin);
+      _clearConnectHighlights();
+
+      // Accept drop on any part of a valid target node (not just the tiny port)
+      const targetEl = document.elementFromPoint(e.clientX, e.clientY)?.closest('.ne-node');
+      if (targetEl) {
+        const toId = targetEl.id.replace('ne-node-', '');
+        if (toId && toId !== _dragConn.fromId) {
+          _addEdge(_dragConn.fromId, toId);
+        }
       }
       _dragConn = null;
     }

@@ -164,7 +164,9 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   user-select: none;
-  transition: box-shadow 0.15s, border-color 0.15s;
+  transition: box-shadow 0.15s, border-color 0.15s, opacity 0.15s, transform 0.1s;
+  /* Allow ports to extend outside node bounds */
+  overflow: visible;
 }
 .ne-node.selected {
   border-color: var(--accent);
@@ -173,6 +175,39 @@
 .ne-node.connecting-target {
   border-color: #10B981;
   box-shadow: 0 0 0 2px rgba(16,185,129,0.25), var(--shadow-md);
+}
+
+/* ── Connection drag feedback ── */
+/* Source node (where drag started) */
+.ne-conn-source {
+  opacity: 0.6;
+}
+/* Valid drop targets — green glow + port pulse */
+.ne-conn-valid {
+  border-color: #10B981 !important;
+  box-shadow: 0 0 0 2px rgba(16,185,129,0.25), var(--shadow-sm) !important;
+}
+.ne-conn-valid .ne-port-in {
+  border-color: #10B981;
+  background: rgba(16,185,129,0.2);
+  transform: scale(1.6);
+  transition: transform 0.15s, background 0.15s;
+}
+/* Hover over a valid target — stronger green glow */
+.ne-conn-hover {
+  border-color: #10B981 !important;
+  box-shadow: 0 0 0 4px rgba(16,185,129,0.35), var(--shadow-md) !important;
+  transform: scale(1.01);
+}
+.ne-conn-hover .ne-port-in {
+  border-color: #10B981;
+  background: #10B981;
+  transform: scale(1.8);
+}
+/* Invalid drop targets — dimmed */
+.ne-conn-invalid {
+  opacity: 0.28;
+  filter: grayscale(0.4);
 }
 
 /* ── Node header ── */
