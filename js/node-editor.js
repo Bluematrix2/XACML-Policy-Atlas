@@ -22,22 +22,43 @@ const ALLOWED_TARGETS = {
   condition: [],
 };
 
-// ── XACML mappings ──────────────────────────────────────────────────────
+// ── XACML mappings — aligned with form editor ───────────────────────────
 const SUBJECT_ATTR_IDS = {
-  role:  'urn:oasis:names:tc:xacml:2.0:subject:role',
-  id:    'urn:oasis:names:tc:xacml:1.0:subject:subject-id',
-  group: 'urn:oasis:names:tc:xacml:1.0:subject:group',
-  email: 'urn:oasis:names:tc:xacml:1.0:subject:email',
+  role: 'urn:oasis:names:tc:xacml:2.0:subject:role',
+  id:   'urn:oasis:names:tc:xacml:1.0:subject:subject-id',
+  ip:   'urn:oasis:names:tc:xacml:1.0:subject:authn-locality:ip-address',
+  dns:  'urn:oasis:names:tc:xacml:1.0:subject:authn-locality:dns-name',
 };
 
-const OP_TO_COND_FN = {
-  eq:       'urn:oasis:names:tc:xacml:1.0:function:string-equal',
-  neq:      'urn:oasis:names:tc:xacml:1.0:function:string-equal',
-  lt:       'urn:oasis:names:tc:xacml:1.0:function:integer-less-than',
-  gt:       'urn:oasis:names:tc:xacml:1.0:function:integer-greater-than',
-  contains: 'urn:oasis:names:tc:xacml:1.0:function:string-equal',
-  inList:   'urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of',
-};
+const RESOURCE_ATTR_IDS = [
+  { key: 'resource-id', value: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',         labelKey: 'ne.resource.id' },
+  { key: 'fhir',        value: 'http://hl7.org/fhir/resource-types',                         labelKey: 'ne.resource.fhir' },
+  { key: 'namespace',   value: 'urn:oasis:names:tc:xacml:2.0:resource:target-namespace',     labelKey: 'ne.resource.ns' },
+];
+
+const ACTION_ATTR_IDS = [
+  { key: 'action-id',      value: 'urn:oasis:names:tc:xacml:1.0:action:action-id',      labelKey: 'ne.action.attrId.actionId' },
+  { key: 'implied-action', value: 'urn:oasis:names:tc:xacml:1.0:action:implied-action', labelKey: 'ne.action.attrId.impliedAction' },
+];
+
+const NE_COND_FUNCTIONS = [
+  { label: 'string-equal',                  value: 'urn:oasis:names:tc:xacml:1.0:function:string-equal' },
+  { label: 'string-equal-ignore-case',      value: 'urn:oasis:names:tc:xacml:1.0:function:string-equal-ignore-case' },
+  { label: 'integer-equal',                 value: 'urn:oasis:names:tc:xacml:1.0:function:integer-equal' },
+  { label: 'boolean-equal',                 value: 'urn:oasis:names:tc:xacml:1.0:function:boolean-equal' },
+  { label: 'anyURI-equal',                  value: 'urn:oasis:names:tc:xacml:1.0:function:anyURI-equal' },
+  { label: 'date-equal',                    value: 'urn:oasis:names:tc:xacml:1.0:function:date-equal' },
+  { label: 'dateTime-equal',                value: 'urn:oasis:names:tc:xacml:1.0:function:dateTime-equal' },
+  { label: 'string-at-least-one-member-of', value: 'urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of' },
+  { label: 'string-is-in',                  value: 'urn:oasis:names:tc:xacml:1.0:function:string-is-in' },
+];
+
+const NE_COND_CATEGORIES = [
+  { labelKey: 'ne.cond.cat.subject',     value: 'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject' },
+  { labelKey: 'ne.cond.cat.resource',    value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:resource' },
+  { labelKey: 'ne.cond.cat.action',      value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:action' },
+  { labelKey: 'ne.cond.cat.environment', value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:environment' },
+];
 
 const NodeEditor = (() => {
   // ── Module-level DOM refs ──
@@ -100,10 +121,16 @@ const NodeEditor = (() => {
         combiningAlg: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides',
       };
       case 'rule':      return { name: 'regel-1', effect: 'Permit' };
-      case 'subject':   return { attrType: 'role', operator: 'eq', value: '' };
-      case 'action':    return { action: 'read', customAction: '' };
-      case 'resource':  return { resourceType: 'document', identifier: '', wildcard: false };
-      case 'condition': return { attribute: '', operator: 'eq', value: '', logic: 'AND' };
+      case 'subject':   return { attrType: 'role', value: '' };
+      case 'action':    return { attributeId: 'urn:oasis:names:tc:xacml:1.0:action:action-id', action: 'read', customAction: '' };
+      case 'resource':  return { attributeId: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id', identifier: '', wildcard: false };
+      case 'condition': return {
+        category:   'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
+        attribute:  '',
+        functionId: 'urn:oasis:names:tc:xacml:1.0:function:string-equal',
+        value:      '',
+        logic:      'AND',
+      };
       default:          return {};
     }
   }
@@ -247,7 +274,7 @@ const NodeEditor = (() => {
         const val = a.data.action === 'custom' ? (a.data.customAction||'') : (a.data.action||'read');
         matches.push({
           cat: 'action',
-          attributeId: 'urn:oasis:names:tc:xacml:1.0:action:action-id',
+          attributeId: a.data.attributeId || 'urn:oasis:names:tc:xacml:1.0:action:action-id',
           matchId:  'urn:oasis:names:tc:xacml:1.0:function:string-equal',
           dataType: 'http://www.w3.org/2001/XMLSchema#string',
           valueType: 'simple', value: val,
@@ -256,7 +283,7 @@ const NodeEditor = (() => {
       children.filter(n => n.type === 'resource').forEach(r => {
         matches.push({
           cat: 'resource',
-          attributeId: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',
+          attributeId: r.data.attributeId || 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',
           matchId:  'urn:oasis:names:tc:xacml:1.0:function:string-equal',
           dataType: 'http://www.w3.org/2001/XMLSchema#string',
           valueType: 'simple', value: r.data.wildcard ? '*' : (r.data.identifier||''),
@@ -265,12 +292,12 @@ const NodeEditor = (() => {
 
       const conds = children.filter(n => n.type === 'condition');
       const conditionModels = conds.map(c => ({
-        functionId:    OP_TO_COND_FN[c.data.operator] || OP_TO_COND_FN.eq,
+        functionId:    c.data.functionId || 'urn:oasis:names:tc:xacml:1.0:function:string-equal',
         functionCustom: '',
-        arg1Cat:    'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
-        arg1AttrId: c.data.attribute || 'urn:oasis:names:tc:xacml:2.0:subject:role',
+        arg1Cat:     c.data.category   || 'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
+        arg1AttrId:  c.data.attribute  || 'urn:oasis:names:tc:xacml:2.0:subject:role',
         arg1DataType: 'http://www.w3.org/2001/XMLSchema#string',
-        arg2Value:    c.data.value || '',
+        arg2Value:    c.data.value     || '',
         arg2DataType: 'http://www.w3.org/2001/XMLSchema#string',
       }));
 
@@ -285,7 +312,7 @@ const NodeEditor = (() => {
 
     return {
       id: pNode.data.name || 'node-policy',
-      version: '3.0',
+      version: '2.0',
       description:  pNode.data.description || '',
       combiningAlg: pNode.data.combiningAlg ||
                     'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides',
@@ -456,19 +483,10 @@ const NodeEditor = (() => {
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.subject.type'))}</span>
           <select data-node="${id}" data-field="attrType">
-            <option value="role"  ${d.attrType==='role' ?'selected':''}>${_esc(_t('ne.subject.role'))}</option>
-            <option value="id"    ${d.attrType==='id'   ?'selected':''}>${_esc(_t('ne.subject.id'))}</option>
-            <option value="group" ${d.attrType==='group'?'selected':''}>${_esc(_t('ne.subject.group'))}</option>
-            <option value="email" ${d.attrType==='email'?'selected':''}>${_esc(_t('ne.subject.email'))}</option>
-          </select>
-        </div>
-        <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.operator'))}</span>
-          <select data-node="${id}" data-field="operator">
-            <option value="eq"         ${d.operator==='eq'        ?'selected':''}>${_esc(_t('ne.op.eq'))}</option>
-            <option value="neq"        ${d.operator==='neq'       ?'selected':''}>${_esc(_t('ne.op.neq'))}</option>
-            <option value="contains"   ${d.operator==='contains'  ?'selected':''}>${_esc(_t('ne.op.contains'))}</option>
-            <option value="startsWith" ${d.operator==='startsWith'?'selected':''}>${_esc(_t('ne.op.startsWith'))}</option>
+            <option value="role" ${d.attrType==='role'?'selected':''}>${_esc(_t('ne.subject.role'))}</option>
+            <option value="id"   ${d.attrType==='id'  ?'selected':''}>${_esc(_t('ne.subject.id'))}</option>
+            <option value="ip"   ${d.attrType==='ip'  ?'selected':''}>${_esc(_t('ne.subject.ip'))}</option>
+            <option value="dns"  ${d.attrType==='dns' ?'selected':''}>${_esc(_t('ne.subject.dns'))}</option>
           </select>
         </div>
         <div class="ne-field">
@@ -478,6 +496,14 @@ const NodeEditor = (() => {
         </div>`;
 
       case 'action': return `
+        <div class="ne-field">
+          <span class="ne-field-label">${_esc(_t('ne.field.action.attrId'))}</span>
+          <select data-node="${id}" data-field="attributeId">
+            ${ACTION_ATTR_IDS.map(a =>
+              `<option value="${_esc(a.value)}" ${d.attributeId===a.value?'selected':''}>${_esc(_t(a.labelKey))}</option>`
+            ).join('')}
+          </select>
+        </div>
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.action'))}</span>
           <select data-node="${id}" data-field="action">
@@ -497,12 +523,11 @@ const NodeEditor = (() => {
 
       case 'resource': return `
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.resource.type'))}</span>
-          <select data-node="${id}" data-field="resourceType">
-            <option value="document" ${d.resourceType==='document'?'selected':''}>${_esc(_t('ne.resource.document'))}</option>
-            <option value="endpoint" ${d.resourceType==='endpoint'?'selected':''}>${_esc(_t('ne.resource.endpoint'))}</option>
-            <option value="service"  ${d.resourceType==='service' ?'selected':''}>${_esc(_t('ne.resource.service'))}</option>
-            <option value="custom"   ${d.resourceType==='custom'  ?'selected':''}>${_esc(_t('ne.resource.custom'))}</option>
+          <span class="ne-field-label">${_esc(_t('ne.field.resource.attrId'))}</span>
+          <select data-node="${id}" data-field="attributeId">
+            ${RESOURCE_ATTR_IDS.map(r =>
+              `<option value="${_esc(r.value)}" ${d.attributeId===r.value?'selected':''}>${_esc(_t(r.labelKey))}</option>`
+            ).join('')}
           </select>
         </div>
         <div class="ne-field">
@@ -517,19 +542,24 @@ const NodeEditor = (() => {
 
       case 'condition': return `
         <div class="ne-field">
+          <span class="ne-field-label">${_esc(_t('ne.field.condition.cat'))}</span>
+          <select data-node="${id}" data-field="category">
+            ${NE_COND_CATEGORIES.map(c =>
+              `<option value="${_esc(c.value)}" ${d.category===c.value?'selected':''}>${_esc(_t(c.labelKey))}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.condition.attr'))}</span>
           <input type="text" data-node="${id}" data-field="attribute" value="${_esc(d.attribute)}"
             placeholder="${_esc(_t('ne.placeholder.condition'))}">
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.operator'))}</span>
-          <select data-node="${id}" data-field="operator">
-            <option value="eq"       ${d.operator==='eq'      ?'selected':''}>= (${_esc(_t('ne.op.eq'))})</option>
-            <option value="neq"      ${d.operator==='neq'     ?'selected':''}>≠ (${_esc(_t('ne.op.neq'))})</option>
-            <option value="lt"       ${d.operator==='lt'      ?'selected':''}>&lt;</option>
-            <option value="gt"       ${d.operator==='gt'      ?'selected':''}>&gt;</option>
-            <option value="contains" ${d.operator==='contains'?'selected':''}>${_esc(_t('ne.op.contains'))}</option>
-            <option value="inList"   ${d.operator==='inList'  ?'selected':''}>${_esc(_t('ne.op.inList'))}</option>
+          <span class="ne-field-label">${_esc(_t('ne.field.condition.fn'))}</span>
+          <select data-node="${id}" data-field="functionId">
+            ${NE_COND_FUNCTIONS.map(f =>
+              `<option value="${_esc(f.value)}" ${d.functionId===f.value?'selected':''}>${_esc(f.label)}</option>`
+            ).join('')}
           </select>
         </div>
         <div class="ne-field">
@@ -1076,15 +1106,23 @@ const NodeEditor = (() => {
         const known = ['read','write','delete','execute','*'];
         const act   = known.includes(a.value) ? a.value : 'custom';
         nodes.push({ id: nId, type: 'action', x: 540, y: childY,
-          data: { action: act, customAction: act === 'custom' ? (a.value||'') : '' } });
+          data: {
+            attributeId:  a.attributeId || 'urn:oasis:names:tc:xacml:1.0:action:action-id',
+            action:       act,
+            customAction: act === 'custom' ? (a.value||'') : '',
+          } });
         edges.push({ id: _uid(), fromId: rId, toId: nId });
-        childY += 120;
+        childY += 145;
       });
 
       matches.filter(m => m.cat === 'resource').forEach(r => {
         const nId = _uid();
         nodes.push({ id: nId, type: 'resource', x: 540, y: childY,
-          data: { resourceType: 'document', identifier: r.value||'', wildcard: r.value==='*' } });
+          data: {
+            attributeId: r.attributeId || 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',
+            identifier:  r.value === '*' ? '' : (r.value||''),
+            wildcard:    r.value === '*',
+          } });
         edges.push({ id: _uid(), fromId: rId, toId: nId });
         childY += 155;
       });
@@ -1092,9 +1130,15 @@ const NodeEditor = (() => {
       (rule.conditions || []).forEach(c => {
         const nId = _uid();
         nodes.push({ id: nId, type: 'condition', x: 540, y: childY,
-          data: { attribute: c.arg1AttrId||'', operator: 'eq', value: c.arg2Value||'', logic: rule.conditionOp||'AND' } });
+          data: {
+            category:   c.arg1Cat   || 'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
+            attribute:  c.arg1AttrId || '',
+            functionId: c.functionId || 'urn:oasis:names:tc:xacml:1.0:function:string-equal',
+            value:      c.arg2Value  || '',
+            logic:      rule.conditionOp || 'AND',
+          } });
         edges.push({ id: _uid(), fromId: rId, toId: nId });
-        childY += 175;
+        childY += 210;
       });
 
       ruleY = Math.max(ruleY + 200, childY + 20);

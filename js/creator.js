@@ -219,7 +219,7 @@ const PolicyCreator = (() => {
   function _defaultPsPolicy() {
     return {
       id: '',
-      version: '3.0',
+      version: '2.0',
       description: '',
       combiningAlg: COMBINING_ALGS[0].value,
       target: _defaultTarget(),
@@ -233,7 +233,7 @@ const PolicyCreator = (() => {
       rootType: 'Policy',
       policy: {
         id: '',
-        version: '3.0',
+        version: '2.0',
         description: '',
         combiningAlg: COMBINING_ALGS[0].value,
         target: _defaultTarget(),
@@ -241,7 +241,7 @@ const PolicyCreator = (() => {
       },
       policySet: {
         id: '',
-        version: '3.0',
+        version: '2.0',
         description: '',
         combiningAlg: PS_COMBINING_ALGS[0].value,
         target: _defaultTarget(),
