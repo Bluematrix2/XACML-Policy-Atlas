@@ -2124,25 +2124,6 @@ footer a:hover { opacity: 1; text-decoration: none; }
   gap: var(--sp-3);
   flex-wrap: wrap;
 }
-.creator-sample-btn {
-  padding: 5px 14px;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-pill);
-  background: var(--accent-subtle);
-  color: var(--accent);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  font-family: inherit;
-  min-height: 1.875rem;
-  transition: background 0.1s, border-color 0.1s, color 0.1s;
-  flex-shrink: 0;
-}
-.creator-sample-btn:hover {
-  background: var(--accent);
-  color: #fff;
-}
 .creator-reset-btn {
   padding: 5px 14px;
   border: 1px solid var(--border);

@@ -816,6 +816,7 @@ const App = (() => {
            + `<div class="sb-bar" style="background:linear-gradient(to right,#4CAF50 ${pPct}%,#F44336 ${pPct}%)"></div></div>`
            + `<div class="policy-actions">`
            + `<button class="sb-action-btn" onclick="event.stopPropagation();App.handlePolicyEdit(${i})" title="${esc(I18n.t('sidebar.editBtn.title'))}" aria-label="${esc(I18n.t('sidebar.editBtn.aria'))}">&#x270F;&#xFE0F;</button>`
+           + `<button class="sb-action-btn" onclick="event.stopPropagation();App.handlePolicyEditInCreator(${i})" title="${esc(I18n.t('sidebar.editCreatorBtn.title'))}" aria-label="${esc(I18n.t('sidebar.editCreatorBtn.aria'))}">&#x1F4DD;</button>`
            + `<button class="sb-action-btn sb-action-delete" onclick="event.stopPropagation();App.handlePolicyDelete(${i})" title="${esc(I18n.t('sidebar.deleteBtn.title'))}" aria-label="${esc(I18n.t('sidebar.deleteBtn.aria'))}">&#x1F5D1;</button>`
            + `</div></div>`;
     }).join('');
@@ -828,6 +829,14 @@ const App = (() => {
     UIState.setActive(idx);
     refreshSidebar();
     loadPolicyIntoEditor(policy.filename, policy.rawXml);
+  }
+
+  function handlePolicyEditInCreator(idx) {
+    const policies = UIState.getAll();
+    const policy   = policies[idx];
+    if (!policy) return;
+    PolicyCreator.loadFromPolicy(policy);
+    switchTab('creator');
   }
 
   function handlePolicyDelete(idx) {
@@ -1686,7 +1695,7 @@ const App = (() => {
     importDragOver, importDragLeave, importDrop, importFromFiles, importFromPaste,
     switchContentTab, handleEditorUpdate, handleBeautify, handleDownload,
     handleReset, confirmReset, cancelReset, loadPolicyIntoEditor,
-    handlePolicyEdit, handlePolicyDelete, confirmPolicyDelete, cancelPolicyDelete,
+    handlePolicyEdit, handlePolicyEditInCreator, handlePolicyDelete, confirmPolicyDelete, cancelPolicyDelete,
     restoreMappingsOnStartup, clearAllMappings,
     toggleValidationPanel, fixPolicyInEditor,
     openKbSection, loadExample,

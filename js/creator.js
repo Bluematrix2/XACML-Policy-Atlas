@@ -911,10 +911,6 @@ const PolicyCreator = (() => {
 
     el.innerHTML = steps + `
       <div class="creator-stepbar-right">
-        <button class="creator-sample-btn" id="creator-sample-btn"
-                title="${esc(I18n.t('creator.sample.title'))}">
-          ${esc(I18n.t('creator.sample.btn'))}
-        </button>
         <button class="creator-reset-btn" id="creator-reset-btn"
                 title="${esc(I18n.t('creator.reset.title'))}"
                 aria-label="${esc(I18n.t('creator.reset.aria'))}">
@@ -1689,7 +1685,6 @@ const PolicyCreator = (() => {
     if (t.id === 'creator-next'      || t.closest('#creator-next'))      { if (_canProceed() && _state.step < 4) { _state.step++; _saveState(); _refresh(); } return; }
     if (t.id === 'creator-back'      || t.closest('#creator-back'))      { if (_state.step > 1) { _state.step--; _saveState(); _refresh(); } return; }
     if (t.id === 'creator-add-rule'  || t.closest('#creator-add-rule'))  { _addRule(); return; }
-    if (t.id === 'creator-sample-btn' || t.closest('#creator-sample-btn')) { _loadSamplePolicy(); return; }
     if (t.id === 'creator-reset-btn' || t.closest('#creator-reset-btn')) { _showResetConfirm(); return; }
     if (t.id === 'creator-reset-yes' || t.closest('#creator-reset-yes')) { _doReset(); return; }
     if (t.id === 'creator-reset-no'  || t.closest('#creator-reset-no'))  { _hideResetConfirm(); return; }
@@ -2368,6 +2363,93 @@ const PolicyCreator = (() => {
     _refresh();
   }
 
+  // ── Load a policy parsed by XACMLParser into the creator ──────────────
+
+  function _parsedTargetToCreatorTarget(parsedTarget) {
+    if (!parsedTarget) return _defaultTarget();
+    const matches = [];
+    const push = (cat, group) => group.forEach(m => matches.push({
+      cat,
+      attributeId:  m.designator?.attributeId || DEFAULT_ATTR_IDS[cat] || '',
+      matchId:      m.matchId      || '',
+      dataType:     m.value?.dataType || '',
+      valueType:    'simple',
+      value:        m.value?.value || '',
+      cvCode: '', cvCodeSystem: '', iiRoot: '',
+    }));
+    (parsedTarget.subjects  || []).forEach(g => push('subject',  g));
+    (parsedTarget.resources || []).forEach(g => push('resource', g));
+    (parsedTarget.actions   || []).forEach(g => push('action',   g));
+    if (matches.length === 0) return _defaultTarget();
+    return { groups: [{ matches }] };
+  }
+
+  function _parsedConditionToCreator(cond) {
+    if (!cond) return null;
+    const args = cond.args || [];
+    const CAT_MAP = {
+      SubjectAttr:  'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
+      ResourceAttr: 'urn:oasis:names:tc:xacml:3.0:attribute-category:resource',
+      ActionAttr:   'urn:oasis:names:tc:xacml:3.0:attribute-category:action',
+      EnvAttr:      'urn:oasis:names:tc:xacml:3.0:attribute-category:environment',
+    };
+    let arg1Cat  = CONDITION_CATEGORIES[0].value;
+    let designator = null;
+    let argValue = null;
+    for (const a of args) {
+      if (a.nodeType === 'Apply' && a.args?.[0]) {
+        const d = a.args[0];
+        designator = d;
+        arg1Cat = CAT_MAP[d.nodeType] || arg1Cat;
+      } else if (CAT_MAP[a.nodeType]) {
+        designator = a;
+        arg1Cat = CAT_MAP[a.nodeType];
+      } else if (a.nodeType === 'Value') {
+        argValue = a;
+      }
+    }
+    return {
+      functionId:     cond.functionId || CONDITION_FUNCTIONS[0].value,
+      functionCustom: '',
+      arg1Cat,
+      arg1AttrId:   designator?.attributeId || '',
+      arg1DataType: designator?.dataType || CONDITION_DATA_TYPES[0].value,
+      arg2Value:    argValue?.value || '',
+      arg2DataType: argValue?.dataType || CONDITION_DATA_TYPES[0].value,
+    };
+  }
+
+  function _loadFromParsedPolicy(parsedPolicy) {
+    if (!parsedPolicy) return;
+    const policy = {
+      id:          parsedPolicy.policyId    || '',
+      version:     parsedPolicy.version     || '2.0',
+      description: parsedPolicy.description || '',
+      combiningAlg: parsedPolicy.algorithm  || COMBINING_ALGS[0].value,
+      target: _parsedTargetToCreatorTarget(parsedPolicy.target),
+      rules: (parsedPolicy.rules || []).map(r => {
+        const conditions = [];
+        const c = _parsedConditionToCreator(r.condition);
+        if (c) conditions.push(c);
+        return {
+          id:          r.ruleId      || '',
+          effect:      r.effect      || 'Permit',
+          description: r.description || '',
+          target:      _parsedTargetToCreatorTarget(r.target),
+          conditions,
+          conditionOp: 'AND',
+        };
+      }),
+    };
+    _state.rootType = 'Policy';
+    _state.policy   = policy;
+    _state.step     = 2;
+    _saveState();
+    NodeEditor.clearSession();
+    if (_nodeEditorReady) NodeEditor.setPolicy(_state.policy);
+    _refresh();
+  }
+
   function _generateUuid() {
     const uuid = _makeUuid();
     _state.policy.id = uuid;
@@ -2532,7 +2614,8 @@ const PolicyCreator = (() => {
 
   return {
     init,
-    loadSamplePolicy: _loadSamplePolicy,
+    loadSamplePolicy:    _loadSamplePolicy,
+    loadFromPolicy:      _loadFromParsedPolicy,
     get _initialized() { return _initialized; }
   };
 })();

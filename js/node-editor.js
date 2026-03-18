@@ -1127,7 +1127,7 @@ const NodeEditor = (() => {
 
     const pId = _uid();
     const nodes = [{
-      id: pId, type: 'policy', x: 20, y: 50,
+      id: pId, type: 'policy', x: 30, y: 60,
       data: {
         name:         policy.id          || 'meine-policy',
         description:  policy.description || '',
@@ -1137,10 +1137,10 @@ const NodeEditor = (() => {
     }];
     const edges = [];
 
-    let ruleY = 30;
+    let ruleY = 40;
     (policy.rules || []).forEach(rule => {
       const rId = _uid();
-      nodes.push({ id: rId, type: 'rule', x: 280, y: ruleY,
+      nodes.push({ id: rId, type: 'rule', x: 340, y: ruleY,
         data: { name: rule.id || 'regel', effect: rule.effect || 'Permit' } });
       edges.push({ id: _uid(), fromId: pId, toId: rId });
 
@@ -1153,41 +1153,41 @@ const NodeEditor = (() => {
         if (s.attributeId?.includes('role'))  attrType = 'role';
         if (s.attributeId?.includes('group')) attrType = 'group';
         if (s.attributeId?.includes('email')) attrType = 'email';
-        nodes.push({ id: nId, type: 'subject', x: 540, y: childY,
+        nodes.push({ id: nId, type: 'subject', x: 660, y: childY,
           data: { attrType, operator: 'eq', value: s.value || '' } });
         edges.push({ id: _uid(), fromId: rId, toId: nId });
-        childY += 155;
+        childY += 180;
       });
 
       matches.filter(m => m.cat === 'action').forEach(a => {
         const nId = _uid();
         const known = ['read','write','delete','execute','*'];
         const act   = known.includes(a.value) ? a.value : 'custom';
-        nodes.push({ id: nId, type: 'action', x: 540, y: childY,
+        nodes.push({ id: nId, type: 'action', x: 660, y: childY,
           data: {
             attributeId:  a.attributeId || 'urn:oasis:names:tc:xacml:1.0:action:action-id',
             action:       act,
             customAction: act === 'custom' ? (a.value||'') : '',
           } });
         edges.push({ id: _uid(), fromId: rId, toId: nId });
-        childY += 145;
+        childY += 170;
       });
 
       matches.filter(m => m.cat === 'resource').forEach(r => {
         const nId = _uid();
-        nodes.push({ id: nId, type: 'resource', x: 540, y: childY,
+        nodes.push({ id: nId, type: 'resource', x: 660, y: childY,
           data: {
             attributeId: r.attributeId || 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',
             identifier:  r.value === '*' ? '' : (r.value||''),
             wildcard:    r.value === '*',
           } });
         edges.push({ id: _uid(), fromId: rId, toId: nId });
-        childY += 155;
+        childY += 180;
       });
 
       (rule.conditions || []).forEach(c => {
         const nId = _uid();
-        nodes.push({ id: nId, type: 'condition', x: 540, y: childY,
+        nodes.push({ id: nId, type: 'condition', x: 660, y: childY,
           data: {
             category:   c.arg1Cat   || 'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
             attribute:  c.arg1AttrId || '',
@@ -1196,10 +1196,10 @@ const NodeEditor = (() => {
             logic:      rule.conditionOp || 'AND',
           } });
         edges.push({ id: _uid(), fromId: rId, toId: nId });
-        childY += 210;
+        childY += 240;
       });
 
-      ruleY = Math.max(ruleY + 200, childY + 20);
+      ruleY = Math.max(ruleY + 250, childY + 30);
     });
 
     _nodes   = nodes;
