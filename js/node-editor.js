@@ -7,10 +7,11 @@
 
 import { I18n } from './i18n.js';
 
-const NODE_W  = 220; // node width in canvas pixels
-const PORT_Y  = 19;  // port vertical offset (center of header ~38px)
-const INIT_PX = 30;  // initial panX — keeps nodes well inside viewport
-const INIT_PY = 30;  // initial panY
+const NODE_W      = 230; // node width in canvas pixels — must match .ne-node { width: 230px }
+const PORT_Y      = 26;  // port center Y = top:19px + half of 13px height
+const INIT_PX     = 30;  // initial panX — keeps nodes well inside viewport
+const INIT_PY     = 30;  // initial panY
+const NE_SESS_KEY = 'xacml-ne-state'; // sessionStorage key for node layout
 
 // ── Allowed connection rules ────────────────────────────────────────────
 const ALLOWED_TARGETS = {
@@ -325,6 +326,7 @@ const NodeEditor = (() => {
 
   function _emit() {
     _updateValidation();
+    try { sessionStorage.setItem(NE_SESS_KEY, JSON.stringify({ nodes: _nodes, edges: _edges })); } catch (_) {}
     if (_onPolicyChange) {
       const p = _toPolicyModel();
       if (p) _onPolicyChange(p);
@@ -906,6 +908,20 @@ const NodeEditor = (() => {
 
   // ── Palette drag & drop ────────────────────────────────────────────────
 
+  function _onPaletteClick(e) {
+    const item = e.target.closest('.ne-palette-item');
+    if (!item) return;
+    const type = item.dataset.nodeType;
+    if (!type) return;
+    // Place new node near the center of the current viewport
+    const r  = _viewport.getBoundingClientRect();
+    const cx = (r.width  / 2 - _panX) / _zoom - NODE_W / 2;
+    const cy = (r.height / 2 - _panY) / _zoom - 40;
+    // Offset slightly so repeated clicks don't stack exactly
+    const offset = _nodes.filter(n => n.type === type).length * 20;
+    _addNode(type, cx + offset, cy + offset);
+  }
+
   function _onPaletteDragStart(e) {
     const item = e.target.closest('.ne-palette-item');
     if (!item) return;
@@ -952,6 +968,21 @@ const NodeEditor = (() => {
     _applyTransform();
   }
 
+  function _clearCanvas() {
+    if (!confirm(_t('ne.toolbar.clear.confirm'))) return;
+    _pushHistory();
+    _nodes = [{ id: _uid(), type: 'policy', x: 20, y: 50, data: _defaultData('policy') }];
+    _edges = [];
+    _selNode = null;
+    _selEdge = null;
+    _history = [];
+    _histIdx = -1;
+    _pushHistory();
+    try { sessionStorage.removeItem(NE_SESS_KEY); } catch (_) {}
+    _rerenderAll();
+    _emit();
+  }
+
   // ── HTML skeleton ─────────────────────────────────────────────────────
 
   function _buildSkeleton() {
@@ -991,9 +1022,12 @@ const NodeEditor = (() => {
             <div class="ne-toolbar-sep"></div>
             <button class="ne-toolbar-btn" id="ne-fit-btn"
               title="${_esc(_t('ne.toolbar.fit'))}">&#x229E;</button>
-            <button class="ne-toolbar-btn" id="ne-reset-btn"
+            <button class="ne-toolbar-btn" id="ne-zoom-reset-btn"
               title="${_esc(_t('ne.toolbar.reset'))}"
               style="font-size:0.65rem;width:36px">100%</button>
+            <div class="ne-toolbar-sep"></div>
+            <button class="ne-toolbar-btn ne-toolbar-btn--danger" id="ne-clear-btn"
+              title="${_esc(_t('ne.toolbar.clear'))}">&#x1F5D1;</button>
           </div>
           <div id="ne-validation" class="ne-validation">
             <span class="ne-validation-dot invalid"></span>
@@ -1014,13 +1048,30 @@ const NodeEditor = (() => {
 
     _wrap           = container;
     _onPolicyChange = onPolicyChange;
-    _nodes          = [{ id: _uid(), type: 'policy', x: 20, y: 50, data: _defaultData('policy') }];
-    _edges          = [];
     _zoom = 1; _panX = INIT_PX; _panY = INIT_PY;
     _history        = [];
     _histIdx        = -1;
     _selNode = null;
     _selEdge = null;
+
+    // Try to restore layout from sessionStorage
+    let restored = false;
+    try {
+      const saved = sessionStorage.getItem(NE_SESS_KEY);
+      if (saved) {
+        const s = JSON.parse(saved);
+        if (Array.isArray(s.nodes) && s.nodes.length > 0) {
+          _nodes = s.nodes;
+          _edges = s.edges || [];
+          restored = true;
+        }
+      }
+    } catch (_) {}
+
+    if (!restored) {
+      _nodes = [{ id: _uid(), type: 'policy', x: 20, y: 50, data: _defaultData('policy') }];
+      _edges = [];
+    }
 
     container.innerHTML = _buildSkeleton();
 
@@ -1036,6 +1087,7 @@ const NodeEditor = (() => {
     _renderNodes();
     _renderEdges();
     _updateValidation();
+    if (restored) requestAnimationFrame(_fitView);
 
     container.addEventListener('mousedown', _onMouseDown);
     container.addEventListener('click',     _onClick);
@@ -1046,7 +1098,10 @@ const NodeEditor = (() => {
     _viewport.addEventListener('drop',     _onViewportDrop);
 
     const palette = container.querySelector('.ne-palette');
-    if (palette) palette.addEventListener('dragstart', _onPaletteDragStart);
+    if (palette) {
+      palette.addEventListener('dragstart', _onPaletteDragStart);
+      palette.addEventListener('click',     _onPaletteClick);
+    }
 
     document.addEventListener('mousemove', _onMouseMove);
     document.addEventListener('mouseup',   _onMouseUp);
@@ -1057,9 +1112,12 @@ const NodeEditor = (() => {
     container.querySelector('#ne-undo-btn')?.addEventListener('click', _undo);
     container.querySelector('#ne-redo-btn')?.addEventListener('click', _redo);
     container.querySelector('#ne-fit-btn')?.addEventListener('click',  _fitView);
-    container.querySelector('#ne-reset-btn')?.addEventListener('click', _resetView);
+    container.querySelector('#ne-zoom-reset-btn')?.addEventListener('click', _resetView);
+    container.querySelector('#ne-clear-btn')?.addEventListener('click', _clearCanvas);
 
-    _emit();
+    // Do NOT call _emit() here — would overwrite saved creator state.
+    // setPolicy() will be called by the host if this is a fresh start.
+    return restored;
   }
 
   // ── Public: setPolicy ──────────────────────────────────────────────────
@@ -1182,7 +1240,11 @@ const NodeEditor = (() => {
     _dragConn     = null;
   }
 
-  return { init, setPolicy, refresh, destroy };
+  function clearSession() {
+    try { sessionStorage.removeItem(NE_SESS_KEY); } catch (_) {}
+  }
+
+  return { init, setPolicy, refresh, destroy, clearSession };
 })();
 
 export { NodeEditor };

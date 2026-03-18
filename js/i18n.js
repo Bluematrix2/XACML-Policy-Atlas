@@ -340,7 +340,7 @@ const TRANSLATIONS = {
     'ne.palette.resource':     'Worauf? (Resource)',
     'ne.palette.condition':    'Bedingung',
     'ne.palette.drag':         'In Canvas ziehen',
-    'ne.palette.hint':         'In Canvas ziehen oder klicken',
+    'ne.palette.hint':         'Klicken oder in Canvas ziehen',
     'ne.toolbar.undo':         'Rückgängig (Strg+Z)',
     'ne.toolbar.redo':         'Wiederholen (Strg+Y)',
     'ne.toolbar.fit':          'Ansicht einpassen',
@@ -353,6 +353,10 @@ const TRANSLATIONS = {
 
     // ── Creator — shell ──
     'creator.subtitle':       'Erstelle eine XACML-Policy Schritt für Schritt — ohne XML-Kenntnisse.',
+    'creator.sample.btn':     '▶ Beispiel laden',
+    'creator.sample.title':   'Beispiel-Policy (Physician Access) laden',
+    'ne.toolbar.clear':       'Canvas zurücksetzen',
+    'ne.toolbar.clear.confirm': 'Canvas zurücksetzen und alle Nodes löschen?',
     'creator.reset.btn':      '↺ Zurücksetzen',
     'creator.reset.title':    'Alles zurücksetzen und neu beginnen',
     'creator.reset.aria':     'Creator zurücksetzen',
@@ -863,7 +867,7 @@ const TRANSLATIONS = {
     'ne.palette.resource':     'On what? (Resource)',
     'ne.palette.condition':    'Condition',
     'ne.palette.drag':         'Drag into canvas',
-    'ne.palette.hint':         'Drag building blocks into the canvas',
+    'ne.palette.hint':         'Click or drag into canvas',
     'ne.toolbar.undo':         'Undo (Ctrl+Z)',
     'ne.toolbar.redo':         'Redo (Ctrl+Y)',
     'ne.toolbar.fit':          'Fit view',
@@ -876,6 +880,10 @@ const TRANSLATIONS = {
 
     // ── Creator — shell ──
     'creator.subtitle':       'Create an XACML policy step by step — no XML knowledge required.',
+    'creator.sample.btn':     '▶ Load example',
+    'creator.sample.title':   'Load sample policy (Physician Access)',
+    'ne.toolbar.clear':       'Reset canvas',
+    'ne.toolbar.clear.confirm': 'Reset canvas and delete all nodes?',
     'creator.reset.btn':      '↺ Reset',
     'creator.reset.title':    'Reset everything and start over',
     'creator.reset.aria':     'Reset Creator',

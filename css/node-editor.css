@@ -188,6 +188,8 @@
   box-shadow: var(--shadow-sm);
   user-select: none;
   transition: box-shadow 0.15s, border-color 0.15s, opacity 0.15s, transform 0.1s;
+  /* Own stacking context: ports (z-index:5 inside) won't bleed above sibling nodes */
+  isolation: isolate;
   /* Allow ports to extend outside node bounds */
   overflow: visible;
 }
@@ -422,6 +424,7 @@
 }
 .ne-toolbar-btn:hover:not(:disabled) { background: var(--bg-secondary); color: var(--text-primary); }
 .ne-toolbar-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.ne-toolbar-btn--danger:hover:not(:disabled) { background: var(--deny-bg); color: var(--deny-border); }
 .ne-toolbar-sep {
   width: 1px;
   height: 18px;

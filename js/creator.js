@@ -831,10 +831,14 @@ const PolicyCreator = (() => {
     if (!area) return;
     if (!_nodeEditorReady) {
       _nodeEditorReady = true;
-      NodeEditor.init(area, _onNodePolicyChange);
-    }
-    // Always sync current policy into the node editor when showing it
-    if (_state.rootType === 'Policy') {
+      const restored = NodeEditor.init(area, _onNodePolicyChange);
+      // If state was restored from sessionStorage, skip setPolicy (would overwrite layout).
+      // Otherwise build the canvas from current form state.
+      if (!restored && _state.rootType === 'Policy') {
+        NodeEditor.setPolicy(_state.policy);
+      }
+    } else if (_state.rootType === 'Policy') {
+      // Tab switch: always sync latest form state into the node editor
       NodeEditor.setPolicy(_state.policy);
     }
   }
@@ -907,6 +911,10 @@ const PolicyCreator = (() => {
 
     el.innerHTML = steps + `
       <div class="creator-stepbar-right">
+        <button class="creator-sample-btn" id="creator-sample-btn"
+                title="${esc(I18n.t('creator.sample.title'))}">
+          ${esc(I18n.t('creator.sample.btn'))}
+        </button>
         <button class="creator-reset-btn" id="creator-reset-btn"
                 title="${esc(I18n.t('creator.reset.title'))}"
                 aria-label="${esc(I18n.t('creator.reset.aria'))}">
@@ -1681,6 +1689,7 @@ const PolicyCreator = (() => {
     if (t.id === 'creator-next'      || t.closest('#creator-next'))      { if (_canProceed() && _state.step < 4) { _state.step++; _saveState(); _refresh(); } return; }
     if (t.id === 'creator-back'      || t.closest('#creator-back'))      { if (_state.step > 1) { _state.step--; _saveState(); _refresh(); } return; }
     if (t.id === 'creator-add-rule'  || t.closest('#creator-add-rule'))  { _addRule(); return; }
+    if (t.id === 'creator-sample-btn' || t.closest('#creator-sample-btn')) { _loadSamplePolicy(); return; }
     if (t.id === 'creator-reset-btn' || t.closest('#creator-reset-btn')) { _showResetConfirm(); return; }
     if (t.id === 'creator-reset-yes' || t.closest('#creator-reset-yes')) { _doReset(); return; }
     if (t.id === 'creator-reset-no'  || t.closest('#creator-reset-no'))  { _hideResetConfirm(); return; }
@@ -2297,7 +2306,65 @@ const PolicyCreator = (() => {
   function _doReset() {
     _state = _defaultState();
     _saveState();
+    NodeEditor.clearSession();
+    if (_nodeEditorReady) NodeEditor.setPolicy(_state.policy);
     _hideResetConfirm();
+    _refresh();
+  }
+
+  function _samplePolicyData() {
+    const STR_EQ   = 'urn:oasis:names:tc:xacml:1.0:function:string-equal';
+    const DT_STR   = 'http://www.w3.org/2001/XMLSchema#string';
+    const mkMatch  = (cat, attrId, value) => ({
+      cat, attributeId: attrId, matchId: STR_EQ, dataType: DT_STR, valueType: 'simple', value,
+    });
+    return {
+      id: 'physician-access-policy',
+      version: '2.0',
+      description: 'Physicians can read and write patient records',
+      combiningAlg: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides',
+      target: { groups: [{ matches: [] }] },
+      rules: [
+        {
+          id: 'permit-physician-read',
+          effect: 'Permit',
+          description: 'Permit physicians to read patient records',
+          target: { groups: [{ matches: [
+            mkMatch('subject',  'urn:oasis:names:tc:xacml:2.0:subject:role',          'physician'),
+            mkMatch('action',   'urn:oasis:names:tc:xacml:1.0:action:action-id',      'read'),
+            mkMatch('resource', 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',  'patient-record'),
+          ]}]},
+          conditions: [], conditionOp: 'AND',
+        },
+        {
+          id: 'permit-physician-write',
+          effect: 'Permit',
+          description: 'Permit physicians to write patient records',
+          target: { groups: [{ matches: [
+            mkMatch('subject',  'urn:oasis:names:tc:xacml:2.0:subject:role',          'physician'),
+            mkMatch('action',   'urn:oasis:names:tc:xacml:1.0:action:action-id',      'write'),
+            mkMatch('resource', 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',  'patient-record'),
+          ]}]},
+          conditions: [], conditionOp: 'AND',
+        },
+        {
+          id: 'deny-all-others',
+          effect: 'Deny',
+          description: 'Deny all other access',
+          target: { groups: [{ matches: [] }] },
+          conditions: [], conditionOp: 'AND',
+        },
+      ],
+    };
+  }
+
+  function _loadSamplePolicy() {
+    _state.rootType = 'Policy';
+    _state.policy   = _samplePolicyData();
+    _state.step     = 2;   // jump to policy details step
+    _saveState();
+    NodeEditor.clearSession();
+    if (_nodeEditorReady) NodeEditor.setPolicy(_state.policy);
     _refresh();
   }
 
@@ -2465,6 +2532,7 @@ const PolicyCreator = (() => {
 
   return {
     init,
+    loadSamplePolicy: _loadSamplePolicy,
     get _initialized() { return _initialized; }
   };
 })();

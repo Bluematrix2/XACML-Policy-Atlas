@@ -501,9 +501,9 @@ const App = (() => {
   }
 
   async function loadExample() {
-    const EXAMPLE_FILE   = 'sample/ExamplePhysicianAccess.xml';
-    const EXAMPLE_NAME   = 'ExamplePhysicianAccess.xml';
-    const EXAMPLE_CSV    = 'sample/ExamplePhysicianAccess-mapping.csv';
+    const EXAMPLE_FILE     = 'sample/ExamplePhysicianAccess.xml';
+    const EXAMPLE_NAME     = 'ExamplePhysicianAccess.xml';
+    const EXAMPLE_CSV      = 'sample/ExamplePhysicianAccess-mapping.csv';
     const EXAMPLE_CSV_NAME = 'ExamplePhysicianAccess-mapping.csv';
     try {
       const [rXml, rCsv] = await Promise.all([fetch(EXAMPLE_FILE), fetch(EXAMPLE_CSV)]);
@@ -517,10 +517,12 @@ const App = (() => {
         const csvText = await rCsv.text();
         loadMappingIntoApp(EXAMPLE_CSV_NAME, csvText);
       }
+      // Load into Visualizer (background — no tab switch)
       const idx = UIState.addOrReplace(policy);
-      await switchTab('viz');
       refreshSidebar();
       activatePolicy(idx);
+      // Load into Creator (both form + visual editor)
+      PolicyCreator.loadSamplePolicy();
       _showToast(I18n.t('toast.example'));
     } catch (e) {
       alert(I18n.t('toast.example.err', { msg: e.message }));
