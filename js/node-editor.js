@@ -7,10 +7,10 @@
 
 import { I18n } from './i18n.js';
 
-const NODE_W = 230; // node width in canvas pixels
-
-// Port Y-offset from node top (center of header at ~38px / 2 ≈ 19)
-const PORT_Y = 19;
+const NODE_W  = 220; // node width in canvas pixels
+const PORT_Y  = 19;  // port vertical offset (center of header ~38px)
+const INIT_PX = 30;  // initial panX — keeps nodes well inside viewport
+const INIT_PY = 30;  // initial panY
 
 // ── Allowed connection rules ────────────────────────────────────────────
 const ALLOWED_TARGETS = {
@@ -55,18 +55,22 @@ const NodeEditor = (() => {
   let _nodes    = [];
   let _edges    = [];
   let _zoom     = 1;
-  let _panX     = 260;
-  let _panY     = 60;
+  let _panX     = INIT_PX;
+  let _panY     = INIT_PY;
   let _history  = [];
   let _histIdx  = -1;
-  let _selNode  = null;   // selected node id
-  let _selEdge  = null;   // selected edge id
+  let _selNode  = null;
+  let _selEdge  = null;
 
-  // ── Drag state ──
+  // ── Drag state (nodes + canvas pan) ──
   let _dragNode = null;   // { nodeId, startMX, startMY, origX, origY }
   let _dragPan  = null;   // { startMX, startMY, origPX, origPY }
-  let _dragConn = null;   // { fromId, curX, curY }
-  let _paletteType = null; // type being dragged from palette
+
+  // ── Connection drag state ──
+  let _dragConn = null;   // { fromId } — active while port is captured
+
+  // ── Palette drag type ──
+  let _paletteType = null;
 
   // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -91,8 +95,7 @@ const NodeEditor = (() => {
   function _defaultData(type) {
     switch (type) {
       case 'policy':    return {
-        name: 'meine-policy',
-        description: '',
+        name: 'meine-policy', description: '',
         combiningAlg: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides',
       };
       case 'rule':      return { name: 'regel-1', effect: 'Permit' };
@@ -113,7 +116,7 @@ const NodeEditor = (() => {
     };
   }
 
-  // ── Screen ↔ canvas coordinate conversion ──────────────────────────────
+  // ── Screen ↔ canvas conversion ──────────────────────────────────────────
 
   function _s2c(sx, sy) {
     const r = _viewport.getBoundingClientRect();
@@ -181,13 +184,11 @@ const NodeEditor = (() => {
   function _validate() {
     const hasPolicy = _nodes.some(n => n.type === 'policy');
     const ruleNodes = _nodes.filter(n => n.type === 'rule');
-    const errors = [];
-    const warnings = [];
+    const errors = [], warnings = [];
     if (!hasPolicy) errors.push('no-policy');
     if (ruleNodes.length === 0) errors.push('no-rules');
     ruleNodes.forEach(r => {
-      const connectedToPolicy = _edges.some(e => e.toId === r.id);
-      if (!connectedToPolicy) warnings.push('rule-unconnected');
+      if (!_edges.some(e => e.toId === r.id)) warnings.push('rule-unconnected');
     });
     return { valid: errors.length === 0, errors, warnings };
   }
@@ -200,13 +201,13 @@ const NodeEditor = (() => {
     if (!dot || !text) return;
     const { valid, warnings } = _validate();
     if (!valid) {
-      dot.className  = 'ne-validation-dot invalid';
+      dot.className    = 'ne-validation-dot invalid';
       text.textContent = _t('ne.validation.invalid');
     } else if (warnings.length > 0) {
-      dot.className  = 'ne-validation-dot warning';
+      dot.className    = 'ne-validation-dot warning';
       text.textContent = _t('ne.validation.warnings', { n: warnings.length });
     } else {
-      dot.className  = 'ne-validation-dot valid';
+      dot.className    = 'ne-validation-dot valid';
       text.textContent = _t('ne.validation.valid');
     }
   }
@@ -217,13 +218,10 @@ const NodeEditor = (() => {
     const pNode = _nodes.find(n => n.type === 'policy');
     if (!pNode) return null;
 
-    // Find connected rule nodes (or all rule nodes if none connected)
     let ruleNodes = _nodes.filter(n =>
       n.type === 'rule' && _edges.some(e => e.fromId === pNode.id && e.toId === n.id)
     );
-    if (ruleNodes.length === 0) {
-      ruleNodes = _nodes.filter(n => n.type === 'rule');
-    }
+    if (ruleNodes.length === 0) ruleNodes = _nodes.filter(n => n.type === 'rule');
 
     const rules = ruleNodes.map(rn => {
       const children = _edges
@@ -231,50 +229,38 @@ const NodeEditor = (() => {
         .map(e => _nodes.find(n => n.id === e.toId))
         .filter(Boolean);
 
-      const subjects   = children.filter(n => n.type === 'subject');
-      const actions    = children.filter(n => n.type === 'action');
-      const resources  = children.filter(n => n.type === 'resource');
-      const conditions = children.filter(n => n.type === 'condition');
-
       const matches = [];
-
-      subjects.forEach(s => {
+      children.filter(n => n.type === 'subject').forEach(s => {
         matches.push({
           cat: 'subject',
           attributeId: SUBJECT_ATTR_IDS[s.data.attrType] || SUBJECT_ATTR_IDS.role,
           matchId:  'urn:oasis:names:tc:xacml:1.0:function:string-equal',
           dataType: 'http://www.w3.org/2001/XMLSchema#string',
-          valueType: 'simple',
-          value: s.data.value || '',
+          valueType: 'simple', value: s.data.value || '',
         });
       });
-
-      actions.forEach(a => {
-        const val = a.data.action === 'custom'
-          ? (a.data.customAction || '')
-          : (a.data.action || 'read');
+      children.filter(n => n.type === 'action').forEach(a => {
+        const val = a.data.action === 'custom' ? (a.data.customAction||'') : (a.data.action||'read');
         matches.push({
           cat: 'action',
           attributeId: 'urn:oasis:names:tc:xacml:1.0:action:action-id',
           matchId:  'urn:oasis:names:tc:xacml:1.0:function:string-equal',
           dataType: 'http://www.w3.org/2001/XMLSchema#string',
-          valueType: 'simple',
-          value: val,
+          valueType: 'simple', value: val,
         });
       });
-
-      resources.forEach(r => {
+      children.filter(n => n.type === 'resource').forEach(r => {
         matches.push({
           cat: 'resource',
           attributeId: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',
           matchId:  'urn:oasis:names:tc:xacml:1.0:function:string-equal',
           dataType: 'http://www.w3.org/2001/XMLSchema#string',
-          valueType: 'simple',
-          value: r.data.wildcard ? '*' : (r.data.identifier || ''),
+          valueType: 'simple', value: r.data.wildcard ? '*' : (r.data.identifier||''),
         });
       });
 
-      const conditionModels = conditions.map(c => ({
+      const conds = children.filter(n => n.type === 'condition');
+      const conditionModels = conds.map(c => ({
         functionId:    OP_TO_COND_FN[c.data.operator] || OP_TO_COND_FN.eq,
         functionCustom: '',
         arg1Cat:    'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
@@ -285,22 +271,21 @@ const NodeEditor = (() => {
       }));
 
       return {
-        id:          rn.data.name || rn.id,
-        effect:      rn.data.effect || 'Permit',
+        id: rn.data.name || rn.id, effect: rn.data.effect || 'Permit',
         description: '',
-        target:      { groups: [{ matches }] },
-        conditions:  conditionModels,
-        conditionOp: conditions.length > 0 ? (conditions[0].data.logic || 'AND') : 'AND',
+        target: { groups: [{ matches }] },
+        conditions: conditionModels,
+        conditionOp: conds.length > 0 ? (conds[0].data.logic || 'AND') : 'AND',
       };
     });
 
     return {
-      id:           pNode.data.name || 'node-policy',
-      version:      '3.0',
+      id: pNode.data.name || 'node-policy',
+      version: '3.0',
       description:  pNode.data.description || '',
       combiningAlg: pNode.data.combiningAlg ||
                     'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides',
-      target:       { groups: [{ matches: [] }] },
+      target: { groups: [{ matches: [] }] },
       rules,
     };
   }
@@ -328,7 +313,7 @@ const NodeEditor = (() => {
     _canvas.querySelectorAll('.ne-node').forEach(el => el.remove());
     _nodes.forEach(n => _canvas.appendChild(_makeNodeEl(n)));
     const hint = _wrap.querySelector('.ne-empty-hint');
-    if (hint) hint.style.display = _nodes.length <= 1 ? '' : 'none';
+    if (hint) hint.style.display = _nodes.length === 0 ? '' : 'none';
   }
 
   function _renderEdges() {
@@ -364,7 +349,6 @@ const NodeEditor = (() => {
     const meta = NODE_TYPE_META[node.type] || { icon:'❓', labelKey: node.type };
     const isLeaf   = ['subject','action','resource','condition'].includes(node.type);
     const isPolicy = node.type === 'policy';
-    const canDel   = !isPolicy;
 
     el.id        = `ne-node-${node.id}`;
     el.className = `ne-node ne-node--${node.type}${
@@ -372,19 +356,43 @@ const NodeEditor = (() => {
     }${node.id === _selNode ? ' selected' : ''}`;
     el.style.cssText = `left:${node.x}px;top:${node.y}px`;
 
-    el.innerHTML = `
-      <div class="ne-node-hdr" data-drag="${node.id}">
-        <span class="ne-node-icon">${meta.icon}</span>
-        <span class="ne-node-label">${_esc(_t(meta.labelKey))}</span>
-        ${canDel ? `<button class="ne-node-del" data-del="${node.id}"
-          title="${_esc(_t('ne.node.delete'))}" aria-label="${_esc(_t('ne.node.delete'))}">&#x2715;</button>` : ''}
-      </div>
-      <div class="ne-node-body" id="ne-body-${node.id}">
-        ${_bodyHtml(node)}
-      </div>
-      ${!isPolicy ? `<div class="ne-port ne-port-in"  data-pin="${node.id}"></div>` : ''}
-      ${!isLeaf   ? `<div class="ne-port ne-port-out" data-pout="${node.id}"></div>` : ''}
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'ne-node-hdr';
+    hdr.dataset.drag = node.id;
+    hdr.innerHTML = `
+      <span class="ne-node-icon">${meta.icon}</span>
+      <span class="ne-node-label">${_esc(_t(meta.labelKey))}</span>
+      ${!isPolicy ? `<button class="ne-node-del" data-del="${node.id}"
+        title="${_esc(_t('ne.node.delete'))}" aria-label="${_esc(_t('ne.node.delete'))}">&#x2715;</button>` : ''}
     `;
+    el.appendChild(hdr);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'ne-node-body';
+    body.id = `ne-body-${node.id}`;
+    body.innerHTML = _bodyHtml(node);
+    el.appendChild(body);
+
+    // Input port (left side) — all except policy
+    if (!isPolicy) {
+      const portIn = document.createElement('div');
+      portIn.className = 'ne-port ne-port-in';
+      portIn.dataset.pin = node.id;
+      el.appendChild(portIn);
+    }
+
+    // Output port (right side) — all except leaf nodes
+    // Ports get direct pointerdown listener — NOT event delegation
+    if (!isLeaf) {
+      const portOut = document.createElement('div');
+      portOut.className = 'ne-port ne-port-out';
+      portOut.dataset.pout = node.id;
+      portOut.addEventListener('pointerdown', _onPortDown);
+      el.appendChild(portOut);
+    }
+
     return el;
   }
 
@@ -404,9 +412,7 @@ const NodeEditor = (() => {
         </div>
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.policy.alg'))}</span>
-          <select data-node="${id}" data-field="combiningAlg">
-            ${_algOpts(d.combiningAlg)}
-          </select>
+          <select data-node="${id}" data-field="combiningAlg">${_algOpts(d.combiningAlg)}</select>
         </div>`;
 
       case 'rule': return `
@@ -536,10 +542,8 @@ const NodeEditor = (() => {
     _pushHistory();
     const node = { id: _uid(), type, x, y, data: _defaultData(type) };
     _nodes.push(node);
-    const el = _makeNodeEl(node);
-    _canvas.appendChild(el);
-    const hint = _wrap.querySelector('.ne-empty-hint');
-    if (hint) hint.style.display = 'none';
+    _canvas.appendChild(_makeNodeEl(node));
+    _wrap.querySelector('.ne-empty-hint')?.style.setProperty('display', 'none');
     _updateValidation();
     _emit();
     return node;
@@ -575,7 +579,9 @@ const NodeEditor = (() => {
     _emit();
   }
 
-  // ── Connection highlight helpers ───────────────────────────────────────
+  // ── Connection drag (port → pointer capture) ───────────────────────────
+  // Uses PointerEvent + setPointerCapture so all subsequent events are
+  // delivered to the port element regardless of where the pointer moves.
 
   function _highlightConnectTargets(fromId) {
     const fromNode = _nodes.find(n => n.id === fromId);
@@ -595,27 +601,100 @@ const NodeEditor = (() => {
   }
 
   function _clearConnectHighlights() {
-    _wrap.querySelectorAll(
-      '.ne-conn-source,.ne-conn-valid,.ne-conn-invalid,.ne-conn-hover'
-    ).forEach(el => el.classList.remove(
-      'ne-conn-source','ne-conn-valid','ne-conn-invalid','ne-conn-hover'
-    ));
+    if (!_wrap) return;
+    _wrap.querySelectorAll('.ne-conn-source,.ne-conn-valid,.ne-conn-invalid,.ne-conn-hover')
+      .forEach(el => el.classList.remove(
+        'ne-conn-source','ne-conn-valid','ne-conn-invalid','ne-conn-hover'
+      ));
   }
 
-  // ── Event handlers ─────────────────────────────────────────────────────
+  function _onPortDown(e) {
+    // Only handle primary button (left click)
+    if (e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const nodeId = e.currentTarget.dataset.pout;
+    if (!nodeId) return;
+
+    // Capture pointer: all future pointermove / pointerup go to this element
+    e.currentTarget.setPointerCapture(e.pointerId);
+
+    _dragConn = { fromId: nodeId };
+
+    // Draw initial temp edge
+    const fromNode = _nodes.find(n => n.id === nodeId);
+    if (fromNode && _tempEdgePath) {
+      const p1  = _portPos(fromNode, 'out');
+      const pos = _s2c(e.clientX, e.clientY);
+      _tempEdgePath.setAttribute('d', _bezier(p1.x, p1.y, pos.x, pos.y));
+      _tempEdgePath.style.display = '';
+    }
+
+    _highlightConnectTargets(nodeId);
+
+    // Register move / up / cancel on this specific port element
+    e.currentTarget.addEventListener('pointermove',   _onPortMove);
+    e.currentTarget.addEventListener('pointerup',     _onPortUp);
+    e.currentTarget.addEventListener('pointercancel', _onPortCancel);
+  }
+
+  function _onPortMove(e) {
+    if (!_dragConn) return;
+    const pos    = _s2c(e.clientX, e.clientY);
+    const fnNode = _nodes.find(n => n.id === _dragConn.fromId);
+    if (fnNode && _tempEdgePath) {
+      const p1 = _portPos(fnNode, 'out');
+      _tempEdgePath.setAttribute('d', _bezier(p1.x, p1.y, pos.x, pos.y));
+    }
+    // Hover highlight on valid target
+    _wrap.querySelectorAll('.ne-conn-hover').forEach(el => el.classList.remove('ne-conn-hover'));
+    const hovEl = document.elementFromPoint(e.clientX, e.clientY)?.closest('.ne-conn-valid');
+    if (hovEl) hovEl.classList.add('ne-conn-hover');
+  }
+
+  function _onPortUp(e) {
+    _cleanupPortListeners(e.currentTarget);
+    if (_tempEdgePath) {
+      _tempEdgePath.style.display = 'none';
+      _tempEdgePath.setAttribute('d', '');
+    }
+    _clearConnectHighlights();
+
+    if (_dragConn) {
+      // Accept drop on any part of any node (not just the tiny port circle)
+      const targetEl = document.elementFromPoint(e.clientX, e.clientY)?.closest('.ne-node');
+      if (targetEl) {
+        const toId = targetEl.id.replace('ne-node-', '');
+        if (toId && toId !== _dragConn.fromId) {
+          _addEdge(_dragConn.fromId, toId);
+        }
+      }
+      _dragConn = null;
+    }
+  }
+
+  function _onPortCancel(e) {
+    _cleanupPortListeners(e.currentTarget);
+    if (_tempEdgePath) {
+      _tempEdgePath.style.display = 'none';
+      _tempEdgePath.setAttribute('d', '');
+    }
+    _clearConnectHighlights();
+    _dragConn = null;
+  }
+
+  function _cleanupPortListeners(el) {
+    el.removeEventListener('pointermove',   _onPortMove);
+    el.removeEventListener('pointerup',     _onPortUp);
+    el.removeEventListener('pointercancel', _onPortCancel);
+  }
+
+  // ── Node drag + canvas pan (mousedown on container) ────────────────────
 
   function _onMouseDown(e) {
-    // Port out → start connection
-    const pout = e.target.closest('[data-pout]');
-    if (pout) {
-      e.preventDefault();
-      e.stopPropagation();
-      const pos = _s2c(e.clientX, e.clientY);
-      _dragConn = { fromId: pout.dataset.pout, curX: pos.x, curY: pos.y };
-      if (_tempEdgePath) _tempEdgePath.style.display = '';
-      _highlightConnectTargets(_dragConn.fromId);
-      return;
-    }
+    // Ignore if a port started this (port uses pointerdown and stops propagation)
+    if (e.target.closest('[data-pout]')) return;
 
     // Node header drag
     const hdr = e.target.closest('[data-drag]');
@@ -634,13 +713,10 @@ const NodeEditor = (() => {
       return;
     }
 
-    // Canvas pan (click on viewport background)
-    if (
-      e.target === _viewport ||
-      e.target === _canvas   ||
-      e.target === _svgEl    ||
-      e.target === _edgesGroup
-    ) {
+    // Canvas pan — click on viewport background (not a node, not the palette)
+    const onNode = e.target.closest('.ne-node');
+    const onPal  = e.target.closest('.ne-palette');
+    if (!onNode && !onPal) {
       e.preventDefault();
       _dragPan = { startMX: e.clientX, startMY: e.clientY, origPX: _panX, origPY: _panY };
       _selNode = null;
@@ -663,28 +739,10 @@ const NodeEditor = (() => {
       _renderEdges();
       return;
     }
-
     if (_dragPan) {
       _panX = _dragPan.origPX + (e.clientX - _dragPan.startMX);
       _panY = _dragPan.origPY + (e.clientY - _dragPan.startMY);
       _applyTransform();
-      return;
-    }
-
-    if (_dragConn && _tempEdgePath) {
-      const pos = _s2c(e.clientX, e.clientY);
-      _dragConn.curX = pos.x;
-      _dragConn.curY = pos.y;
-      const fn = _nodes.find(n => n.id === _dragConn.fromId);
-      if (fn) {
-        const p1 = _portPos(fn, 'out');
-        _tempEdgePath.setAttribute('d', _bezier(p1.x, p1.y, pos.x, pos.y));
-      }
-
-      // Highlight the node currently hovered (if it's a valid target)
-      _wrap.querySelectorAll('.ne-conn-hover').forEach(el => el.classList.remove('ne-conn-hover'));
-      const hovEl = document.elementFromPoint(e.clientX, e.clientY)?.closest('.ne-conn-valid');
-      if (hovEl) hovEl.classList.add('ne-conn-hover');
     }
   }
 
@@ -695,28 +753,8 @@ const NodeEditor = (() => {
       _emit();
       return;
     }
-
     if (_dragPan) {
       _dragPan = null;
-      return;
-    }
-
-    if (_dragConn) {
-      if (_tempEdgePath) {
-        _tempEdgePath.style.display = 'none';
-        _tempEdgePath.setAttribute('d', '');
-      }
-      _clearConnectHighlights();
-
-      // Accept drop on any part of a valid target node (not just the tiny port)
-      const targetEl = document.elementFromPoint(e.clientX, e.clientY)?.closest('.ne-node');
-      if (targetEl) {
-        const toId = targetEl.id.replace('ne-node-', '');
-        if (toId && toId !== _dragConn.fromId) {
-          _addEdge(_dragConn.fromId, toId);
-        }
-      }
-      _dragConn = null;
     }
   }
 
@@ -752,13 +790,12 @@ const NodeEditor = (() => {
       return;
     }
 
-    // Edge click
+    // Edge click (select / delete)
     const edgeEl = e.target.closest('.ne-edge');
     if (edgeEl) {
       _selEdge = edgeEl.dataset.edgeId;
       _selNode = null;
       _renderEdges();
-      return;
     }
   }
 
@@ -769,35 +806,26 @@ const NodeEditor = (() => {
     const node = _nodes.find(n => n.id === nodeId);
     if (!node) return;
 
-    node.data[field] = e.target.type === 'checkbox'
-      ? e.target.checked
-      : e.target.value;
+    node.data[field] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
 
-    // Re-render body if action changed (to show/hide custom input)
     if (field === 'action') {
       const body = document.getElementById(`ne-body-${nodeId}`);
       if (body) body.innerHTML = _bodyHtml(node);
     }
-
     _emit();
   }
 
   function _onKeyDown(e) {
     if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
-
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (_selNode) { _deleteNode(_selNode); _selNode = null; }
       else if (_selEdge) { _deleteEdge(_selEdge); _selEdge = null; }
     }
-
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-      e.preventDefault();
-      _undo();
+      e.preventDefault(); _undo();
     }
-
     if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-      e.preventDefault();
-      _redo();
+      e.preventDefault(); _redo();
     }
   }
 
@@ -814,7 +842,8 @@ const NodeEditor = (() => {
     _applyTransform();
   }
 
-  // Palette drag & drop
+  // ── Palette drag & drop ────────────────────────────────────────────────
+
   function _onPaletteDragStart(e) {
     const item = e.target.closest('.ne-palette-item');
     if (!item) return;
@@ -835,7 +864,7 @@ const NodeEditor = (() => {
     _paletteType = null;
   }
 
-  // ── Toolbar actions ────────────────────────────────────────────────────
+  // ── Toolbar ────────────────────────────────────────────────────────────
 
   function _fitView() {
     if (_nodes.length === 0) return;
@@ -846,15 +875,18 @@ const NodeEditor = (() => {
     const maxX = Math.max(...xs) + NODE_W;
     const maxY = Math.max(...ys) + 200;
     const r    = _viewport.getBoundingClientRect();
-    const sz   = Math.min(r.width / (maxX - minX + 80), r.height / (maxY - minY + 80), 1.5);
+    if (r.width === 0 || r.height === 0) return;
+    const sz = Math.min(r.width / (maxX - minX + 60), r.height / (maxY - minY + 60), 1.2);
     _zoom = sz;
-    _panX = 40 - minX * sz;
-    _panY = 40 - minY * sz;
+    _panX = 30 - minX * sz;
+    _panY = 30 - minY * sz;
     _applyTransform();
   }
 
   function _resetView() {
-    _zoom = 1; _panX = 260; _panY = 60;
+    _zoom = 1;
+    _panX = INIT_PX;
+    _panY = INIT_PY;
     _applyTransform();
   }
 
@@ -890,14 +922,14 @@ const NodeEditor = (() => {
           </div>
           <div class="ne-toolbar">
             <button class="ne-toolbar-btn" id="ne-undo-btn"
-              title="${_esc(_t('ne.toolbar.undo'))}" aria-label="${_esc(_t('ne.toolbar.undo'))}" disabled>&#x21A9;</button>
+              title="${_esc(_t('ne.toolbar.undo'))}" disabled>&#x21A9;</button>
             <button class="ne-toolbar-btn" id="ne-redo-btn"
-              title="${_esc(_t('ne.toolbar.redo'))}" aria-label="${_esc(_t('ne.toolbar.redo'))}" disabled>&#x21AA;</button>
+              title="${_esc(_t('ne.toolbar.redo'))}" disabled>&#x21AA;</button>
             <div class="ne-toolbar-sep"></div>
             <button class="ne-toolbar-btn" id="ne-fit-btn"
-              title="${_esc(_t('ne.toolbar.fit'))}" aria-label="${_esc(_t('ne.toolbar.fit'))}">&#x229E;</button>
+              title="${_esc(_t('ne.toolbar.fit'))}">&#x229E;</button>
             <button class="ne-toolbar-btn" id="ne-reset-btn"
-              title="${_esc(_t('ne.toolbar.reset'))}" aria-label="${_esc(_t('ne.toolbar.reset'))}"
+              title="${_esc(_t('ne.toolbar.reset'))}"
               style="font-size:0.65rem;width:36px">100%</button>
           </div>
           <div id="ne-validation" class="ne-validation">
@@ -917,23 +949,23 @@ const NodeEditor = (() => {
   function init(container, onPolicyChange) {
     destroy();
 
-    _wrap             = container;
-    _onPolicyChange   = onPolicyChange;
-    _nodes            = [{ id: _uid(), type: 'policy', x: 60, y: 80, data: _defaultData('policy') }];
-    _edges            = [];
-    _zoom = 1; _panX = 260; _panY = 60;
-    _history          = [];
-    _histIdx          = -1;
+    _wrap           = container;
+    _onPolicyChange = onPolicyChange;
+    _nodes          = [{ id: _uid(), type: 'policy', x: 20, y: 50, data: _defaultData('policy') }];
+    _edges          = [];
+    _zoom = 1; _panX = INIT_PX; _panY = INIT_PY;
+    _history        = [];
+    _histIdx        = -1;
     _selNode = null;
     _selEdge = null;
 
     container.innerHTML = _buildSkeleton();
 
-    _viewport    = container.querySelector('#ne-viewport');
-    _canvas      = container.querySelector('#ne-canvas');
-    _svgEl       = container.querySelector('#ne-svg');
-    _edgesGroup  = container.querySelector('#ne-edges-group');
-    _tempEdgePath= container.querySelector('#ne-temp-edge');
+    _viewport     = container.querySelector('#ne-viewport');
+    _canvas       = container.querySelector('#ne-canvas');
+    _svgEl        = container.querySelector('#ne-svg');
+    _edgesGroup   = container.querySelector('#ne-edges-group');
+    _tempEdgePath = container.querySelector('#ne-temp-edge');
 
     _applyTransform();
     _pushHistory();
@@ -941,7 +973,6 @@ const NodeEditor = (() => {
     _renderEdges();
     _updateValidation();
 
-    // Bind events
     container.addEventListener('mousedown', _onMouseDown);
     container.addEventListener('click',     _onClick);
     container.addEventListener('input',     _onInput);
@@ -953,14 +984,12 @@ const NodeEditor = (() => {
     const palette = container.querySelector('.ne-palette');
     if (palette) palette.addEventListener('dragstart', _onPaletteDragStart);
 
-    // Global events (detached in destroy)
     document.addEventListener('mousemove', _onMouseMove);
     document.addEventListener('mouseup',   _onMouseUp);
     document.addEventListener('keydown',   _onKeyDown);
 
     _viewport.addEventListener('wheel', _onWheel, { passive: false });
 
-    // Toolbar
     container.querySelector('#ne-undo-btn')?.addEventListener('click', _undo);
     container.querySelector('#ne-redo-btn')?.addEventListener('click', _redo);
     container.querySelector('#ne-fit-btn')?.addEventListener('click',  _fitView);
@@ -976,7 +1005,7 @@ const NodeEditor = (() => {
 
     const pId = _uid();
     const nodes = [{
-      id: pId, type: 'policy', x: 60, y: 80,
+      id: pId, type: 'policy', x: 20, y: 50,
       data: {
         name:         policy.id          || 'meine-policy',
         description:  policy.description || '',
@@ -986,10 +1015,10 @@ const NodeEditor = (() => {
     }];
     const edges = [];
 
-    let ruleY = 60;
+    let ruleY = 30;
     (policy.rules || []).forEach(rule => {
       const rId = _uid();
-      nodes.push({ id: rId, type: 'rule', x: 360, y: ruleY,
+      nodes.push({ id: rId, type: 'rule', x: 280, y: ruleY,
         data: { name: rule.id || 'regel', effect: rule.effect || 'Permit' } });
       edges.push({ id: _uid(), fromId: pId, toId: rId });
 
@@ -1002,39 +1031,39 @@ const NodeEditor = (() => {
         if (s.attributeId?.includes('role'))  attrType = 'role';
         if (s.attributeId?.includes('group')) attrType = 'group';
         if (s.attributeId?.includes('email')) attrType = 'email';
-        nodes.push({ id: nId, type: 'subject', x: 660, y: childY,
+        nodes.push({ id: nId, type: 'subject', x: 540, y: childY,
           data: { attrType, operator: 'eq', value: s.value || '' } });
         edges.push({ id: _uid(), fromId: rId, toId: nId });
-        childY += 160;
+        childY += 155;
       });
 
       matches.filter(m => m.cat === 'action').forEach(a => {
         const nId = _uid();
         const known = ['read','write','delete','execute','*'];
         const act   = known.includes(a.value) ? a.value : 'custom';
-        nodes.push({ id: nId, type: 'action', x: 660, y: childY,
+        nodes.push({ id: nId, type: 'action', x: 540, y: childY,
           data: { action: act, customAction: act === 'custom' ? (a.value||'') : '' } });
         edges.push({ id: _uid(), fromId: rId, toId: nId });
-        childY += 130;
+        childY += 120;
       });
 
       matches.filter(m => m.cat === 'resource').forEach(r => {
         const nId = _uid();
-        nodes.push({ id: nId, type: 'resource', x: 660, y: childY,
+        nodes.push({ id: nId, type: 'resource', x: 540, y: childY,
           data: { resourceType: 'document', identifier: r.value||'', wildcard: r.value==='*' } });
         edges.push({ id: _uid(), fromId: rId, toId: nId });
-        childY += 160;
+        childY += 155;
       });
 
       (rule.conditions || []).forEach(c => {
         const nId = _uid();
-        nodes.push({ id: nId, type: 'condition', x: 660, y: childY,
+        nodes.push({ id: nId, type: 'condition', x: 540, y: childY,
           data: { attribute: c.arg1AttrId||'', operator: 'eq', value: c.arg2Value||'', logic: rule.conditionOp||'AND' } });
         edges.push({ id: _uid(), fromId: rId, toId: nId });
-        childY += 180;
+        childY += 175;
       });
 
-      ruleY = Math.max(ruleY + 220, childY + 20);
+      ruleY = Math.max(ruleY + 200, childY + 20);
     });
 
     _nodes   = nodes;
@@ -1043,17 +1072,20 @@ const NodeEditor = (() => {
     _histIdx = -1;
     _pushHistory();
 
-    if (_canvas) _rerenderAll();
+    if (_canvas) {
+      _rerenderAll();
+      // Fit view after layout so all nodes are visible; defer by one frame
+      // so the DOM has finalised its dimensions.
+      requestAnimationFrame(_fitView);
+    }
   }
 
-  // ── Public: refresh labels (on i18n change) ────────────────────────────
+  // ── Public: refresh labels (i18n change) ──────────────────────────────
 
   function refresh() {
     if (!_canvas) return;
-    // Re-render all node elements in place (preserve positions from _nodes)
     _rerenderAll();
-    const valText = _wrap?.querySelector('.ne-validation-text');
-    if (valText) _updateValidation();
+    _updateValidation();
   }
 
   // ── Public: destroy ────────────────────────────────────────────────────
@@ -1062,12 +1094,13 @@ const NodeEditor = (() => {
     document.removeEventListener('mousemove', _onMouseMove);
     document.removeEventListener('mouseup',   _onMouseUp);
     document.removeEventListener('keydown',   _onKeyDown);
-    _canvas      = null;
-    _viewport    = null;
-    _svgEl       = null;
-    _edgesGroup  = null;
-    _tempEdgePath= null;
-    _wrap        = null;
+    _canvas       = null;
+    _viewport     = null;
+    _svgEl        = null;
+    _edgesGroup   = null;
+    _tempEdgePath = null;
+    _wrap         = null;
+    _dragConn     = null;
   }
 
   return { init, setPolicy, refresh, destroy };
