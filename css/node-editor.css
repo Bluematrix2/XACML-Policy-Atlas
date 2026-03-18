@@ -1,0 +1,414 @@
+/* ================================================================
+   Node Editor — Visual Policy Creator (Phase 1)
+   ================================================================ */
+
+/* ── Creator mode tab switcher ── */
+.creator-mode-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: var(--sp-4);
+}
+
+.creator-mode-tab {
+  padding: var(--sp-2) var(--sp-6);
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: -2px;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
+}
+.creator-mode-tab:hover { color: var(--text-primary); }
+.creator-mode-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Node editor canvas area (replaces creator-left in node mode) ── */
+.creator-node-area {
+  display: none;
+}
+.creator-main.node-mode .creator-left       { display: none; }
+.creator-main.node-mode .creator-node-area  { display: block; }
+
+/* Override grid ratio for node mode: give canvas more space */
+.creator-main.node-mode {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+
+/* ── Outer wrapper ── */
+.ne-wrap {
+  display: flex;
+  height: calc(100vh - 52px - 46px - 140px);
+  min-height: 520px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+}
+
+/* ── Palette sidebar ── */
+.ne-palette {
+  width: 176px;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-3);
+  gap: var(--sp-2);
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.ne-palette-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-1);
+}
+
+.ne-palette-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  cursor: grab;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  user-select: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.ne-palette-item:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  background: var(--accent-subtle);
+}
+.ne-palette-item:active { cursor: grabbing; }
+.ne-palette-item-icon { font-size: 0.95rem; line-height: 1; }
+
+.ne-palette-hint {
+  margin-top: auto;
+  padding-top: var(--sp-3);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Viewport (pan/zoom area) ── */
+.ne-viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  background:
+    radial-gradient(circle, var(--border) 1px, transparent 1px) 0 0 / 24px 24px;
+}
+
+/* ── Canvas (transformed) ── */
+.ne-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+/* ── SVG edge layer ── */
+.ne-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.ne-edge {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  pointer-events: stroke;
+  cursor: pointer;
+  transition: stroke 0.15s;
+}
+.ne-edge:hover  { stroke: var(--accent); stroke-width: 3; }
+.ne-edge.selected { stroke: var(--accent); stroke-width: 3; }
+.ne-edge-temp {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+}
+
+/* ── Node base ── */
+.ne-node {
+  position: absolute;
+  width: 230px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  user-select: none;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.ne-node.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent), var(--shadow-md);
+}
+.ne-node.connecting-target {
+  border-color: #10B981;
+  box-shadow: 0 0 0 2px rgba(16,185,129,0.25), var(--shadow-md);
+}
+
+/* ── Node header ── */
+.ne-node-hdr {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 7px var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  cursor: grab;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--bg-secondary);
+  min-height: 38px;
+}
+.ne-node-hdr:active { cursor: grabbing; }
+.ne-node-icon { font-size: 0.9rem; line-height: 1; flex-shrink: 0; }
+.ne-node-label {
+  flex: 1;
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ne-node-del {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.ne-node:hover .ne-node-del  { opacity: 1; }
+.ne-node-del:hover {
+  background: var(--deny-bg);
+  color: var(--deny-border);
+}
+
+/* ── Color-coded headers per node type ── */
+.ne-node--policy .ne-node-hdr  { background: #EFF6FF; border-bottom-color: #BFDBFE; }
+.ne-node--subject .ne-node-hdr  { background: #F0FDF4; border-bottom-color: #BBF7D0; }
+.ne-node--action .ne-node-hdr   { background: #FFF7ED; border-bottom-color: #FED7AA; }
+.ne-node--resource .ne-node-hdr { background: #FDF4FF; border-bottom-color: #E9D5FF; }
+.ne-node--condition .ne-node-hdr{ background: var(--condition-bg); border-bottom-color: var(--condition-border); }
+.ne-node--rule.effect-permit .ne-node-hdr { background: var(--permit-bg); border-bottom-color: var(--permit-border); }
+.ne-node--rule.effect-deny .ne-node-hdr   { background: var(--deny-bg);   border-bottom-color: var(--deny-border);   }
+
+[data-theme="dark"] .ne-node--policy .ne-node-hdr   { background: #1E3A5F; border-bottom-color: #1D4ED8; }
+[data-theme="dark"] .ne-node--subject .ne-node-hdr  { background: #052e16; border-bottom-color: #064e3b; }
+[data-theme="dark"] .ne-node--action .ne-node-hdr   { background: #431407; border-bottom-color: #7c2d12; }
+[data-theme="dark"] .ne-node--resource .ne-node-hdr { background: #2e1065; border-bottom-color: #4c1d95; }
+
+/* ── Node body ── */
+.ne-node-body {
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.ne-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ne-field-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.ne-field input[type="text"],
+.ne-field select {
+  width: 100%;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.ne-field input[type="text"]:focus,
+.ne-field select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.ne-field-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.ne-field input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+
+/* ── Effect toggle ── */
+.ne-effect-toggle {
+  display: flex;
+  gap: var(--sp-2);
+}
+.ne-effect-btn {
+  flex: 1;
+  padding: 4px var(--sp-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.ne-effect-btn.active-permit {
+  border-color: var(--permit-border);
+  background: var(--permit-bg);
+  color: var(--permit-border);
+}
+.ne-effect-btn.active-deny {
+  border-color: var(--deny-border);
+  background: var(--deny-bg);
+  color: var(--deny-border);
+}
+
+/* ── Port handles ── */
+.ne-port {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  cursor: crosshair;
+  transition: border-color 0.12s, background 0.12s, transform 0.1s;
+  z-index: 5;
+}
+.ne-port:hover {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  transform: scale(1.4);
+}
+.ne-port-in  { left: -8px; top: 19px; }
+.ne-port-out { right: -8px; top: 19px; }
+
+/* ── Toolbar (top-right of viewport) ── */
+.ne-toolbar {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-3);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  z-index: 20;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
+}
+.ne-toolbar-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.12s, color 0.12s;
+  font-family: inherit;
+}
+.ne-toolbar-btn:hover:not(:disabled) { background: var(--bg-secondary); color: var(--text-primary); }
+.ne-toolbar-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.ne-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+/* ── Validation indicator (bottom-right) ── */
+.ne-validation {
+  position: absolute;
+  bottom: var(--sp-3);
+  right: var(--sp-3);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px var(--sp-3);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+  z-index: 20;
+  pointer-events: none;
+}
+.ne-validation-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ne-validation-dot.valid   { background: var(--permit-border); }
+.ne-validation-dot.invalid { background: var(--deny-border); }
+.ne-validation-dot.warning { background: #F59E0B; }
+
+/* ── Empty hint ── */
+.ne-empty-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--text-muted);
+  pointer-events: none;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+.ne-empty-hint-icon { font-size: 2.5rem; margin-bottom: var(--sp-2); }

@@ -8,6 +8,7 @@
 
 import { esc, XACMLParser } from './parser.js';
 import { I18n } from './i18n.js';
+import { NodeEditor } from './node-editor.js';
 
 const COMBINING_ALGS = [
   { labelKey: 'creator.alg.deny',   value: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides' },
@@ -107,11 +108,15 @@ const MATCH_DATATYPE_OPTIONS = [
 const SESSION_KEY       = 'xacml-creator-state';
 const SESSION_MAX_BYTES = 524288; // 512 KB
 
+const CREATOR_TAB_KEY = 'xacml-creator-tab';
+
 const PolicyCreator = (() => {
   let _initialized  = false;
   let _previewTimer = null;
   let _previewMode  = 'visual'; // 'visual' | 'xml'
   let _xmlCm        = null;     // CodeMirror read-only instance for XML tab
+  let _creatorTab   = sessionStorage.getItem(CREATOR_TAB_KEY) || 'form'; // 'form' | 'node'
+  let _nodeEditorReady = false; // NodeEditor.init() called yet?
   // Track accordion open/closed state across re-renders (by index, since IDs are random)
   const _accState = {
     closedPolicies: new Set(), // policy-panel indices that are closed
@@ -763,18 +768,27 @@ const PolicyCreator = (() => {
     const container = document.getElementById('layout-creator');
     if (!container) return;
 
+    const isNode = _creatorTab === 'node';
+
     container.innerHTML = `
       <div class="creator-wrap">
         <div class="creator-header">
           <h2 class="creator-title">&#x1F6E0;&#xFE0F; Policy Creator <span class="alpha-badge">ALPHA</span></h2>
           <p class="creator-subtitle">${esc(I18n.t('creator.subtitle'))}</p>
         </div>
-        <div class="creator-main">
-          <div class="creator-left">
+        <div class="creator-mode-tabs">
+          <button class="creator-mode-tab${!isNode ? ' active' : ''}" data-action="creator-tab" data-tab="form"
+                  id="creator-tab-form">&#x1F4DD; ${esc(I18n.t('creator.tab.form'))}</button>
+          <button class="creator-mode-tab${isNode  ? ' active' : ''}" data-action="creator-tab" data-tab="node"
+                  id="creator-tab-node">&#x1F5FA;&#xFE0F; ${esc(I18n.t('creator.tab.node'))}</button>
+        </div>
+        <div class="creator-main${isNode ? ' node-mode' : ''}" id="creator-main">
+          <div class="creator-left" id="creator-form-editor-wrap"${isNode ? ' style="display:none"' : ''}>
             <div class="creator-steps" id="creator-steps"></div>
             <div class="creator-form-area" id="creator-form-area"></div>
             <div class="creator-nav" id="creator-nav"></div>
           </div>
+          <div class="creator-node-area" id="creator-node-editor-wrap"${!isNode ? ' style="display:none"' : ''}></div>
           <div class="creator-right">
             <div class="creator-preview" id="creator-preview">
               <div class="creator-preview-header">
@@ -805,6 +819,71 @@ const PolicyCreator = (() => {
     container.addEventListener('click',  _handleClick);
     container.addEventListener('input',  _handleInput);
     container.addEventListener('change', _handleChange);
+
+    // If node tab was active, initialise node editor immediately
+    if (isNode) {
+      _initNodeEditor();
+    }
+  }
+
+  function _initNodeEditor() {
+    const area = document.getElementById('creator-node-editor-wrap');
+    if (!area) return;
+    if (!_nodeEditorReady) {
+      _nodeEditorReady = true;
+      NodeEditor.init(area, _onNodePolicyChange);
+    }
+    // Always sync current policy into the node editor when showing it
+    if (_state.rootType === 'Policy') {
+      NodeEditor.setPolicy(_state.policy);
+    }
+  }
+
+  function _onNodePolicyChange(policy) {
+    if (_state.rootType !== 'Policy') return;
+    // Merge node-editor-produced policy back into form state
+    // Preserve fields not managed by node editor (version, _nodeLayout)
+    _state.policy = Object.assign({}, _state.policy, {
+      id:           policy.id,
+      description:  policy.description,
+      combiningAlg: policy.combiningAlg,
+      rules:        policy.rules,
+      target:       policy.target,
+    });
+    _saveState();
+    _schedulePreview();
+  }
+
+  function _switchCreatorTab(tab) {
+    if (tab === _creatorTab) return;
+    _creatorTab = tab;
+    sessionStorage.setItem(CREATOR_TAB_KEY, tab);
+
+    const formWrap = document.getElementById('creator-form-editor-wrap');
+    const nodeWrap = document.getElementById('creator-node-editor-wrap');
+    const main     = document.getElementById('creator-main');
+    const tabForm  = document.getElementById('creator-tab-form');
+    const tabNode  = document.getElementById('creator-tab-node');
+
+    if (tab === 'node') {
+      if (formWrap) formWrap.style.display = 'none';
+      if (nodeWrap) nodeWrap.style.display = '';
+      if (main)     main.classList.add('node-mode');
+      if (tabForm)  tabForm.classList.remove('active');
+      if (tabNode)  tabNode.classList.add('active');
+      _initNodeEditor();
+    } else {
+      if (formWrap) formWrap.style.display = '';
+      if (nodeWrap) nodeWrap.style.display = 'none';
+      if (main)     main.classList.remove('node-mode');
+      if (tabForm)  tabForm.classList.add('active');
+      if (tabNode)  tabNode.classList.remove('active');
+      // Re-render form with latest state (node editor may have changed it)
+      _renderStepBar();
+      _renderFormStep();
+      _renderNav();
+      _updatePreview();
+    }
   }
 
   // ── Step Bar ───────────────────────────────────────────────────────────
@@ -1581,6 +1660,12 @@ const PolicyCreator = (() => {
       return;
     }
 
+    const tabBtn = t.closest('[data-action="creator-tab"]');
+    if (tabBtn) {
+      _switchCreatorTab(tabBtn.dataset.tab);
+      return;
+    }
+
     const modeBtn = t.closest('[data-action="preview-mode"]');
     if (modeBtn) {
       _previewMode = modeBtn.dataset.mode;
@@ -2118,6 +2203,13 @@ const PolicyCreator = (() => {
     if (titleEl) titleEl.textContent = I18n.t('creator.preview.title');
     const copyBtn = document.getElementById('creator-copy-btn');
     if (copyBtn) copyBtn.title = I18n.t('creator.copy.title');
+    // Update tab labels
+    const tabForm = document.getElementById('creator-tab-form');
+    if (tabForm) tabForm.innerHTML = `&#x1F4DD; ${esc(I18n.t('creator.tab.form'))}`;
+    const tabNode = document.getElementById('creator-tab-node');
+    if (tabNode) tabNode.innerHTML = `&#x1F5FA;&#xFE0F; ${esc(I18n.t('creator.tab.node'))}`;
+    // Refresh node editor labels if active
+    if (_nodeEditorReady) NodeEditor.refresh();
   }
 
   // ── Actions ────────────────────────────────────────────────────────────
