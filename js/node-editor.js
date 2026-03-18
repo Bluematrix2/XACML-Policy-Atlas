@@ -44,9 +44,10 @@ const NodeEditor = (() => {
   let _wrap        = null;
   let _viewport    = null;
   let _canvas      = null;
-  let _svgEl       = null;
-  let _edgesGroup  = null;
-  let _tempEdgePath= null;
+  let _svgEl            = null;
+  let _svgTransformGroup= null;
+  let _edgesGroup       = null;
+  let _tempEdgePath     = null;
 
   // ── Callback ──
   let _onPolicyChange = null;
@@ -138,6 +139,9 @@ const NodeEditor = (() => {
   function _applyTransform() {
     if (_canvas) {
       _canvas.style.transform = `translate(${_panX}px,${_panY}px) scale(${_zoom})`;
+    }
+    if (_svgTransformGroup) {
+      _svgTransformGroup.setAttribute('transform', `translate(${_panX},${_panY}) scale(${_zoom})`);
     }
   }
 
@@ -325,11 +329,29 @@ const NodeEditor = (() => {
       if (!fn || !tn) return;
       const p1 = _portPos(fn, 'out');
       const p2 = _portPos(tn, 'in');
+      const selected = e.id === _selEdge;
+
+      // Edge path
       const path = document.createElementNS('http://www.w3.org/2000/svg','path');
       path.setAttribute('d', _bezier(p1.x, p1.y, p2.x, p2.y));
-      path.setAttribute('class', `ne-edge${e.id === _selEdge ? ' selected' : ''}`);
+      path.setAttribute('class', `ne-edge${selected ? ' selected' : ''}`);
       path.dataset.edgeId = e.id;
       _edgesGroup.appendChild(path);
+
+      // Delete button at midpoint (only on selected edge)
+      if (selected) {
+        const mx = (p1.x + p2.x) / 2;
+        const my = (p1.y + p2.y) / 2;
+        const fo = document.createElementNS('http://www.w3.org/2000/svg','foreignObject');
+        fo.setAttribute('x', mx - 10);
+        fo.setAttribute('y', my - 10);
+        fo.setAttribute('width', 20);
+        fo.setAttribute('height', 20);
+        fo.style.pointerEvents = 'all';
+        fo.innerHTML = `<button class="ne-edge-del" data-del-edge="${e.id}"
+          title="${_esc(_t('ne.edge.delete'))}">&#x2715;</button>`;
+        _edgesGroup.appendChild(fo);
+      }
     });
   }
 
@@ -735,7 +757,7 @@ const NodeEditor = (() => {
       node.x = _dragNode.origX + dx;
       node.y = _dragNode.origY + dy;
       const el = document.getElementById(`ne-node-${node.id}`);
-      if (el) el.style.cssText = `left:${node.x}px;top:${node.y}px`;
+      if (el) el.style.cssText = `left:${node.x}px;top:${node.y}px;z-index:20`;
       _renderEdges();
       return;
     }
@@ -749,6 +771,8 @@ const NodeEditor = (() => {
   function _onMouseUp(e) {
     if (_dragNode) {
       _pushHistory();
+      const dragEl = document.getElementById(`ne-node-${_dragNode.nodeId}`);
+      if (dragEl) dragEl.style.zIndex = '';
       _dragNode = null;
       _emit();
       return;
@@ -790,7 +814,15 @@ const NodeEditor = (() => {
       return;
     }
 
-    // Edge click (select / delete)
+    // Edge delete button
+    const delEdge = e.target.closest('[data-del-edge]');
+    if (delEdge) {
+      e.stopPropagation();
+      _deleteEdge(delEdge.dataset.delEdge);
+      return;
+    }
+
+    // Edge click (select → shows delete button at midpoint)
     const edgeEl = e.target.closest('.ne-edge');
     if (edgeEl) {
       _selEdge = edgeEl.dataset.edgeId;
@@ -914,12 +946,13 @@ const NodeEditor = (() => {
           <div class="ne-palette-hint">${_esc(_t('ne.palette.hint'))}</div>
         </div>
         <div class="ne-viewport" id="ne-viewport">
-          <div class="ne-canvas" id="ne-canvas">
-            <svg class="ne-svg" id="ne-svg">
+          <div class="ne-canvas" id="ne-canvas"></div>
+          <svg class="ne-svg" id="ne-svg">
+            <g id="ne-svg-transform">
               <g id="ne-edges-group"></g>
               <path id="ne-temp-edge" class="ne-edge-temp" style="display:none"/>
-            </svg>
-          </div>
+            </g>
+          </svg>
           <div class="ne-toolbar">
             <button class="ne-toolbar-btn" id="ne-undo-btn"
               title="${_esc(_t('ne.toolbar.undo'))}" disabled>&#x21A9;</button>
@@ -961,11 +994,12 @@ const NodeEditor = (() => {
 
     container.innerHTML = _buildSkeleton();
 
-    _viewport     = container.querySelector('#ne-viewport');
-    _canvas       = container.querySelector('#ne-canvas');
-    _svgEl        = container.querySelector('#ne-svg');
-    _edgesGroup   = container.querySelector('#ne-edges-group');
-    _tempEdgePath = container.querySelector('#ne-temp-edge');
+    _viewport          = container.querySelector('#ne-viewport');
+    _canvas            = container.querySelector('#ne-canvas');
+    _svgEl             = container.querySelector('#ne-svg');
+    _svgTransformGroup = container.querySelector('#ne-svg-transform');
+    _edgesGroup        = container.querySelector('#ne-edges-group');
+    _tempEdgePath      = container.querySelector('#ne-temp-edge');
 
     _applyTransform();
     _pushHistory();
@@ -1094,11 +1128,12 @@ const NodeEditor = (() => {
     document.removeEventListener('mousemove', _onMouseMove);
     document.removeEventListener('mouseup',   _onMouseUp);
     document.removeEventListener('keydown',   _onKeyDown);
-    _canvas       = null;
-    _viewport     = null;
-    _svgEl        = null;
-    _edgesGroup   = null;
-    _tempEdgePath = null;
+    _canvas            = null;
+    _viewport          = null;
+    _svgEl             = null;
+    _svgTransformGroup = null;
+    _edgesGroup        = null;
+    _tempEdgePath      = null;
     _wrap         = null;
     _dragConn     = null;
   }

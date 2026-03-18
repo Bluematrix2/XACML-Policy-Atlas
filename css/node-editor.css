@@ -127,15 +127,16 @@
   transform-origin: 0 0;
 }
 
-/* ── SVG edge layer ── */
+/* ── SVG edge layer — sits at viewport level, same stacking as canvas ── */
 .ne-svg {
   position: absolute;
   top: 0;
   left: 0;
-  width: 0;
-  height: 0;
+  width: 100%;
+  height: 100%;
   overflow: visible;
   pointer-events: none;
+  z-index: 1;
 }
 .ne-edge {
   fill: none;
@@ -147,6 +148,28 @@
 }
 .ne-edge:hover  { stroke: var(--accent); stroke-width: 3; }
 .ne-edge.selected { stroke: var(--accent); stroke-width: 3; }
+/* ── Edge delete button (shown at midpoint of selected edge) ── */
+.ne-edge-del {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--deny-border);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--deny-border);
+  font-size: 0.6rem;
+  cursor: pointer;
+  line-height: 1;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s;
+  padding: 0;
+}
+.ne-edge-del:hover {
+  background: var(--deny-bg);
+}
+
 .ne-edge-temp {
   fill: none;
   stroke: var(--accent);
