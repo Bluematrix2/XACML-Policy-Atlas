@@ -616,8 +616,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg, 0 8px 32px rgba(0,0,0,0.2));
-  width: min(560px, 90%);
-  max-height: 80%;
+  width: min(680px, 92%);
+  max-height: 82%;
   overflow-y: auto;
   padding: var(--sp-5);
   display: flex;

@@ -92,6 +92,12 @@ const NE_TEMPLATE_DEFS = [
     descKey:  'ne.tpl.dept.desc',
     icon: '🏢',
   },
+  {
+    id: 'physician',
+    titleKey: 'ne.tpl.physician.title',
+    descKey:  'ne.tpl.physician.desc',
+    icon: '🏥',
+  },
 ];
 
 const NodeEditor = (() => {
@@ -151,7 +157,7 @@ const NodeEditor = (() => {
   function _defaultData(type) {
     switch (type) {
       case 'policy':    return {
-        name: 'meine-policy', description: '',
+        name: 'meine-policy', description: '', version: '2.0',
         combiningAlg: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides',
       };
       case 'rule':      return { name: 'regel-1', effect: 'Permit' };
@@ -347,8 +353,8 @@ const NodeEditor = (() => {
     });
 
     return {
-      id: pNode.data.name || 'node-policy',
-      version: '2.0',
+      id:           pNode.data.name        || 'node-policy',
+      version:      pNode.data.version     || '2.0',
       description:  pNode.data.description || '',
       combiningAlg: pNode.data.combiningAlg ||
                     'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides',
@@ -505,6 +511,13 @@ const NodeEditor = (() => {
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.policy.desc'))}</span>
           <input type="text" data-node="${id}" data-field="description" value="${_esc(d.description)}">
+        </div>
+        <div class="ne-field">
+          <span class="ne-field-label">${_esc(_t('ne.field.policy.version'))}</span>
+          <select data-node="${id}" data-field="version">
+            <option value="2.0" ${(d.version||'2.0')==='2.0'?'selected':''}>XACML 2.0</option>
+            <option value="3.0" ${(d.version||'2.0')==='3.0'?'selected':''}>XACML 3.0</option>
+          </select>
         </div>
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.policy.alg'))}</span>
@@ -816,10 +829,11 @@ const NodeEditor = (() => {
       return;
     }
 
-    // Canvas pan — click on viewport background (not a node, not the palette)
+    // Canvas pan — click on viewport background (not a node, not any UI overlay)
     const onNode = e.target.closest('.ne-node');
     const onPal  = e.target.closest('.ne-palette');
-    if (!onNode && !onPal) {
+    const onUI   = e.target.closest('.ne-toolbar, .ne-validation, .ne-minimap, .ne-tpl-modal');
+    if (!onNode && !onPal && !onUI) {
       e.preventDefault();
       _dragPan = { startMX: e.clientX, startMY: e.clientY, origPX: _panX, origPY: _panY };
       _selNode = null;
@@ -1169,6 +1183,52 @@ const NodeEditor = (() => {
             { id: uid(), fromId: pId, toId: rId   },
             { id: uid(), fromId: rId, toId: sId   },
             { id: uid(), fromId: rId, toId: resId },
+          ],
+        };
+      }
+      case 'physician': {
+        const pId = uid(), r1 = uid(), r2 = uid(), r3 = uid();
+        const s1 = uid(), a1 = uid(), res1 = uid();
+        const s2 = uid(), a2 = uid(), res2 = uid();
+        const ROLE = 'urn:oasis:names:tc:xacml:2.0:subject:role';
+        return {
+          nodes: [
+            { id: pId,  type: 'policy',   x: 30,  y: 280,
+              data: { name: 'physician-access-policy',
+                      description: 'Physicians can read and write patient records',
+                      combiningAlg: DENY_OVR, color: '' } },
+            // Rule 1: Permit physician read
+            { id: r1,   type: 'rule',     x: 340, y: 40,
+              data: { name: 'permit-physician-read', effect: 'Permit', color: 'green' } },
+            { id: s1,   type: 'subject',  x: 660, y: 40,
+              data: { attrType: 'role', value: 'physician', color: '' } },
+            { id: a1,   type: 'action',   x: 660, y: 230,
+              data: { attributeId: ACT_ID, action: 'read', customAction: '', color: '' } },
+            { id: res1, type: 'resource', x: 660, y: 410,
+              data: { attributeId: RES_ID, identifier: 'patient-record', wildcard: false, color: '' } },
+            // Rule 2: Permit physician write
+            { id: r2,   type: 'rule',     x: 340, y: 620,
+              data: { name: 'permit-physician-write', effect: 'Permit', color: 'green' } },
+            { id: s2,   type: 'subject',  x: 660, y: 620,
+              data: { attrType: 'role', value: 'physician', color: '' } },
+            { id: a2,   type: 'action',   x: 660, y: 810,
+              data: { attributeId: ACT_ID, action: 'write', customAction: '', color: '' } },
+            { id: res2, type: 'resource', x: 660, y: 990,
+              data: { attributeId: RES_ID, identifier: 'patient-record', wildcard: false, color: '' } },
+            // Rule 3: Deny all
+            { id: r3,   type: 'rule',     x: 340, y: 1200,
+              data: { name: 'deny-all-others', effect: 'Deny', color: 'red' } },
+          ],
+          edges: [
+            { id: uid(), fromId: pId,  toId: r1   },
+            { id: uid(), fromId: r1,   toId: s1   },
+            { id: uid(), fromId: r1,   toId: a1   },
+            { id: uid(), fromId: r1,   toId: res1 },
+            { id: uid(), fromId: pId,  toId: r2   },
+            { id: uid(), fromId: r2,   toId: s2   },
+            { id: uid(), fromId: r2,   toId: a2   },
+            { id: uid(), fromId: r2,   toId: res2 },
+            { id: uid(), fromId: pId,  toId: r3   },
           ],
         };
       }
@@ -1543,6 +1603,7 @@ const NodeEditor = (() => {
       id: pId, type: 'policy', x: 30, y: 60,
       data: {
         name:         policy.id          || 'meine-policy',
+        version:      policy.version     || '2.0',
         description:  policy.description || '',
         combiningAlg: policy.combiningAlg ||
                       'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides',

@@ -295,6 +295,7 @@ const TRANSLATIONS = {
     'ne.node.condition.label': 'Bedingung',
     'ne.node.delete':          'Node löschen',
     'ne.field.policy.id':      'Policy-ID',
+    'ne.field.policy.version': 'XACML-Version',
     'ne.field.policy.desc':    'Beschreibung',
     'ne.field.policy.alg':     'Kombinations-Algorithmus',
     'ne.field.rule.id':        'Regel-ID',
@@ -374,6 +375,8 @@ const TRANSLATIONS = {
     'ne.tpl.timeBased.desc':   'Zugriff nur wenn eine Bedingung über die aktuelle Zeit erfüllt ist.',
     'ne.tpl.dept.title':       'Abteilungsbasierter Zugriff',
     'ne.tpl.dept.desc':        'Abteilungsmitglieder erhalten Zugriff auf Abteilungsressourcen.',
+    'ne.tpl.physician.title':  'Ärztezugriff (Beispiel)',
+    'ne.tpl.physician.desc':   'Ärzte dürfen Patientenakten lesen und schreiben — alle anderen werden abgewiesen.',
 
     // ── Creator — shell ──
     'creator.subtitle':       'Erstelle eine XACML-Policy Schritt für Schritt — ohne XML-Kenntnisse.',
@@ -846,6 +849,7 @@ const TRANSLATIONS = {
     'ne.node.condition.label': 'Condition',
     'ne.node.delete':          'Delete node',
     'ne.field.policy.id':      'Policy ID',
+    'ne.field.policy.version': 'XACML Version',
     'ne.field.policy.desc':    'Description',
     'ne.field.policy.alg':     'Combining Algorithm',
     'ne.field.rule.id':        'Rule ID',
@@ -925,6 +929,8 @@ const TRANSLATIONS = {
     'ne.tpl.timeBased.desc':   'Access granted only when a time-based condition is met.',
     'ne.tpl.dept.title':       'Department-based access',
     'ne.tpl.dept.desc':        'Department members get access to department resources.',
+    'ne.tpl.physician.title':  'Physician access (example)',
+    'ne.tpl.physician.desc':   'Physicians can read and write patient records — all others are denied.',
 
     // ── Creator — shell ──
     'creator.subtitle':       'Create an XACML policy step by step — no XML knowledge required.',

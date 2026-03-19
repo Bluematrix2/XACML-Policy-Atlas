@@ -1711,7 +1711,12 @@ window.TreeRenderer = TreeRenderer;
 (function handleInitialHash() {
   const hash = location.hash.slice(1);
   if (!hash) return;
-  if (hash.startsWith('kb-')) {
+  if (hash.startsWith('ne=')) {
+    // Shareable node-editor link: route to Creator → Visual Editor tab.
+    // Leave the hash intact so NodeEditor.init() can restore state from it.
+    try { sessionStorage.setItem('xacml-creator-tab', 'node'); } catch(_) {}
+    App.switchTab('creator');
+  } else if (hash.startsWith('kb-')) {
     // KB section IDs all start with 'kb-'
     App.openKbSection(hash);
   } else {
