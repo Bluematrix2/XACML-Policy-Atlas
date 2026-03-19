@@ -624,7 +624,7 @@ const TRANSLATIONS = {
     'sim.tests.runAll':          'Alle ausführen',
     'sim.tests.delete':          'Testfall entfernen',
     'sim.nopolicy.hint':         'Noch keine Policy erstellt. Bitte zuerst im Visual Editor oder Form Editor eine Policy definieren.',
-    'creator.tab.sim':           '🧪 Simulator',
+    'creator.tab.sim':           'Simulator',
   },
 
   en: {
@@ -1239,7 +1239,7 @@ const TRANSLATIONS = {
     'sim.tests.runAll':          'Run all',
     'sim.tests.delete':          'Delete test case',
     'sim.nopolicy.hint':         'No policy created yet. Please define a policy in the Visual Editor or Form Editor first.',
-    'creator.tab.sim':           '🧪 Simulator',
+    'creator.tab.sim':           'Simulator',
   }
 };
 
