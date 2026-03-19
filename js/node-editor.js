@@ -1699,7 +1699,11 @@ const NodeEditor = (() => {
     _renderEdges();
     _updateValidation();
     _updateMinimap();
-    if (restored) requestAnimationFrame(_fitView);
+    if (restored) {
+      requestAnimationFrame(_fitView);
+      // Notify creator.js so XML preview and visualizer update immediately
+      _emit();
+    }
 
     container.addEventListener('mousedown', _onMouseDown);
     container.addEventListener('click',     _onClick);
