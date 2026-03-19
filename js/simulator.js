@@ -12,6 +12,26 @@ const SIM_HIST_KEY  = 'xacml-sim-history';
 const SIM_TESTS_KEY = 'xacml-sim-tests';
 const MAX_HISTORY   = 10;
 
+// ── Attribute ID options per category — same as Form Editor ─────────────
+const SIM_ATTR_ID_OPTIONS = {
+  subject: [
+    { value: 'urn:oasis:names:tc:xacml:1.0:subject:subject-id',                labelKey: 'creator.target.attrId.subject.id' },
+    { value: 'urn:oasis:names:tc:xacml:2.0:subject:role',                      labelKey: 'creator.target.attrId.subject.role' },
+    { value: 'urn:oasis:names:tc:xacml:1.0:subject:authn-locality:ip-address', labelKey: 'creator.target.attrId.subject.ip' },
+    { value: 'urn:oasis:names:tc:xacml:1.0:subject:authn-locality:dns-name',   labelKey: 'creator.target.attrId.subject.dns' },
+  ],
+  resource: [
+    { value: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',              labelKey: 'creator.target.attrId.resource.id' },
+    { value: 'http://hl7.org/fhir/resource-types',                             labelKey: 'creator.target.attrId.resource.fhir' },
+    { value: 'urn:oasis:names:tc:xacml:2.0:resource:target-namespace',         labelKey: 'creator.target.attrId.resource.ns' },
+  ],
+  action: [
+    { value: 'urn:oasis:names:tc:xacml:1.0:action:action-id',                  labelKey: 'creator.target.attrId.action.id' },
+    { value: 'urn:oasis:names:tc:xacml:1.0:action:implied-action',             labelKey: 'creator.target.attrId.action.implied' },
+  ],
+  environment: [],
+};
+
 const PolicySimulator = (() => {
 
   // ── Module state ──────────────────────────────────────────────────────
@@ -409,12 +429,15 @@ const PolicySimulator = (() => {
     const newExtras = [];
     extraRows.forEach(row => {
       const catSel    = row.querySelector('.sim-extra-cat');
-      const attrInput = row.querySelector('.sim-extra-atrid');
+      const atridSel  = row.querySelector('.sim-extra-atrid-sel');
+      const atridCustom = row.querySelector('.sim-extra-atrid');
       const valInput  = row.querySelector('.sim-extra-val');
+      const selVal    = atridSel?.value || '';
+      const attrId    = selVal === '__custom__' ? (atridCustom?.value || '') : selVal;
       newExtras.push({
-        cat:    catSel?.value    || 'subject',
-        attrId: attrInput?.value || '',
-        value:  valInput?.value  || '',
+        cat:    catSel?.value || 'subject',
+        attrId,
+        value:  valInput?.value || '',
       });
     });
     _formState.extraAttrs = newExtras;
@@ -497,22 +520,40 @@ const PolicySimulator = (() => {
       </div>`;
   }
 
+  function _simAttrIdOpts(cat, currentAttrId) {
+    const opts  = SIM_ATTR_ID_OPTIONS[cat] || [];
+    const isCustom = currentAttrId && !opts.find(o => o.value === currentAttrId);
+    return opts.map(o =>
+      `<option value="${_esc(o.value)}"${!isCustom && currentAttrId === o.value ? ' selected' : ''}>${_esc(I18n.t(o.labelKey))}</option>`
+    ).join('') +
+    `<option value="__custom__"${isCustom ? ' selected' : ''}>${_esc(_t('creator.target.attrId.custom'))}</option>`;
+  }
+
   function _renderSimpleFormHtml() {
     const s = _formState;
-    const extraRows = (s.extraAttrs || []).map((attr, i) => `
+    const extraRows = (s.extraAttrs || []).map((attr, i) => {
+      const cat      = attr.cat || 'subject';
+      const isCustom = attr.attrId && !(SIM_ATTR_ID_OPTIONS[cat] || []).find(o => o.value === attr.attrId);
+      return `
       <div class="sim-extra-attr" data-extra-idx="${i}">
         <select class="sim-select sim-extra-cat">
-          <option value="subject"${    attr.cat==='subject'    ?' selected':''}>Subject</option>
-          <option value="resource"${   attr.cat==='resource'   ?' selected':''}>Resource</option>
-          <option value="action"${     attr.cat==='action'     ?' selected':''}>Action</option>
-          <option value="environment"${attr.cat==='environment'?' selected':''}>Environment</option>
+          <option value="subject"${    cat==='subject'    ?' selected':''}>Subject</option>
+          <option value="resource"${   cat==='resource'   ?' selected':''}>Resource</option>
+          <option value="action"${     cat==='action'     ?' selected':''}>Action</option>
+          <option value="environment"${cat==='environment'?' selected':''}>Environment</option>
         </select>
-        <input class="sim-input sim-extra-atrid" type="text" placeholder="AttributeId URI"
-               value="${_esc(attr.attrId||'')}">
+        <div class="sim-atrid-wrap">
+          <select class="sim-select sim-extra-atrid-sel">${_simAttrIdOpts(cat, attr.attrId)}</select>
+          <input class="sim-input sim-extra-atrid" type="text"
+                 placeholder="${_esc(_t('creator.target.attrId.custom.ph'))}"
+                 value="${_esc(isCustom ? attr.attrId : '')}"
+                 style="${isCustom ? '' : 'display:none'}">
+        </div>
         <input class="sim-input sim-extra-val" type="text" placeholder="${_esc(_t('sim.field.value'))}"
                value="${_esc(attr.value||'')}">
         <button class="sim-extra-del" data-extrarem="${i}" title="${_esc(_t('sim.extra.remove'))}">&#x2715;</button>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     return `
       <div class="sim-simple-form">
@@ -839,7 +880,33 @@ const PolicySimulator = (() => {
     if (e.target.id === 'sim-xml-input') _xmlInput = e.target.value;
   }
 
-  function _handleChange(e) { /* no-op – inputs are read on run */ }
+  function _handleChange(e) {
+    // Category changed → rebuild attrId dropdown with options for new category
+    if (e.target.classList.contains('sim-extra-cat')) {
+      const row   = e.target.closest('.sim-extra-attr');
+      if (!row) return;
+      const newCat = e.target.value;
+      const atridSel    = row.querySelector('.sim-extra-atrid-sel');
+      const atridCustom = row.querySelector('.sim-extra-atrid');
+      if (atridSel) {
+        atridSel.innerHTML = _simAttrIdOpts(newCat, '');
+        if (atridCustom) atridCustom.style.display = 'none';
+      }
+      return;
+    }
+    // AttrId dropdown changed → show/hide custom text input
+    if (e.target.classList.contains('sim-extra-atrid-sel')) {
+      const row = e.target.closest('.sim-extra-attr');
+      if (!row) return;
+      const customInput = row.querySelector('.sim-extra-atrid');
+      if (customInput) {
+        const isCustom = e.target.value === '__custom__';
+        customInput.style.display = isCustom ? '' : 'none';
+        if (isCustom) { customInput.value = ''; customInput.focus(); }
+      }
+      return;
+    }
+  }
 
   function _promptSaveTest() {
     const name = window.prompt(_t('sim.saveTest.namePrompt'), `Test ${_tests.length + 1}`);

@@ -342,6 +342,52 @@
 }
 .ne-field input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
 
+/* ── Advanced section toggle ── */
+.ne-adv-wrap {
+  margin-top: var(--sp-2);
+  border-top: 1px dashed var(--border);
+  padding-top: var(--sp-2);
+}
+.ne-adv-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.72rem;
+  color: var(--text-muted, #888);
+  padding: 2px 0;
+  letter-spacing: 0.02em;
+}
+.ne-adv-toggle:hover { color: var(--accent); }
+.ne-adv-toggle.ne-adv-active { color: var(--accent); font-weight: 600; }
+.ne-adv-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+.ne-custom-input {
+  margin-top: 3px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.72rem;
+  padding: 2px 5px;
+  border: 1px dashed var(--accent);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--text);
+}
+.ne-cv-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ne-cv-fields input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* ── Effect toggle ── */
 .ne-effect-toggle {
   display: flex;

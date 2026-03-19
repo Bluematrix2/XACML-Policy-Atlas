@@ -175,7 +175,9 @@
   align-items: center;
 }
 .sim-extra-attr .sim-select { flex: 0 0 110px; }
-.sim-extra-attr .sim-extra-atrid { flex: 1.5; }
+.sim-extra-attr .sim-atrid-wrap  { flex: 1.5; display: flex; flex-direction: column; gap: 3px; }
+.sim-extra-attr .sim-extra-atrid-sel { width: 100%; }
+.sim-extra-attr .sim-extra-atrid { width: 100%; box-sizing: border-box; font-size: 0.8rem; }
 .sim-extra-attr .sim-extra-val   { flex: 1; }
 .sim-extra-del {
   background: none;

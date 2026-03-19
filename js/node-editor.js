@@ -65,6 +65,46 @@ const NE_COND_CATEGORIES = [
   { labelKey: 'ne.cond.cat.environment', value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:environment' },
 ];
 
+// ── Advanced match fields — same options as Form Editor ─────────────────
+const NE_MATCH_ID_OPTIONS = [
+  { label: 'string-equal',              value: 'urn:oasis:names:tc:xacml:1.0:function:string-equal' },
+  { label: 'anyURI-equal',              value: 'urn:oasis:names:tc:xacml:1.0:function:anyURI-equal' },
+  { label: 'integer-equal',             value: 'urn:oasis:names:tc:xacml:1.0:function:integer-equal' },
+  { label: 'date-equal',                value: 'urn:oasis:names:tc:xacml:1.0:function:date-equal' },
+  { label: 'CV-equal (HL7) – Coded Value',          value: 'urn:hl7-org:v3:function:CV-equal' },
+  { label: 'II-equal (HL7) – Instance Identifier',  value: 'urn:hl7-org:v3:function:II-equal' },
+];
+
+const NE_MATCH_DATATYPE_OPTIONS = [
+  { label: 'string',                              value: 'http://www.w3.org/2001/XMLSchema#string' },
+  { label: 'anyURI',                              value: 'http://www.w3.org/2001/XMLSchema#anyURI' },
+  { label: 'integer',                             value: 'http://www.w3.org/2001/XMLSchema#integer' },
+  { label: 'date',                                value: 'http://www.w3.org/2001/XMLSchema#date' },
+  { label: 'CV (HL7) – Coded Value',              value: 'urn:hl7-org:v3#CV' },
+  { label: 'II (HL7) – Instance Identifier',      value: 'urn:hl7-org:v3#II' },
+  { label: 'ST (HL7) – Simple Text',              value: 'urn:hl7-org:v3#ST' },
+  { label: 'BL (HL7) – Boolean',                  value: 'urn:hl7-org:v3#BL' },
+  { label: 'INT (HL7) – Integer',                 value: 'urn:hl7-org:v3#INT' },
+  { label: 'TS (HL7) – Timestamp',                value: 'urn:hl7-org:v3#TS' },
+  { label: 'CE (HL7) – Coded with Equivalents',   value: 'urn:hl7-org:v3#CE' },
+  { label: 'CS (HL7) – Coded Simple Value',       value: 'urn:hl7-org:v3#CS' },
+];
+
+const NE_CONDITION_DATA_TYPES = [
+  { label: 'string',   value: 'http://www.w3.org/2001/XMLSchema#string' },
+  { label: 'integer',  value: 'http://www.w3.org/2001/XMLSchema#integer' },
+  { label: 'boolean',  value: 'http://www.w3.org/2001/XMLSchema#boolean' },
+  { label: 'anyURI',   value: 'http://www.w3.org/2001/XMLSchema#anyURI' },
+  { label: 'date',     value: 'http://www.w3.org/2001/XMLSchema#date' },
+  { label: 'dateTime', value: 'http://www.w3.org/2001/XMLSchema#dateTime' },
+  { label: 'ST (HL7) – Simple Text',              value: 'urn:hl7-org:v3#ST' },
+  { label: 'BL (HL7) – Boolean',                  value: 'urn:hl7-org:v3#BL' },
+  { label: 'INT (HL7) – Integer',                 value: 'urn:hl7-org:v3#INT' },
+  { label: 'TS (HL7) – Timestamp',                value: 'urn:hl7-org:v3#TS' },
+  { label: 'CE (HL7) – Coded with Equivalents',   value: 'urn:hl7-org:v3#CE' },
+  { label: 'CS (HL7) – Coded Simple Value',       value: 'urn:hl7-org:v3#CS' },
+];
+
 // ── Phase 2: Policy Templates ───────────────────────────────────────────
 // Defined outside IIFE so they can reference _uid() lazily via factory fns.
 const NE_TEMPLATE_DEFS = [
@@ -162,15 +202,29 @@ const NodeEditor = (() => {
         combiningAlg: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides',
       };
       case 'rule':      return { name: 'regel-1', description: '', effect: 'Permit' };
-      case 'subject':   return { attrType: 'role', value: '' };
-      case 'action':    return { attributeId: 'urn:oasis:names:tc:xacml:1.0:action:action-id', action: 'read', customAction: '' };
-      case 'resource':  return { attributeId: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id', identifier: '', wildcard: false };
+      case 'subject':   return {
+        attrType: 'role', value: '',
+        matchId: '', dataType: '', valueType: 'simple',
+        cvCode: '', cvCodeSystem: '', iiRoot: '',
+      };
+      case 'action':    return {
+        attributeId: 'urn:oasis:names:tc:xacml:1.0:action:action-id', action: 'read', customAction: '',
+        matchId: '', dataType: '',
+      };
+      case 'resource':  return {
+        attributeId: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id', identifier: '', wildcard: false,
+        matchId: '', dataType: '', valueType: 'simple',
+        cvCode: '', cvCodeSystem: '', iiRoot: '',
+      };
       case 'condition': return {
         category:   'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
         attribute:  '',
         functionId: 'urn:oasis:names:tc:xacml:1.0:function:string-equal',
+        functionCustom: '',
         value:      '',
         logic:      'AND',
+        arg1DataType: 'http://www.w3.org/2001/XMLSchema#string',
+        arg2DataType: 'http://www.w3.org/2001/XMLSchema#string',
       };
       case 'note':      return { text: '', color: '' };
       default:          return {};
@@ -303,14 +357,22 @@ const NodeEditor = (() => {
         .map(e => _nodes.find(n => n.id === e.toId))
         .filter(Boolean);
 
+      const STR_EQ = 'urn:oasis:names:tc:xacml:1.0:function:string-equal';
+      const DT_STR = 'http://www.w3.org/2001/XMLSchema#string';
+
       const matches = [];
       children.filter(n => n.type === 'subject').forEach(s => {
+        const vt = s.data.valueType || 'simple';
         matches.push({
           cat: 'subject',
           attributeId: SUBJECT_ATTR_IDS[s.data.attrType] || SUBJECT_ATTR_IDS.role,
-          matchId:  'urn:oasis:names:tc:xacml:1.0:function:string-equal',
-          dataType: 'http://www.w3.org/2001/XMLSchema#string',
-          valueType: 'simple', value: s.data.value || '',
+          matchId:   s.data.matchId  || STR_EQ,
+          dataType:  s.data.dataType || DT_STR,
+          valueType: vt,
+          value:       vt === 'simple' ? (s.data.value || '') : '',
+          cvCode:      s.data.cvCode       || '',
+          cvCodeSystem: s.data.cvCodeSystem || '',
+          iiRoot:      s.data.iiRoot       || '',
         });
       });
       children.filter(n => n.type === 'action').forEach(a => {
@@ -318,31 +380,40 @@ const NodeEditor = (() => {
         matches.push({
           cat: 'action',
           attributeId: a.data.attributeId || 'urn:oasis:names:tc:xacml:1.0:action:action-id',
-          matchId:  'urn:oasis:names:tc:xacml:1.0:function:string-equal',
-          dataType: 'http://www.w3.org/2001/XMLSchema#string',
+          matchId:   a.data.matchId  || STR_EQ,
+          dataType:  a.data.dataType || DT_STR,
           valueType: 'simple', value: val,
+          cvCode: '', cvCodeSystem: '', iiRoot: '',
         });
       });
       children.filter(n => n.type === 'resource').forEach(r => {
+        const vt = r.data.valueType || 'simple';
         matches.push({
           cat: 'resource',
           attributeId: r.data.attributeId || 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',
-          matchId:  'urn:oasis:names:tc:xacml:1.0:function:string-equal',
-          dataType: 'http://www.w3.org/2001/XMLSchema#string',
-          valueType: 'simple', value: r.data.wildcard ? '*' : (r.data.identifier||''),
+          matchId:   r.data.matchId  || STR_EQ,
+          dataType:  r.data.dataType || DT_STR,
+          valueType: vt,
+          value:       r.data.wildcard ? '*' : (vt === 'simple' ? (r.data.identifier||'') : ''),
+          cvCode:      r.data.cvCode       || '',
+          cvCodeSystem: r.data.cvCodeSystem || '',
+          iiRoot:      r.data.iiRoot       || '',
         });
       });
 
       const conds = children.filter(n => n.type === 'condition');
-      const conditionModels = conds.map(c => ({
-        functionId:    c.data.functionId || 'urn:oasis:names:tc:xacml:1.0:function:string-equal',
-        functionCustom: '',
-        arg1Cat:     c.data.category   || 'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
-        arg1AttrId:  c.data.attribute  || 'urn:oasis:names:tc:xacml:2.0:subject:role',
-        arg1DataType: 'http://www.w3.org/2001/XMLSchema#string',
-        arg2Value:    c.data.value     || '',
-        arg2DataType: 'http://www.w3.org/2001/XMLSchema#string',
-      }));
+      const conditionModels = conds.map(c => {
+        const isCustomFn = c.data.functionId === '__custom__' || (c.data.functionId && !NE_COND_FUNCTIONS.find(f => f.value === c.data.functionId));
+        return {
+          functionId:    isCustomFn ? (c.data.functionCustom || c.data.functionId || STR_EQ) : (c.data.functionId || STR_EQ),
+          functionCustom: c.data.functionCustom || '',
+          arg1Cat:     c.data.category   || 'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject',
+          arg1AttrId:  c.data.attribute  || 'urn:oasis:names:tc:xacml:2.0:subject:role',
+          arg1DataType: c.data.arg1DataType || DT_STR,
+          arg2Value:    c.data.value     || '',
+          arg2DataType: c.data.arg2DataType || DT_STR,
+        };
+      });
 
       return {
         id: rn.data.name || rn.id, effect: rn.data.effect || 'Permit',
@@ -556,9 +627,9 @@ const NodeEditor = (() => {
         </div>
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.value'))}</span>
-          <input type="text" data-node="${id}" data-field="value" value="${_esc(d.value)}"
-            placeholder="${_esc(_t('ne.placeholder.subject'))}">
-        </div>`;
+          ${_matchValueInput(id, d, 'value')}
+        </div>
+        ${_advMatchSection(id, d, true)}`;
 
       case 'action': return `
         <div class="ne-field">
@@ -584,7 +655,8 @@ const NodeEditor = (() => {
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.action.custom'))}</span>
           <input type="text" data-node="${id}" data-field="customAction" value="${_esc(d.customAction)}">
-        </div>` : ''}`;
+        </div>` : ''}
+        ${_advMatchSection(id, d, false)}`;
 
       case 'resource': return `
         <div class="ne-field">
@@ -597,15 +669,17 @@ const NodeEditor = (() => {
         </div>
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.resource.id'))}</span>
-          <input type="text" data-node="${id}" data-field="identifier" value="${_esc(d.identifier)}"
-            placeholder="${_esc(_t('ne.placeholder.resource'))}">
+          ${_matchValueInput(id, d, 'identifier')}
         </div>
         <div class="ne-field ne-field-row">
           <input type="checkbox" id="ne-wc-${id}" data-node="${id}" data-field="wildcard" ${d.wildcard?'checked':''}>
           <label for="ne-wc-${id}" class="ne-field-label" style="margin:0;cursor:pointer">${_esc(_t('ne.field.resource.wildcard'))}</label>
-        </div>`;
+        </div>
+        ${_advMatchSection(id, d, true)}`;
 
-      case 'condition': return `
+      case 'condition': {
+        const isCustomFn = d.functionId === '__custom__' || (d.functionId && !NE_COND_FUNCTIONS.find(f => f.value === d.functionId));
+        return `
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.condition.cat'))}</span>
           <select data-node="${id}" data-field="category">
@@ -620,16 +694,31 @@ const NodeEditor = (() => {
             placeholder="${_esc(_t('ne.placeholder.condition'))}">
         </div>
         <div class="ne-field">
+          <span class="ne-field-label">${_esc(_t('creator.condition.arg1.dt'))}</span>
+          <select data-node="${id}" data-field="arg1DataType">${_condDtOpts(d.arg1DataType||'http://www.w3.org/2001/XMLSchema#string')}</select>
+        </div>
+        <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.condition.fn'))}</span>
           <select data-node="${id}" data-field="functionId">
             ${NE_COND_FUNCTIONS.map(f =>
-              `<option value="${_esc(f.value)}" ${d.functionId===f.value?'selected':''}>${_esc(f.label)}</option>`
+              `<option value="${_esc(f.value)}" ${!isCustomFn && d.functionId===f.value?'selected':''}>${_esc(f.label)}</option>`
             ).join('')}
+            <option value="__custom__" ${isCustomFn?'selected':''}>${_esc(_t('creator.condition.fn.custom'))}</option>
           </select>
         </div>
+        ${isCustomFn ? `
+        <div class="ne-field">
+          <span class="ne-field-label">${_esc(_t('creator.condition.fn'))}</span>
+          <input type="text" data-node="${id}" data-field="functionCustom" class="ne-custom-input"
+            placeholder="${_esc(_t('creator.condition.fn.ph'))}" value="${_esc(d.functionCustom||'')}">
+        </div>` : ''}
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.value'))}</span>
           <input type="text" data-node="${id}" data-field="value" value="${_esc(d.value)}">
+        </div>
+        <div class="ne-field">
+          <span class="ne-field-label">${_esc(_t('creator.condition.arg2.dt'))}</span>
+          <select data-node="${id}" data-field="arg2DataType">${_condDtOpts(d.arg2DataType||'http://www.w3.org/2001/XMLSchema#string')}</select>
         </div>
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.condition.logic'))}</span>
@@ -638,6 +727,7 @@ const NodeEditor = (() => {
             <option value="OR"  ${d.logic==='OR' ?'selected':''}>OR</option>
           </select>
         </div>`;
+      }
 
       case 'note': return `
         <textarea class="ne-note-text" data-node="${id}" data-field="text"
@@ -645,6 +735,92 @@ const NodeEditor = (() => {
 
       default: return '';
     }
+  }
+
+  // ── Advanced match field helpers ─────────────────────────────────────
+
+  function _matchIdOpts(current) {
+    const isCustom = current && current !== '__custom__' && !NE_MATCH_ID_OPTIONS.find(o => o.value === current);
+    return `<option value=""${!current ? ' selected' : ''}>${_esc(_t('creator.target.matchId.default'))}</option>` +
+      NE_MATCH_ID_OPTIONS.map(o =>
+        `<option value="${_esc(o.value)}"${!isCustom && current === o.value ? ' selected' : ''}>${_esc(o.label)}</option>`
+      ).join('') +
+      `<option value="__custom__"${isCustom ? ' selected' : ''}>${_esc(_t('creator.target.attrId.custom'))}</option>`;
+  }
+
+  function _matchDtOpts(current) {
+    const isCustom = current && current !== '__custom__' && !NE_MATCH_DATATYPE_OPTIONS.find(o => o.value === current);
+    return `<option value=""${!current ? ' selected' : ''}>${_esc(_t('creator.target.dataType.default'))}</option>` +
+      NE_MATCH_DATATYPE_OPTIONS.map(o =>
+        `<option value="${_esc(o.value)}"${!isCustom && current === o.value ? ' selected' : ''}>${_esc(o.label)}</option>`
+      ).join('') +
+      `<option value="__custom__"${isCustom ? ' selected' : ''}>${_esc(_t('creator.target.attrId.custom'))}</option>`;
+  }
+
+  function _condDtOpts(current) {
+    return NE_CONDITION_DATA_TYPES.map(o =>
+      `<option value="${_esc(o.value)}"${current === o.value ? ' selected' : ''}>${_esc(o.label)}</option>`
+    ).join('');
+  }
+
+  // Renders the value input(s) depending on valueType (simple / cv / ii)
+  function _matchValueInput(id, d, fieldName) {
+    const vt = d.valueType || 'simple';
+    if (vt === 'cv') {
+      return `
+        <div class="ne-cv-fields">
+          <input type="text" data-node="${id}" data-field="cvCode"
+            placeholder="${_esc(_t('creator.target.cv.code.ph'))}" value="${_esc(d.cvCode||'')}">
+          <input type="text" data-node="${id}" data-field="cvCodeSystem"
+            placeholder="${_esc(_t('creator.target.cv.sys.ph'))}" value="${_esc(d.cvCodeSystem||'')}">
+        </div>`;
+    } else if (vt === 'ii') {
+      return `<input type="text" data-node="${id}" data-field="iiRoot"
+        placeholder="${_esc(_t('creator.target.ii.root.ph'))}" value="${_esc(d.iiRoot||'')}">`;
+    } else {
+      return `<input type="text" data-node="${id}" data-field="${fieldName||'value'}" value="${_esc(d[fieldName||'value']||'')}"
+        placeholder="${_esc(_t('ne.placeholder.' + (fieldName === 'identifier' ? 'resource' : 'subject')))}">`;
+    }
+  }
+
+  // Renders the collapsible advanced section for subject/action/resource nodes
+  function _advMatchSection(id, d, showValueType) {
+    const open   = !!d._advOpen;
+    const isCustomMatchId = d.matchId && d.matchId !== '__custom__' && !NE_MATCH_ID_OPTIONS.find(o => o.value === d.matchId);
+    const isCustomDataType = d.dataType && d.dataType !== '__custom__' && !NE_MATCH_DATATYPE_OPTIONS.find(o => o.value === d.dataType);
+    const hasContent = !!(d.matchId || d.dataType || (d.valueType && d.valueType !== 'simple'));
+    return `
+      <div class="ne-adv-wrap">
+        <button class="ne-adv-toggle${hasContent ? ' ne-adv-active' : ''}" type="button"
+          data-node="${id}" data-field="_advOpen" data-adv-toggle="1">
+          ${open ? '&#x25BE;' : '&#x25B8;'} ${_esc(_t('ne.adv.section'))}${hasContent ? ' ●' : ''}
+        </button>
+        <div class="ne-adv-body" style="${open ? '' : 'display:none'}">
+          <div class="ne-field">
+            <span class="ne-field-label">${_esc(_t('creator.target.matchId.label'))}</span>
+            <select data-node="${id}" data-field="matchId">${_matchIdOpts(d.matchId)}</select>
+            ${isCustomMatchId ? `<input type="text" data-node="${id}" data-field="matchId-custom"
+              class="ne-custom-input" placeholder="${_esc(_t('creator.target.matchId.custom.ph'))}"
+              value="${_esc(d.matchId)}">` : ''}
+          </div>
+          <div class="ne-field">
+            <span class="ne-field-label">${_esc(_t('creator.target.dataType.label'))}</span>
+            <select data-node="${id}" data-field="dataType">${_matchDtOpts(d.dataType)}</select>
+            ${isCustomDataType ? `<input type="text" data-node="${id}" data-field="dataType-custom"
+              class="ne-custom-input" placeholder="${_esc(_t('creator.target.dataType.custom.ph'))}"
+              value="${_esc(d.dataType)}">` : ''}
+          </div>
+          ${showValueType ? `
+          <div class="ne-field">
+            <span class="ne-field-label">${_esc(_t('ne.adv.valueType'))}</span>
+            <select data-node="${id}" data-field="valueType">
+              <option value="simple"${(d.valueType||'simple')==='simple'?' selected':''}>Simple</option>
+              <option value="cv"${d.valueType==='cv'?' selected':''}>CV (HL7 Coded Value)</option>
+              <option value="ii"${d.valueType==='ii'?' selected':''}>II (HL7 Instance Identifier)</option>
+            </select>
+          </div>` : ''}
+        </div>
+      </div>`;
   }
 
   function _algOpts(current) {
@@ -932,6 +1108,19 @@ const NodeEditor = (() => {
       _copyShareLink(); return;
     }
 
+    // Advanced section toggle
+    const advBtn = e.target.closest('[data-adv-toggle]');
+    if (advBtn && advBtn.dataset.node) {
+      const nodeId = advBtn.dataset.node;
+      const node   = _nodes.find(n => n.id === nodeId);
+      if (node) {
+        node.data._advOpen = !node.data._advOpen;
+        const body = document.getElementById(`ne-body-${nodeId}`);
+        if (body) body.innerHTML = _bodyHtml(node);
+      }
+      return;
+    }
+
     // Effect toggle
     const eff = e.target.closest('[data-effect]');
     if (eff && eff.dataset.node) {
@@ -979,9 +1168,45 @@ const NodeEditor = (() => {
     const node = _nodes.find(n => n.id === nodeId);
     if (!node) return;
 
+    // Advanced-toggle: flip _advOpen and re-render (only on click events)
+    if (field === '_advOpen' && e.type === 'click') {
+      node.data._advOpen = !node.data._advOpen;
+      const body = document.getElementById(`ne-body-${nodeId}`);
+      if (body) body.innerHTML = _bodyHtml(node);
+      return; // no _emit needed, no policy change
+    }
+
+    const prevValueType = node.data.valueType;
+
+    // Handle custom sub-inputs (matchId-custom, dataType-custom)
+    if (field === 'matchId-custom') {
+      node.data.matchId = e.target.value;
+      _emit();
+      return;
+    }
+    if (field === 'dataType-custom') {
+      node.data.dataType = e.target.value;
+      _emit();
+      return;
+    }
+
     node.data[field] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
 
-    if (field === 'action') {
+    // When dataType changes to CV/II, update valueType and re-render
+    if (field === 'dataType') {
+      const dt = e.target.value;
+      if (dt === 'urn:hl7-org:v3#CV' || dt === 'urn:hl7-org:v3#CE')  node.data.valueType = 'cv';
+      else if (dt === 'urn:hl7-org:v3#II')                             node.data.valueType = 'ii';
+      else if (dt !== '' && dt !== '__custom__')                       node.data.valueType = 'simple';
+    }
+
+    const needsRerender = field === 'action' || field === 'valueType' ||
+      field === 'functionId' ||
+      (field === 'dataType' && node.data.valueType !== prevValueType) ||
+      (field === 'matchId' && e.target.value === '__custom__') ||
+      (field === 'dataType' && e.target.value === '__custom__');
+
+    if (needsRerender) {
       const body = document.getElementById(`ne-body-${nodeId}`);
       if (body) body.innerHTML = _bodyHtml(node);
     }
