@@ -9,6 +9,7 @@
 import { esc, XACMLParser } from './parser.js';
 import { I18n } from './i18n.js';
 import { NodeEditor } from './node-editor.js';
+import { PolicySimulator } from './simulator.js';
 
 const COMBINING_ALGS = [
   { labelKey: 'creator.alg.deny',   value: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides' },
@@ -115,8 +116,9 @@ const PolicyCreator = (() => {
   let _previewTimer = null;
   let _previewMode  = 'visual'; // 'visual' | 'xml'
   let _xmlCm        = null;     // CodeMirror read-only instance for XML tab
-  let _creatorTab   = sessionStorage.getItem(CREATOR_TAB_KEY) || 'node'; // 'form' | 'node'
-  let _nodeEditorReady = false; // NodeEditor.init() called yet?
+  let _creatorTab   = sessionStorage.getItem(CREATOR_TAB_KEY) || 'node'; // 'form' | 'node' | 'sim'
+  let _nodeEditorReady  = false; // NodeEditor.init() called yet?
+  let _simInitialized   = false; // PolicySimulator.init() called yet?
   // Track accordion open/closed state across re-renders (by index, since IDs are random)
   const _accState = {
     closedPolicies: new Set(), // policy-panel indices that are closed
@@ -769,6 +771,7 @@ const PolicyCreator = (() => {
     if (!container) return;
 
     const isNode = _creatorTab === 'node';
+    const isSim  = _creatorTab === 'sim';
 
     container.innerHTML = `
       <div class="creator-wrap">
@@ -779,17 +782,20 @@ const PolicyCreator = (() => {
         <div class="creator-mode-tabs">
           <button class="creator-mode-tab${isNode  ? ' active' : ''}" data-action="creator-tab" data-tab="node"
                   id="creator-tab-node">&#x1F5FA;&#xFE0F; ${esc(I18n.t('creator.tab.node'))}</button>
-          <button class="creator-mode-tab${!isNode ? ' active' : ''}" data-action="creator-tab" data-tab="form"
+          <button class="creator-mode-tab${!isNode && !isSim ? ' active' : ''}" data-action="creator-tab" data-tab="form"
                   id="creator-tab-form">&#x1F4DD; ${esc(I18n.t('creator.tab.form'))}</button>
+          <button class="creator-mode-tab${isSim   ? ' active' : ''}" data-action="creator-tab" data-tab="sim"
+                  id="creator-tab-sim">&#x1F9EA; ${esc(I18n.t('creator.tab.sim'))}</button>
         </div>
-        <div class="creator-main${isNode ? ' node-mode' : ''}" id="creator-main">
-          <div class="creator-left" id="creator-form-editor-wrap"${isNode ? ' style="display:none"' : ''}>
+        <div class="creator-main${isNode ? ' node-mode' : isSim ? ' sim-mode' : ''}" id="creator-main">
+          <div class="creator-left" id="creator-form-editor-wrap"${isNode || isSim ? ' style="display:none"' : ''}>
             <div class="creator-steps" id="creator-steps"></div>
             <div class="creator-form-area" id="creator-form-area"></div>
             <div class="creator-nav" id="creator-nav"></div>
           </div>
-          <div class="creator-node-area" id="creator-node-editor-wrap"${!isNode ? ' style="display:none"' : ''}></div>
-          <div class="creator-right">
+          <div class="creator-node-area" id="creator-node-editor-wrap"${!isNode && !isSim ? ' style="display:none"' : ''}></div>
+          <div class="creator-sim-wrap" id="creator-sim-wrap"${!isSim ? ' style="display:none"' : ''}></div>
+          <div class="creator-right"${isSim ? ' style="display:none"' : ''}>
             <div class="creator-preview" id="creator-preview">
               <div class="creator-preview-header">
                 <div class="creator-preview-tabs">
@@ -820,9 +826,12 @@ const PolicyCreator = (() => {
     container.addEventListener('input',  _handleInput);
     container.addEventListener('change', _handleChange);
 
-    // If node tab was active, initialise node editor immediately
+    // Initialise the active editor immediately
     if (isNode) {
       _initNodeEditor();
+    } else if (isSim) {
+      _initNodeEditor(); // needed for trace highlighting
+      _initSimulator();
     }
   }
 
@@ -843,6 +852,18 @@ const PolicyCreator = (() => {
     }
   }
 
+  function _initSimulator() {
+    const wrap = document.getElementById('creator-sim-wrap');
+    if (!wrap) return;
+    // PolicySimulator.init handles re-entry gracefully (preserves result across switches)
+    PolicySimulator.init(
+      wrap,
+      () => _state.policy,   // getPolicy callback — always returns latest state
+      () => NodeEditor,      // getNodeEditor callback — for trace highlighting
+    );
+    _simInitialized = true;
+  }
+
   function _onNodePolicyChange(policy) {
     if (_state.rootType !== 'Policy') return;
     // Merge node-editor-produced policy back into form state
@@ -860,33 +881,59 @@ const PolicyCreator = (() => {
 
   function _switchCreatorTab(tab) {
     if (tab === _creatorTab) return;
+
+    // Clear trace highlights when leaving simulator
+    if (_creatorTab === 'sim') NodeEditor.clearTrace();
+
     _creatorTab = tab;
     sessionStorage.setItem(CREATOR_TAB_KEY, tab);
 
     const formWrap = document.getElementById('creator-form-editor-wrap');
     const nodeWrap = document.getElementById('creator-node-editor-wrap');
+    const simWrap  = document.getElementById('creator-sim-wrap');
+    const rightCol = document.querySelector('#creator-main .creator-right');
     const main     = document.getElementById('creator-main');
     const tabForm  = document.getElementById('creator-tab-form');
     const tabNode  = document.getElementById('creator-tab-node');
+    const tabSim   = document.getElementById('creator-tab-sim');
 
     if (tab === 'node') {
       if (formWrap) formWrap.style.display = 'none';
       if (nodeWrap) nodeWrap.style.display = '';
-      if (main)     main.classList.add('node-mode');
+      if (simWrap)  simWrap.style.display  = 'none';
+      if (rightCol) rightCol.style.display = '';
+      if (main)     { main.classList.add('node-mode'); main.classList.remove('sim-mode'); }
       if (tabForm)  tabForm.classList.remove('active');
       if (tabNode)  tabNode.classList.add('active');
+      if (tabSim)   tabSim.classList.remove('active');
       _initNodeEditor();
-    } else {
+
+    } else if (tab === 'form') {
       if (formWrap) formWrap.style.display = '';
       if (nodeWrap) nodeWrap.style.display = 'none';
-      if (main)     main.classList.remove('node-mode');
+      if (simWrap)  simWrap.style.display  = 'none';
+      if (rightCol) rightCol.style.display = '';
+      if (main)     { main.classList.remove('node-mode'); main.classList.remove('sim-mode'); }
       if (tabForm)  tabForm.classList.add('active');
       if (tabNode)  tabNode.classList.remove('active');
+      if (tabSim)   tabSim.classList.remove('active');
       // Re-render form with latest state (node editor may have changed it)
       _renderStepBar();
       _renderFormStep();
       _renderNav();
       _updatePreview();
+
+    } else if (tab === 'sim') {
+      if (formWrap) formWrap.style.display = 'none';
+      if (nodeWrap) nodeWrap.style.display = '';   // node canvas visible for trace
+      if (simWrap)  simWrap.style.display  = '';
+      if (rightCol) rightCol.style.display = 'none';
+      if (main)     { main.classList.remove('node-mode'); main.classList.add('sim-mode'); }
+      if (tabForm)  tabForm.classList.remove('active');
+      if (tabNode)  tabNode.classList.remove('active');
+      if (tabSim)   tabSim.classList.add('active');
+      _initNodeEditor(); // ensure canvas is ready for trace highlighting
+      _initSimulator();
     }
   }
 
@@ -2212,8 +2259,12 @@ const PolicyCreator = (() => {
     if (tabForm) tabForm.innerHTML = `&#x1F4DD; ${esc(I18n.t('creator.tab.form'))}`;
     const tabNode = document.getElementById('creator-tab-node');
     if (tabNode) tabNode.innerHTML = `&#x1F5FA;&#xFE0F; ${esc(I18n.t('creator.tab.node'))}`;
+    const tabSim  = document.getElementById('creator-tab-sim');
+    if (tabSim)  tabSim.innerHTML  = `&#x1F9EA; ${esc(I18n.t('creator.tab.sim'))}`;
     // Refresh node editor labels if active
     if (_nodeEditorReady) NodeEditor.refresh();
+    // Refresh simulator if active
+    if (_simInitialized && _creatorTab === 'sim') PolicySimulator.refresh();
   }
 
   // ── Actions ────────────────────────────────────────────────────────────
@@ -2616,6 +2667,7 @@ const PolicyCreator = (() => {
     init,
     loadSamplePolicy:    _loadSamplePolicy,
     loadFromPolicy:      _loadFromParsedPolicy,
+    getPolicy:           () => _state.policy,
     get _initialized() { return _initialized; }
   };
 })();

@@ -1839,6 +1839,82 @@ const NodeEditor = (() => {
     }
   }
 
+  // ── Public: apply evaluation trace (Phase 3 simulator) ───────────────
+
+  function setTraceResult(traceResult) {
+    if (!_canvas) return;
+
+    // Clear all existing trace classes first
+    _nodes.forEach(n => {
+      const el = document.getElementById(`ne-node-${n.id}`);
+      if (el) el.classList.remove('ne-trace-permit', 'ne-trace-deny', 'ne-trace-na', 'ne-trace-skip');
+    });
+
+    if (!traceResult) return;
+
+    // Highlight policy (root) node based on final decision
+    const policyNode = _nodes.find(n => n.type === 'policy');
+    if (policyNode) {
+      const el  = document.getElementById(`ne-node-${policyNode.id}`);
+      const cls = traceResult.decision === 'Permit' ? 'ne-trace-permit'
+                : traceResult.decision === 'Deny'   ? 'ne-trace-deny'
+                : 'ne-trace-na';
+      if (el) el.classList.add(cls);
+    }
+
+    // Highlight rule nodes and their connected child nodes
+    for (const rt of (traceResult.ruleTraces || [])) {
+      const ruleNode = _nodes.find(n => n.type === 'rule' && n.data && n.data.id === rt.ruleId);
+      if (!ruleNode) continue;
+
+      const ruleEl  = document.getElementById(`ne-node-${ruleNode.id}`);
+      const ruleCls = rt.skipped       ? 'ne-trace-skip'
+                    : rt.decision === 'Permit' ? 'ne-trace-permit'
+                    : rt.decision === 'Deny'   ? 'ne-trace-deny'
+                    : 'ne-trace-na';
+      if (ruleEl) ruleEl.classList.add(ruleCls);
+
+      // Find child nodes connected from this rule node
+      const childEdges = _edges.filter(e => e.fromId === ruleNode.id);
+      for (const edge of childEdges) {
+        const childNode = _nodes.find(n => n.id === edge.toId);
+        if (!childNode) continue;
+        const childEl = document.getElementById(`ne-node-${childNode.id}`);
+        if (!childEl) continue;
+
+        let childCls = 'ne-trace-na';
+        if (rt.skipped) {
+          childCls = 'ne-trace-skip';
+        } else if (childNode.type === 'subject') {
+          const checks = rt.targetChecks.filter(c => c.cat === 'subject');
+          childCls = checks.length === 0 ? (rt.targetMatch ? 'ne-trace-permit' : 'ne-trace-na')
+                   : checks.every(c => c.match) ? 'ne-trace-permit' : 'ne-trace-deny';
+        } else if (childNode.type === 'action') {
+          const checks = rt.targetChecks.filter(c => c.cat === 'action');
+          childCls = checks.length === 0 ? (rt.targetMatch ? 'ne-trace-permit' : 'ne-trace-na')
+                   : checks.every(c => c.match) ? 'ne-trace-permit' : 'ne-trace-deny';
+        } else if (childNode.type === 'resource') {
+          const checks = rt.targetChecks.filter(c => c.cat === 'resource');
+          childCls = checks.length === 0 ? (rt.targetMatch ? 'ne-trace-permit' : 'ne-trace-na')
+                   : checks.every(c => c.match) ? 'ne-trace-permit' : 'ne-trace-deny';
+        } else if (childNode.type === 'condition') {
+          const checks = rt.conditionChecks || [];
+          childCls = checks.length === 0 ? 'ne-trace-na'
+                   : checks.every(c => c.match) ? 'ne-trace-permit' : 'ne-trace-deny';
+        }
+        childEl.classList.add(childCls);
+      }
+    }
+  }
+
+  function clearTrace() {
+    if (!_canvas) return;
+    _nodes.forEach(n => {
+      const el = document.getElementById(`ne-node-${n.id}`);
+      if (el) el.classList.remove('ne-trace-permit', 'ne-trace-deny', 'ne-trace-na', 'ne-trace-skip');
+    });
+  }
+
   // ── Public: refresh labels (i18n change) ──────────────────────────────
 
   function refresh() {
@@ -1867,7 +1943,7 @@ const NodeEditor = (() => {
     try { sessionStorage.removeItem(NE_SESS_KEY); } catch (_) {}
   }
 
-  return { init, setPolicy, refresh, destroy, clearSession };
+  return { init, setPolicy, refresh, destroy, clearSession, setTraceResult, clearTrace };
 })();
 
 export { NodeEditor };
