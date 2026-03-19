@@ -110,8 +110,9 @@ const NodeEditor = (() => {
   let _edgesGroup       = null;
   let _tempEdgePath     = null;
 
-  // ── Callback ──
+  // ── Callbacks ──
   let _onPolicyChange = null;
+  let _onDownload     = null;
 
   // ── Editor state ──
   let _nodes    = [];
@@ -160,7 +161,7 @@ const NodeEditor = (() => {
         name: 'meine-policy', description: '', version: '2.0',
         combiningAlg: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides',
       };
-      case 'rule':      return { name: 'regel-1', effect: 'Permit' };
+      case 'rule':      return { name: 'regel-1', description: '', effect: 'Permit' };
       case 'subject':   return { attrType: 'role', value: '' };
       case 'action':    return { attributeId: 'urn:oasis:names:tc:xacml:1.0:action:action-id', action: 'read', customAction: '' };
       case 'resource':  return { attributeId: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id', identifier: '', wildcard: false };
@@ -345,7 +346,7 @@ const NodeEditor = (() => {
 
       return {
         id: rn.data.name || rn.id, effect: rn.data.effect || 'Permit',
-        description: '',
+        description: rn.data.description || '',
         target: { groups: [{ matches }] },
         conditions: conditionModels,
         conditionOp: conds.length > 0 ? (conds[0].data.logic || 'AND') : 'AND',
@@ -528,6 +529,10 @@ const NodeEditor = (() => {
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.rule.id'))}</span>
           <input type="text" data-node="${id}" data-field="name" value="${_esc(d.name)}">
+        </div>
+        <div class="ne-field">
+          <span class="ne-field-label">${_esc(_t('ne.field.rule.desc'))}</span>
+          <input type="text" data-node="${id}" data-field="description" value="${_esc(d.description||'')}">
         </div>
         <div class="ne-field">
           <span class="ne-field-label">${_esc(_t('ne.field.rule.effect'))}</span>
@@ -882,7 +887,7 @@ const NodeEditor = (() => {
     const del = e.target.closest('[data-del]');
     if (del) {
       e.stopPropagation();
-      _deleteNode(del.dataset.del);
+      _showDeleteConfirm(del.dataset.del);
       return;
     }
 
@@ -986,7 +991,7 @@ const NodeEditor = (() => {
   function _onKeyDown(e) {
     if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (_selNode) { _deleteNode(_selNode); _selNode = null; }
+      if (_selNode) { _showDeleteConfirm(_selNode); }
       else if (_selEdge) { _deleteEdge(_selEdge); _selEdge = null; }
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
@@ -1359,14 +1364,25 @@ const NodeEditor = (() => {
 
   // ── Phase 2: Node Search ─────────────────────────────────────────────
 
+  function _nodeSearchText(n) {
+    const d = n.data || {};
+    const parts = [
+      d.name, d.description, d.text, d.version,
+      d.effect, d.value, d.attrType,
+      d.action, d.customAction, d.attributeId,
+      d.identifier, d.attribute, d.functionId,
+      d.combiningAlg,
+    ];
+    return parts.filter(Boolean).join(' ').toLowerCase();
+  }
+
   function _onSearchInput(e) {
     const q = (e.target.value || '').trim().toLowerCase();
     let firstMatch = null;
     _nodes.forEach(n => {
       const el = document.getElementById(`ne-node-${n.id}`);
       if (!el) return;
-      const name = (n.data.name || n.data.text || '').toLowerCase();
-      const hit = q && name.includes(q);
+      const hit = q && _nodeSearchText(n).includes(q);
       el.classList.toggle('ne-node--found', hit);
       if (hit && !firstMatch) firstMatch = n;
     });
@@ -1410,6 +1426,121 @@ const NodeEditor = (() => {
         }
       });
     } catch (_) {}
+  }
+
+  // ── Auto-layout (tidy) ────────────────────────────────────────────────
+  function _tidyLayout() {
+    if (_nodes.length === 0) return;
+    _pushHistory();
+
+    const COL_GAP  = 80;   // horizontal gap between columns
+    const ROW_GAP  = 30;   // vertical gap between nodes in same column
+    const NODE_H   = {     // estimated rendered heights per type
+      policy: 210, rule: 185, subject: 150, action: 150,
+      resource: 155, condition: 160, note: 120,
+    };
+    const col0X = 30;
+    const col1X = col0X + NODE_W + COL_GAP;
+    const col2X = col1X + NODE_W + COL_GAP;
+
+    const pNode = _nodes.find(n => n.type === 'policy');
+
+    // Rules directly connected to policy
+    const ruleIds  = pNode
+      ? _edges.filter(e => e.fromId === pNode.id).map(e => e.toId)
+      : [];
+    const ruleNodes = ruleIds
+      .map(id => _nodes.find(n => n.id === id))
+      .filter(Boolean);
+
+    // Unconnected rule nodes
+    const orphanRules = _nodes.filter(n =>
+      n.type === 'rule' && !ruleNodes.includes(n)
+    );
+    const allRules = [...ruleNodes, ...orphanRules];
+
+    // Place each rule and its children
+    let curY = 30;
+    allRules.forEach(rn => {
+      const childIds = _edges.filter(e => e.fromId === rn.id).map(e => e.toId);
+      const children = childIds
+        .map(id => _nodes.find(n => n.id === id))
+        .filter(Boolean);
+
+      const ruleH = NODE_H.rule;
+
+      if (children.length === 0) {
+        rn.x = col1X;
+        rn.y = curY;
+        curY += ruleH + ROW_GAP;
+      } else {
+        // Stack children in col2
+        let childY = curY;
+        children.forEach(c => {
+          c.x = col2X;
+          c.y = childY;
+          childY += (NODE_H[c.type] || 150) + ROW_GAP;
+        });
+        const spanH = childY - curY - ROW_GAP;
+        // Centre the rule card vertically over its children block
+        rn.x = col1X;
+        rn.y = curY + Math.max(0, (spanH - ruleH) / 2);
+        curY = childY;
+      }
+      curY += ROW_GAP; // extra gap between rule groups
+    });
+
+    // Centre the policy node vertically over all rules
+    if (pNode) {
+      if (allRules.length > 0) {
+        const minY = Math.min(...allRules.map(r => r.y));
+        const maxY = Math.max(...allRules.map(r => r.y));
+        const policyH = NODE_H.policy;
+        pNode.x = col0X;
+        pNode.y = Math.max(30, (minY + maxY) / 2 - policyH / 2);
+      } else {
+        pNode.x = col0X;
+        pNode.y = 30;
+      }
+    }
+
+    // Remaining orphan nodes (not policy, rule or child of any rule)
+    const positioned = new Set([
+      ...(pNode ? [pNode.id] : []),
+      ...allRules.map(n => n.id),
+      ..._edges.flatMap(e => {
+        const rn = allRules.find(r => r.id === e.fromId);
+        return rn ? [e.toId] : [];
+      }),
+    ]);
+    const leftover = _nodes.filter(n => !positioned.has(n.id));
+    leftover.forEach(n => {
+      n.x = col2X;
+      n.y = curY;
+      curY += (NODE_H[n.type] || 150) + ROW_GAP;
+    });
+
+    _rerenderAll();
+    _fitView();
+  }
+
+  function _showDeleteConfirm(nodeId) {
+    const dlg = _wrap?.querySelector('#ne-del-confirm');
+    if (!dlg) { _deleteNode(nodeId); return; }
+    const textEl = dlg.querySelector('.ne-del-confirm-text');
+    const yesBtn = dlg.querySelector('#ne-del-yes');
+    const noBtn  = dlg.querySelector('#ne-del-no');
+    if (textEl) textEl.textContent = _t('ne.node.delete.confirm.text');
+    if (yesBtn) yesBtn.textContent = _t('ne.node.delete.confirm.yes');
+    if (noBtn)  noBtn.textContent  = _t('ne.node.delete.confirm.no');
+    dlg.style.display = '';
+    const close = () => { dlg.style.display = 'none'; yesBtn.onclick = null; noBtn.onclick = null; };
+    yesBtn.onclick = () => { close(); _deleteNode(nodeId); };
+    noBtn.onclick  = close;
+  }
+
+  function _downloadPolicy() {
+    if (_onDownload) { _onDownload(); return; }
   }
 
   // ── HTML skeleton ─────────────────────────────────────────────────────
@@ -1468,6 +1599,8 @@ const NodeEditor = (() => {
             <button class="ne-toolbar-btn" id="ne-zoom-reset-btn"
               title="${_esc(_t('ne.toolbar.reset'))}"
               style="font-size:0.65rem;width:36px">100%</button>
+            <button class="ne-toolbar-btn" id="ne-tidy-btn"
+              title="${_esc(_t('ne.toolbar.tidy'))}">&#x1F9F9;</button>
             <div class="ne-toolbar-sep"></div>
             <input class="ne-toolbar-search" id="ne-search" type="text"
               placeholder="${_esc(_t('ne.search.placeholder'))}"
@@ -1476,6 +1609,8 @@ const NodeEditor = (() => {
             <div class="ne-toolbar-sep"></div>
             <button class="ne-toolbar-btn" id="ne-share-btn"
               title="${_esc(_t('ne.share.title'))}">&#x1F517;</button>
+            <button class="ne-toolbar-btn" id="ne-download-btn"
+              title="${_esc(_t('ne.toolbar.download'))}">&#x2B07;</button>
             <div class="ne-toolbar-sep"></div>
             <button class="ne-toolbar-btn ne-toolbar-btn--danger" id="ne-clear-btn"
               title="${_esc(_t('ne.toolbar.clear'))}">&#x1F5D1;</button>
@@ -1489,6 +1624,13 @@ const NodeEditor = (() => {
           <div class="ne-empty-hint" style="display:none">
             <div class="ne-empty-hint-icon">🎨</div>
             <p>${_esc(_t('ne.hint.drag'))}</p>
+          </div>
+          <div id="ne-del-confirm" class="ne-del-confirm" style="display:none">
+            <div class="ne-del-confirm-inner">
+              <span class="ne-del-confirm-text"></span>
+              <button class="ne-del-confirm-yes" id="ne-del-yes"></button>
+              <button class="ne-del-confirm-no" id="ne-del-no"></button>
+            </div>
           </div>
           <div id="ne-tpl-modal" class="ne-tpl-modal" style="display:none">
             <div class="ne-tpl-modal-inner">
@@ -1505,11 +1647,12 @@ const NodeEditor = (() => {
 
   // ── Public: init ───────────────────────────────────────────────────────
 
-  function init(container, onPolicyChange) {
+  function init(container, onPolicyChange, onDownload) {
     destroy();
 
     _wrap           = container;
     _onPolicyChange = onPolicyChange;
+    _onDownload     = onDownload || null;
     _zoom = 1; _panX = INIT_PX; _panY = INIT_PY;
     _history        = [];
     _histIdx        = -1;
@@ -1583,6 +1726,8 @@ const NodeEditor = (() => {
     container.querySelector('#ne-fit-btn')?.addEventListener('click',  _fitView);
     container.querySelector('#ne-zoom-reset-btn')?.addEventListener('click', _resetView);
     container.querySelector('#ne-clear-btn')?.addEventListener('click', _clearCanvas);
+    container.querySelector('#ne-download-btn')?.addEventListener('click', _downloadPolicy);
+    container.querySelector('#ne-tidy-btn')?.addEventListener('click', _tidyLayout);
 
     // Phase 2 — minimap click + search
     container.querySelector('#ne-minimap')?.addEventListener('click', _onMinimapClick);
@@ -1615,7 +1760,7 @@ const NodeEditor = (() => {
     (policy.rules || []).forEach(rule => {
       const rId = _uid();
       nodes.push({ id: rId, type: 'rule', x: 340, y: ruleY,
-        data: { name: rule.id || 'regel', effect: rule.effect || 'Permit' } });
+        data: { name: rule.id || 'regel', description: rule.description || '', effect: rule.effect || 'Permit' } });
       edges.push({ id: _uid(), fromId: pId, toId: rId });
 
       let childY = ruleY;

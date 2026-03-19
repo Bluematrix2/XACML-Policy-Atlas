@@ -115,7 +115,7 @@ const PolicyCreator = (() => {
   let _previewTimer = null;
   let _previewMode  = 'visual'; // 'visual' | 'xml'
   let _xmlCm        = null;     // CodeMirror read-only instance for XML tab
-  let _creatorTab   = sessionStorage.getItem(CREATOR_TAB_KEY) || 'form'; // 'form' | 'node'
+  let _creatorTab   = sessionStorage.getItem(CREATOR_TAB_KEY) || 'node'; // 'form' | 'node'
   let _nodeEditorReady = false; // NodeEditor.init() called yet?
   // Track accordion open/closed state across re-renders (by index, since IDs are random)
   const _accState = {
@@ -777,10 +777,10 @@ const PolicyCreator = (() => {
           <p class="creator-subtitle">${esc(I18n.t('creator.subtitle'))}</p>
         </div>
         <div class="creator-mode-tabs">
-          <button class="creator-mode-tab${!isNode ? ' active' : ''}" data-action="creator-tab" data-tab="form"
-                  id="creator-tab-form">&#x1F4DD; ${esc(I18n.t('creator.tab.form'))}</button>
           <button class="creator-mode-tab${isNode  ? ' active' : ''}" data-action="creator-tab" data-tab="node"
                   id="creator-tab-node">&#x1F5FA;&#xFE0F; ${esc(I18n.t('creator.tab.node'))}</button>
+          <button class="creator-mode-tab${!isNode ? ' active' : ''}" data-action="creator-tab" data-tab="form"
+                  id="creator-tab-form">&#x1F4DD; ${esc(I18n.t('creator.tab.form'))}</button>
         </div>
         <div class="creator-main${isNode ? ' node-mode' : ''}" id="creator-main">
           <div class="creator-left" id="creator-form-editor-wrap"${isNode ? ' style="display:none"' : ''}>
@@ -831,7 +831,7 @@ const PolicyCreator = (() => {
     if (!area) return;
     if (!_nodeEditorReady) {
       _nodeEditorReady = true;
-      const restored = NodeEditor.init(area, _onNodePolicyChange);
+      const restored = NodeEditor.init(area, _onNodePolicyChange, _download);
       // If state was restored from sessionStorage, skip setPolicy (would overwrite layout).
       // Otherwise build the canvas from current form state.
       if (!restored && _state.rootType === 'Policy') {

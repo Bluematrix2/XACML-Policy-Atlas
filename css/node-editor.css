@@ -601,6 +601,55 @@
 /* ================================================================
    Phase 2 — Template Modal
    ================================================================ */
+/* ── Delete confirmation ── */
+.ne-del-confirm {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.ne-del-confirm-inner {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg, 0 8px 32px rgba(0,0,0,0.2));
+  padding: var(--sp-4) var(--sp-5);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: 0.9rem;
+}
+.ne-del-confirm-text {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-right: var(--sp-2);
+}
+.ne-del-confirm-yes {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 4px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+.ne-del-confirm-yes:hover { background: #dc2626; }
+.ne-del-confirm-no {
+  background: var(--bg-secondary, #f3f4f6);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.ne-del-confirm-no:hover { opacity: 0.8; }
+
 .ne-tpl-modal {
   position: absolute;
   inset: 0;
