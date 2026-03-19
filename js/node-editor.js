@@ -21,7 +21,11 @@ const ALLOWED_TARGETS = {
   action:    [],
   resource:  [],
   condition: [],
+  note:      [],
 };
+
+// ── Node color cycle ────────────────────────────────────────────────────
+const NODE_COLORS = ['', 'blue', 'green', 'orange', 'red', 'purple'];
 
 // ── XACML mappings — aligned with form editor ───────────────────────────
 const SUBJECT_ATTR_IDS = {
@@ -59,6 +63,35 @@ const NE_COND_CATEGORIES = [
   { labelKey: 'ne.cond.cat.resource',    value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:resource' },
   { labelKey: 'ne.cond.cat.action',      value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:action' },
   { labelKey: 'ne.cond.cat.environment', value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:environment' },
+];
+
+// ── Phase 2: Policy Templates ───────────────────────────────────────────
+// Defined outside IIFE so they can reference _uid() lazily via factory fns.
+const NE_TEMPLATE_DEFS = [
+  {
+    id: 'admin-only',
+    titleKey: 'ne.tpl.adminOnly.title',
+    descKey:  'ne.tpl.adminOnly.desc',
+    icon: '🔐',
+  },
+  {
+    id: 'read-write',
+    titleKey: 'ne.tpl.readWrite.title',
+    descKey:  'ne.tpl.readWrite.desc',
+    icon: '📖',
+  },
+  {
+    id: 'time-based',
+    titleKey: 'ne.tpl.timeBased.title',
+    descKey:  'ne.tpl.timeBased.desc',
+    icon: '🕐',
+  },
+  {
+    id: 'department',
+    titleKey: 'ne.tpl.dept.title',
+    descKey:  'ne.tpl.dept.desc',
+    icon: '🏢',
+  },
 ];
 
 const NodeEditor = (() => {
@@ -132,6 +165,7 @@ const NodeEditor = (() => {
         value:      '',
         logic:      'AND',
       };
+      case 'note':      return { text: '', color: '' };
       default:          return {};
     }
   }
@@ -171,6 +205,7 @@ const NodeEditor = (() => {
     if (_svgTransformGroup) {
       _svgTransformGroup.setAttribute('transform', `translate(${_panX},${_panY}) scale(${_zoom})`);
     }
+    _updateMinimap();
   }
 
   // ── History ────────────────────────────────────────────────────────────
@@ -340,6 +375,7 @@ const NodeEditor = (() => {
     _renderEdges();
     _updateValidation();
     _syncToolbar();
+    _updateMinimap();
   }
 
   function _renderNodes() {
@@ -387,25 +423,29 @@ const NodeEditor = (() => {
   // ── Node element builder ───────────────────────────────────────────────
 
   const NODE_TYPE_META = {
-    policy:    { icon: '📋', labelKey: 'ne.node.policy.label' },
-    rule:      { icon: '📜', labelKey: 'ne.node.rule.label'   },
+    policy:    { icon: '📋', labelKey: 'ne.node.policy.label'    },
+    rule:      { icon: '📜', labelKey: 'ne.node.rule.label'      },
     subject:   { icon: '👤', labelKey: 'ne.node.subject.label'   },
     action:    { icon: '⚡', labelKey: 'ne.node.action.label'    },
     resource:  { icon: '📁', labelKey: 'ne.node.resource.label'  },
     condition: { icon: '🔀', labelKey: 'ne.node.condition.label' },
+    note:      { icon: '📝', labelKey: 'ne.node.note.label'      },
   };
 
   function _makeNodeEl(node) {
     const el   = document.createElement('div');
     const meta = NODE_TYPE_META[node.type] || { icon:'❓', labelKey: node.type };
-    const isLeaf   = ['subject','action','resource','condition'].includes(node.type);
+    const isLeaf   = ['subject','action','resource','condition','note'].includes(node.type);
     const isPolicy = node.type === 'policy';
+    const isNote   = node.type === 'note';
+    const color    = node.data.color || '';
 
     el.id        = `ne-node-${node.id}`;
     el.className = `ne-node ne-node--${node.type}${
       node.type === 'rule' ? ` effect-${(node.data.effect||'Permit').toLowerCase()}` : ''
     }${node.id === _selNode ? ' selected' : ''}`;
     el.style.cssText = `left:${node.x}px;top:${node.y}px`;
+    if (color) el.dataset.color = color;
 
     // Header
     const hdr = document.createElement('div');
@@ -414,6 +454,8 @@ const NodeEditor = (() => {
     hdr.innerHTML = `
       <span class="ne-node-icon">${meta.icon}</span>
       <span class="ne-node-label">${_esc(_t(meta.labelKey))}</span>
+      <button class="ne-node-color" data-color-btn="${_esc(node.id)}" data-color="${_esc(color)}"
+        title="${_esc(_t('ne.node.color'))}">&#x25CF;</button>
       ${!isPolicy ? `<button class="ne-node-del" data-del="${node.id}"
         title="${_esc(_t('ne.node.delete'))}" aria-label="${_esc(_t('ne.node.delete'))}">&#x2715;</button>` : ''}
     `;
@@ -426,22 +468,25 @@ const NodeEditor = (() => {
     body.innerHTML = _bodyHtml(node);
     el.appendChild(body);
 
-    // Input port (left side) — all except policy
-    if (!isPolicy) {
-      const portIn = document.createElement('div');
-      portIn.className = 'ne-port ne-port-in';
-      portIn.dataset.pin = node.id;
-      el.appendChild(portIn);
-    }
+    // Note nodes have no connection ports
+    if (!isNote) {
+      // Input port (left side) — all except policy
+      if (!isPolicy) {
+        const portIn = document.createElement('div');
+        portIn.className = 'ne-port ne-port-in';
+        portIn.dataset.pin = node.id;
+        el.appendChild(portIn);
+      }
 
-    // Output port (right side) — all except leaf nodes
-    // Ports get direct pointerdown listener — NOT event delegation
-    if (!isLeaf) {
-      const portOut = document.createElement('div');
-      portOut.className = 'ne-port ne-port-out';
-      portOut.dataset.pout = node.id;
-      portOut.addEventListener('pointerdown', _onPortDown);
-      el.appendChild(portOut);
+      // Output port (right side) — all except leaf nodes
+      // Ports get direct pointerdown listener — NOT event delegation
+      if (!isLeaf) {
+        const portOut = document.createElement('div');
+        portOut.className = 'ne-port ne-port-out';
+        portOut.dataset.pout = node.id;
+        portOut.addEventListener('pointerdown', _onPortDown);
+        el.appendChild(portOut);
+      }
     }
 
     return el;
@@ -575,6 +620,10 @@ const NodeEditor = (() => {
             <option value="OR"  ${d.logic==='OR' ?'selected':''}>OR</option>
           </select>
         </div>`;
+
+      case 'note': return `
+        <textarea class="ne-note-text" data-node="${id}" data-field="text"
+          rows="4" placeholder="${_esc(_t('ne.placeholder.note'))}">${_esc(d.text || '')}</textarea>`;
 
       default: return '';
     }
@@ -823,6 +872,47 @@ const NodeEditor = (() => {
       return;
     }
 
+    // Color button — cycle node color
+    const colorBtn = e.target.closest('[data-color-btn]');
+    if (colorBtn) {
+      e.stopPropagation();
+      const nodeId = colorBtn.dataset.colorBtn;
+      const node = _nodes.find(n => n.id === nodeId);
+      if (node) {
+        const idx = NODE_COLORS.indexOf(node.data.color || '');
+        node.data.color = NODE_COLORS[(idx + 1) % NODE_COLORS.length];
+        const el = document.getElementById(`ne-node-${nodeId}`);
+        if (el) {
+          if (node.data.color) el.dataset.color = node.data.color;
+          else delete el.dataset.color;
+        }
+        colorBtn.dataset.color = node.data.color || '';
+        _emit();
+      }
+      return;
+    }
+
+    // Template modal — open/close/load
+    if (e.target.id === 'ne-tpl-btn' || e.target.closest('#ne-tpl-btn')) {
+      _openTemplateModal(); return;
+    }
+    if (e.target.id === 'ne-tpl-close' || e.target.closest('#ne-tpl-close')) {
+      _closeTemplateModal(); return;
+    }
+    const tplLoad = e.target.closest('[data-tpl]');
+    if (tplLoad && tplLoad.classList.contains('ne-tpl-load-btn')) {
+      _applyTemplate(tplLoad.dataset.tpl); return;
+    }
+    // Close modal when clicking backdrop
+    if (e.target.id === 'ne-tpl-modal') {
+      _closeTemplateModal(); return;
+    }
+
+    // Share link
+    if (e.target.id === 'ne-share-btn' || e.target.closest('#ne-share-btn')) {
+      _copyShareLink(); return;
+    }
+
     // Effect toggle
     const eff = e.target.closest('[data-effect]');
     if (eff && eff.dataset.node) {
@@ -983,6 +1073,285 @@ const NodeEditor = (() => {
     _emit();
   }
 
+  // ── Phase 2: Templates ────────────────────────────────────────────────
+
+  function _buildTemplateNodes(id) {
+    const uid = () => Math.random().toString(36).slice(2, 9);
+    const DENY_OVR  = 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides';
+    const PERM_OVR  = 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:permit-overrides';
+    const ACT_ID    = 'urn:oasis:names:tc:xacml:1.0:action:action-id';
+    const RES_ID    = 'urn:oasis:names:tc:xacml:1.0:resource:resource-id';
+    const STR_EQ    = 'urn:oasis:names:tc:xacml:1.0:function:string-equal';
+    const DT_EQ     = 'urn:oasis:names:tc:xacml:1.0:function:dateTime-equal';
+    const ENV_CAT   = 'urn:oasis:names:tc:xacml:3.0:attribute-category:environment';
+    const DT_ATTR   = 'urn:oasis:names:tc:xacml:1.0:environment:current-dateTime';
+
+    switch (id) {
+      case 'admin-only': {
+        const pId = uid(), rId = uid(), sId = uid();
+        return {
+          nodes: [
+            { id: pId, type: 'policy', x: 30, y: 60,
+              data: { name: 'admin-policy', description: '', combiningAlg: DENY_OVR, color: '' } },
+            { id: rId, type: 'rule', x: 340, y: 40,
+              data: { name: 'admin-permit', effect: 'Permit', color: '' } },
+            { id: sId, type: 'subject', x: 660, y: 40,
+              data: { attrType: 'role', value: 'admin', color: '' } },
+          ],
+          edges: [
+            { id: uid(), fromId: pId, toId: rId },
+            { id: uid(), fromId: rId, toId: sId },
+          ],
+        };
+      }
+      case 'read-write': {
+        const pId = uid(), r1 = uid(), r2 = uid(), r3 = uid();
+        const a1 = uid(), s2 = uid(), a2 = uid();
+        return {
+          nodes: [
+            { id: pId, type: 'policy', x: 30, y: 230,
+              data: { name: 'read-write-policy', description: '', combiningAlg: DENY_OVR, color: '' } },
+            { id: r1, type: 'rule',    x: 340, y: 40,
+              data: { name: 'read-all', effect: 'Permit', color: '' } },
+            { id: a1, type: 'action',  x: 660, y: 40,
+              data: { attributeId: ACT_ID, action: 'read', customAction: '', color: '' } },
+            { id: r2, type: 'rule',    x: 340, y: 270,
+              data: { name: 'write-owner', effect: 'Permit', color: '' } },
+            { id: s2, type: 'subject', x: 660, y: 230,
+              data: { attrType: 'role', value: 'owner', color: '' } },
+            { id: a2, type: 'action',  x: 660, y: 420,
+              data: { attributeId: ACT_ID, action: 'write', customAction: '', color: '' } },
+            { id: r3, type: 'rule',    x: 340, y: 500,
+              data: { name: 'deny-all', effect: 'Deny', color: '' } },
+          ],
+          edges: [
+            { id: uid(), fromId: pId, toId: r1 },
+            { id: uid(), fromId: r1,  toId: a1 },
+            { id: uid(), fromId: pId, toId: r2 },
+            { id: uid(), fromId: r2,  toId: s2 },
+            { id: uid(), fromId: r2,  toId: a2 },
+            { id: uid(), fromId: pId, toId: r3 },
+          ],
+        };
+      }
+      case 'time-based': {
+        const pId = uid(), rId = uid(), cId = uid();
+        return {
+          nodes: [
+            { id: pId, type: 'policy', x: 30, y: 60,
+              data: { name: 'time-based-policy', description: '', combiningAlg: PERM_OVR, color: '' } },
+            { id: rId, type: 'rule', x: 340, y: 40,
+              data: { name: 'time-permit', effect: 'Permit', color: '' } },
+            { id: cId, type: 'condition', x: 660, y: 40,
+              data: { category: ENV_CAT, attribute: DT_ATTR,
+                      functionId: DT_EQ, value: '2024-01-01T09:00:00', logic: 'AND', color: '' } },
+          ],
+          edges: [
+            { id: uid(), fromId: pId, toId: rId },
+            { id: uid(), fromId: rId, toId: cId },
+          ],
+        };
+      }
+      case 'department': {
+        const pId = uid(), rId = uid(), sId = uid(), resId = uid();
+        return {
+          nodes: [
+            { id: pId, type: 'policy',   x: 30,  y: 100,
+              data: { name: 'department-policy', description: '', combiningAlg: DENY_OVR, color: '' } },
+            { id: rId, type: 'rule',     x: 340, y: 80,
+              data: { name: 'dept-access', effect: 'Permit', color: '' } },
+            { id: sId, type: 'subject',  x: 660, y: 40,
+              data: { attrType: 'id', value: 'dept-member', color: '' } },
+            { id: resId, type: 'resource', x: 660, y: 240,
+              data: { attributeId: RES_ID, identifier: 'dept-docs', wildcard: false, color: '' } },
+          ],
+          edges: [
+            { id: uid(), fromId: pId, toId: rId   },
+            { id: uid(), fromId: rId, toId: sId   },
+            { id: uid(), fromId: rId, toId: resId },
+          ],
+        };
+      }
+      default: return null;
+    }
+  }
+
+  function _openTemplateModal() {
+    const modal = _wrap?.querySelector('#ne-tpl-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function _closeTemplateModal() {
+    const modal = _wrap?.querySelector('#ne-tpl-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function _applyTemplate(tplId) {
+    const result = _buildTemplateNodes(tplId);
+    if (!result) return;
+    if (!confirm(_t('ne.tpl.confirm'))) return;
+    _nodes = result.nodes;
+    _edges = result.edges;
+    _history = [];
+    _histIdx = -1;
+    _pushHistory();
+    try { sessionStorage.removeItem(NE_SESS_KEY); } catch (_) {}
+    _rerenderAll();
+    requestAnimationFrame(_fitView);
+    _emit();
+    _closeTemplateModal();
+  }
+
+  // ── Phase 2: Minimap ─────────────────────────────────────────────────
+
+  function _updateMinimap() {
+    const cvs = _wrap?.querySelector('#ne-minimap');
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    const W = cvs.width, H = cvs.height;
+    ctx.clearRect(0, 0, W, H);
+    if (_nodes.length === 0) return;
+
+    const pad = 30;
+    const xs = _nodes.map(n => n.x);
+    const ys = _nodes.map(n => n.y);
+    const minX = Math.min(...xs) - pad;
+    const minY = Math.min(...ys) - pad;
+    const maxX = Math.max(...xs) + NODE_W + pad;
+    const maxY = Math.max(...ys) + 120 + pad;
+    const cW = maxX - minX, cH = maxY - minY;
+    if (cW <= 0 || cH <= 0) return;
+    const scale = Math.min(W / cW, H / cH) * 0.9;
+    const offX = (W - cW * scale) / 2 - minX * scale;
+    const offY = (H - cH * scale) / 2 - minY * scale;
+
+    const TYPE_COLOR = {
+      policy: '#3B82F6', rule: '#6B7280', subject: '#10B981',
+      action: '#F97316', resource: '#A855F7', condition: '#EAB308', note: '#FCD34D',
+    };
+
+    // Edges
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = '#6B7280';
+    ctx.lineWidth = 1;
+    _edges.forEach(e => {
+      const f = _nodes.find(n => n.id === e.fromId);
+      const t = _nodes.find(n => n.id === e.toId);
+      if (!f || !t) return;
+      ctx.beginPath();
+      ctx.moveTo((f.x + NODE_W) * scale + offX, (f.y + PORT_Y) * scale + offY);
+      ctx.lineTo(t.x             * scale + offX, (t.y + PORT_Y) * scale + offY);
+      ctx.stroke();
+    });
+
+    // Nodes
+    ctx.globalAlpha = 0.8;
+    _nodes.forEach(n => {
+      ctx.fillStyle = TYPE_COLOR[n.type] || '#6B7280';
+      const nx = n.x * scale + offX;
+      const ny = n.y * scale + offY;
+      const nw = NODE_W * scale;
+      const nh = Math.max(55 * scale, 4);
+      ctx.fillRect(nx, ny, nw, nh);
+    });
+
+    // Viewport rect
+    if (_viewport) {
+      const vpR = _viewport.getBoundingClientRect();
+      const vx1 = -_panX / _zoom, vy1 = -_panY / _zoom;
+      const vx2 = (-_panX + vpR.width) / _zoom;
+      const vy2 = (-_panY + vpR.height) / _zoom;
+      const mx = vx1 * scale + offX, my = vy1 * scale + offY;
+      const mw = (vx2 - vx1) * scale, mh = (vy2 - vy1) * scale;
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = '#94A3B8';
+      ctx.fillRect(mx, my, mw, mh);
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(mx, my, mw, mh);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function _onMinimapClick(e) {
+    if (_nodes.length === 0) return;
+    const cvs = _wrap?.querySelector('#ne-minimap');
+    if (!cvs) return;
+    const rect = cvs.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / rect.width  * cvs.width;
+    const my = (e.clientY - rect.top)  / rect.height * cvs.height;
+    const W = cvs.width, H = cvs.height, pad = 30;
+    const xs = _nodes.map(n => n.x), ys = _nodes.map(n => n.y);
+    const minX = Math.min(...xs) - pad, minY = Math.min(...ys) - pad;
+    const maxX = Math.max(...xs) + NODE_W + pad, maxY = Math.max(...ys) + 120 + pad;
+    const cW = maxX - minX, cH = maxY - minY;
+    const scale = Math.min(W / cW, H / cH) * 0.9;
+    const offX = (W - cW * scale) / 2 - minX * scale;
+    const offY = (H - cH * scale) / 2 - minY * scale;
+    const cx = (mx - offX) / scale;
+    const cy = (my - offY) / scale;
+    const vpR = _viewport.getBoundingClientRect();
+    _panX = vpR.width  / 2 - cx * _zoom;
+    _panY = vpR.height / 2 - cy * _zoom;
+    _applyTransform();
+  }
+
+  // ── Phase 2: Node Search ─────────────────────────────────────────────
+
+  function _onSearchInput(e) {
+    const q = (e.target.value || '').trim().toLowerCase();
+    let firstMatch = null;
+    _nodes.forEach(n => {
+      const el = document.getElementById(`ne-node-${n.id}`);
+      if (!el) return;
+      const name = (n.data.name || n.data.text || '').toLowerCase();
+      const hit = q && name.includes(q);
+      el.classList.toggle('ne-node--found', hit);
+      if (hit && !firstMatch) firstMatch = n;
+    });
+    if (firstMatch && _viewport) {
+      const vpR = _viewport.getBoundingClientRect();
+      _panX = vpR.width  / 2 - (firstMatch.x + NODE_W / 2) * _zoom;
+      _panY = vpR.height / 2 - (firstMatch.y + 60)        * _zoom;
+      _applyTransform();
+    }
+  }
+
+  // ── Phase 2: Shareable Link ──────────────────────────────────────────
+
+  function _restoreFromHash() {
+    try {
+      const hash = location.hash;
+      if (!hash.startsWith('#ne=')) return false;
+      const encoded = hash.slice(4);
+      const data = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+      if (Array.isArray(data.nodes) && data.nodes.length > 0) {
+        _nodes = data.nodes;
+        _edges = data.edges || [];
+        history.replaceState(null, '', location.pathname + location.search);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  function _copyShareLink() {
+    try {
+      const data = JSON.stringify({ nodes: _nodes, edges: _edges });
+      const hash = btoa(unescape(encodeURIComponent(data)));
+      const url  = location.href.replace(/#.*$/, '') + '#ne=' + hash;
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = _wrap?.querySelector('#ne-share-btn');
+        if (btn) {
+          const orig = btn.innerHTML;
+          btn.innerHTML = '&#x2713;';
+          setTimeout(() => { btn.innerHTML = orig; }, 1500);
+        }
+      });
+    } catch (_) {}
+  }
+
   // ── HTML skeleton ─────────────────────────────────────────────────────
 
   function _buildSkeleton() {
@@ -992,7 +1361,16 @@ const NodeEditor = (() => {
       { type: 'action',    icon: '⚡', key: 'ne.palette.action'    },
       { type: 'resource',  icon: '📁', key: 'ne.palette.resource'  },
       { type: 'condition', icon: '🔀', key: 'ne.palette.condition' },
+      { type: 'note',      icon: '📝', key: 'ne.palette.note'      },
     ];
+
+    const tplCards = NE_TEMPLATE_DEFS.map(t => `
+      <div class="ne-tpl-card">
+        <div class="ne-tpl-icon">${t.icon}</div>
+        <div class="ne-tpl-title">${_esc(_t(t.titleKey))}</div>
+        <div class="ne-tpl-desc">${_esc(_t(t.descKey))}</div>
+        <button class="ne-tpl-load-btn" data-tpl="${t.id}">${_esc(_t('ne.tpl.load'))}</button>
+      </div>`).join('');
 
     return `
       <div class="ne-wrap">
@@ -1004,6 +1382,11 @@ const NodeEditor = (() => {
               <span class="ne-palette-item-icon">${p.icon}</span>
               <span>${_esc(_t(p.key))}</span>
             </div>`).join('')}
+          <div class="ne-palette-sep"></div>
+          <button class="ne-palette-tpl-btn" id="ne-tpl-btn"
+            title="${_esc(_t('ne.tpl.btn.title'))}">
+            📋 ${_esc(_t('ne.tpl.btn'))}
+          </button>
           <div class="ne-palette-hint">${_esc(_t('ne.palette.hint'))}</div>
         </div>
         <div class="ne-viewport" id="ne-viewport">
@@ -1026,9 +1409,19 @@ const NodeEditor = (() => {
               title="${_esc(_t('ne.toolbar.reset'))}"
               style="font-size:0.65rem;width:36px">100%</button>
             <div class="ne-toolbar-sep"></div>
+            <input class="ne-toolbar-search" id="ne-search" type="text"
+              placeholder="${_esc(_t('ne.search.placeholder'))}"
+              title="${_esc(_t('ne.search.title'))}"
+              aria-label="${_esc(_t('ne.search.title'))}">
+            <div class="ne-toolbar-sep"></div>
+            <button class="ne-toolbar-btn" id="ne-share-btn"
+              title="${_esc(_t('ne.share.title'))}">&#x1F517;</button>
+            <div class="ne-toolbar-sep"></div>
             <button class="ne-toolbar-btn ne-toolbar-btn--danger" id="ne-clear-btn"
               title="${_esc(_t('ne.toolbar.clear'))}">&#x1F5D1;</button>
           </div>
+          <canvas id="ne-minimap" class="ne-minimap" width="160" height="90"
+            title="${_esc(_t('ne.minimap.title'))}"></canvas>
           <div id="ne-validation" class="ne-validation">
             <span class="ne-validation-dot invalid"></span>
             <span class="ne-validation-text">${_esc(_t('ne.validation.invalid'))}</span>
@@ -1036,6 +1429,15 @@ const NodeEditor = (() => {
           <div class="ne-empty-hint" style="display:none">
             <div class="ne-empty-hint-icon">🎨</div>
             <p>${_esc(_t('ne.hint.drag'))}</p>
+          </div>
+          <div id="ne-tpl-modal" class="ne-tpl-modal" style="display:none">
+            <div class="ne-tpl-modal-inner">
+              <div class="ne-tpl-modal-hdr">
+                <span class="ne-tpl-modal-title">${_esc(_t('ne.tpl.modal.title'))}</span>
+                <button class="ne-tpl-close-btn" id="ne-tpl-close" title="${_esc(_t('ne.tpl.modal.close'))}">&#x2715;</button>
+              </div>
+              <div class="ne-tpl-grid">${tplCards}</div>
+            </div>
           </div>
         </div>
       </div>`;
@@ -1055,19 +1457,25 @@ const NodeEditor = (() => {
     _selEdge = null;
 
     // Try to restore layout from sessionStorage
-    let restored = false;
-    try {
-      const saved = sessionStorage.getItem(NE_SESS_KEY);
-      if (saved) {
-        const s = JSON.parse(saved);
-        if (Array.isArray(s.nodes) && s.nodes.length > 0) {
-          _nodes = s.nodes;
-          _edges = s.edges || [];
-          restored = true;
-        }
-      }
-    } catch (_) {}
+    // 1. URL hash takes highest priority (shared link)
+    let restored = _restoreFromHash();
 
+    // 2. Fall back to sessionStorage
+    if (!restored) {
+      try {
+        const saved = sessionStorage.getItem(NE_SESS_KEY);
+        if (saved) {
+          const s = JSON.parse(saved);
+          if (Array.isArray(s.nodes) && s.nodes.length > 0) {
+            _nodes = s.nodes;
+            _edges = s.edges || [];
+            restored = true;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 3. Start with a single blank policy node
     if (!restored) {
       _nodes = [{ id: _uid(), type: 'policy', x: 20, y: 50, data: _defaultData('policy') }];
       _edges = [];
@@ -1087,6 +1495,7 @@ const NodeEditor = (() => {
     _renderNodes();
     _renderEdges();
     _updateValidation();
+    _updateMinimap();
     if (restored) requestAnimationFrame(_fitView);
 
     container.addEventListener('mousedown', _onMouseDown);
@@ -1114,6 +1523,10 @@ const NodeEditor = (() => {
     container.querySelector('#ne-fit-btn')?.addEventListener('click',  _fitView);
     container.querySelector('#ne-zoom-reset-btn')?.addEventListener('click', _resetView);
     container.querySelector('#ne-clear-btn')?.addEventListener('click', _clearCanvas);
+
+    // Phase 2 — minimap click + search
+    container.querySelector('#ne-minimap')?.addEventListener('click', _onMinimapClick);
+    container.querySelector('#ne-search')?.addEventListener('input',  _onSearchInput);
 
     // Do NOT call _emit() here — would overwrite saved creator state.
     // setPolicy() will be called by the host if this is a fresh start.
