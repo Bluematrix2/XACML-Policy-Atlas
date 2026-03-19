@@ -521,8 +521,9 @@ const App = (() => {
       const idx = UIState.addOrReplace(policy);
       refreshSidebar();
       activatePolicy(idx);
-      // Load into Creator (both form + visual editor)
-      PolicyCreator.loadSamplePolicy();
+      // Load into Creator (both form + visual editor) — use the parsed policy
+      // so the creator shows the exact same data as the visualizer.
+      PolicyCreator.loadFromPolicy(policy);
       _showToast(I18n.t('toast.example'));
     } catch (e) {
       alert(I18n.t('toast.example.err', { msg: e.message }));

@@ -1599,14 +1599,14 @@ const NodeEditor = (() => {
             <button class="ne-toolbar-btn" id="ne-zoom-reset-btn"
               title="${_esc(_t('ne.toolbar.reset'))}"
               style="font-size:0.65rem;width:36px">100%</button>
-            <button class="ne-toolbar-btn" id="ne-tidy-btn"
-              title="${_esc(_t('ne.toolbar.tidy'))}">&#x1F9F9;</button>
             <div class="ne-toolbar-sep"></div>
             <input class="ne-toolbar-search" id="ne-search" type="text"
               placeholder="${_esc(_t('ne.search.placeholder'))}"
               title="${_esc(_t('ne.search.title'))}"
               aria-label="${_esc(_t('ne.search.title'))}">
             <div class="ne-toolbar-sep"></div>
+            <button class="ne-toolbar-btn" id="ne-tidy-btn"
+              title="${_esc(_t('ne.toolbar.tidy'))}" style="font-size:1.1rem;font-weight:700">&#x22A3;</button>
             <button class="ne-toolbar-btn" id="ne-share-btn"
               title="${_esc(_t('ne.share.title'))}">&#x1F517;</button>
             <button class="ne-toolbar-btn" id="ne-download-btn"
