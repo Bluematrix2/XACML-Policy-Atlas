@@ -162,6 +162,18 @@
 }
 .sim-select:focus { outline: none; border-color: var(--accent); }
 
+/* ── Standard field row with attrId select ── */
+.sim-field-input-wrap {
+  flex: 1;
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  min-width: 0;
+}
+.sim-field-atrid-sel {
+  flex: 0 0 150px;
+}
+
 /* ── Extra attributes ── */
 .sim-extra-attrs {
   display: flex;
@@ -172,13 +184,14 @@
 .sim-extra-attr {
   display: flex;
   gap: var(--sp-2);
-  align-items: center;
+  align-items: flex-start;
 }
-.sim-extra-attr .sim-select { flex: 0 0 110px; }
-.sim-extra-attr .sim-atrid-wrap  { flex: 1.5; display: flex; flex-direction: column; gap: 3px; }
+.sim-extra-attr .sim-select        { flex: 0 0 110px; margin-top: 2px; }
+.sim-extra-attr .sim-atrid-wrap    { flex: 1.5; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .sim-extra-attr .sim-extra-atrid-sel { width: 100%; }
-.sim-extra-attr .sim-extra-atrid { width: 100%; box-sizing: border-box; font-size: 0.8rem; }
-.sim-extra-attr .sim-extra-val   { flex: 1; }
+.sim-extra-attr .sim-extra-atrid   { width: 100%; box-sizing: border-box; font-size: 0.8rem; margin-top: 0; }
+.sim-extra-attr .sim-extra-val     { flex: 1; margin-top: 2px; }
+.sim-extra-attr .sim-extra-del     { margin-top: 4px; }
 .sim-extra-del {
   background: none;
   border: 1px solid var(--border);

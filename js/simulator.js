@@ -42,7 +42,17 @@ const PolicySimulator = (() => {
   let _mode            = 'simple'; // 'simple' | 'xml'
   let _panel           = 'evaluate'; // 'evaluate' | 'history' | 'tests'
   let _result          = null;
-  let _formState       = { role: '', subjectId: '', action: '', resource: '', extraAttrs: [] };
+  let _formState       = {
+    roleAttrId:      'urn:oasis:names:tc:xacml:2.0:subject:role',
+    role:            '',
+    subjectIdAttrId: 'urn:oasis:names:tc:xacml:1.0:subject:subject-id',
+    subjectId:       '',
+    actionAttrId:    'urn:oasis:names:tc:xacml:1.0:action:action-id',
+    action:          '',
+    resourceAttrId:  'urn:oasis:names:tc:xacml:1.0:resource:resource-id',
+    resource:        '',
+    extraAttrs:      [],
+  };
   let _xmlInput        = '';
   let _history         = _loadHistory();
   let _tests           = _loadTests();
@@ -267,10 +277,10 @@ const PolicySimulator = (() => {
 
   function _buildRequestFromForm() {
     const req = { subject: {}, resource: {}, action: {}, environment: {} };
-    if (_formState.role)      req.subject['urn:oasis:names:tc:xacml:2.0:subject:role']                   = _formState.role;
-    if (_formState.subjectId) req.subject['urn:oasis:names:tc:xacml:1.0:subject:subject-id']             = _formState.subjectId;
-    if (_formState.action)    req.action['urn:oasis:names:tc:xacml:1.0:action:action-id']                = _formState.action;
-    if (_formState.resource)  req.resource['urn:oasis:names:tc:xacml:1.0:resource:resource-id']          = _formState.resource;
+    if (_formState.role)      req.subject[_formState.roleAttrId      || 'urn:oasis:names:tc:xacml:2.0:subject:role']              = _formState.role;
+    if (_formState.subjectId) req.subject[_formState.subjectIdAttrId || 'urn:oasis:names:tc:xacml:1.0:subject:subject-id']        = _formState.subjectId;
+    if (_formState.action)    req.action[_formState.actionAttrId     || 'urn:oasis:names:tc:xacml:1.0:action:action-id']          = _formState.action;
+    if (_formState.resource)  req.resource[_formState.resourceAttrId || 'urn:oasis:names:tc:xacml:1.0:resource:resource-id']      = _formState.resource;
     for (const attr of (_formState.extraAttrs || [])) {
       if (!attr.attrId || !attr.value) continue;
       const cat = attr.cat || 'subject';
@@ -416,14 +426,22 @@ const PolicySimulator = (() => {
   // ── Form state collector ──────────────────────────────────────────────
 
   function _collectFormState() {
-    const role     = document.getElementById('sim-role');
-    const subId    = document.getElementById('sim-subjectid');
-    const action   = document.getElementById('sim-action');
-    const resource = document.getElementById('sim-resource');
-    if (role)     _formState.role      = role.value.trim();
-    if (subId)    _formState.subjectId = subId.value.trim();
-    if (action)   _formState.action    = action.value.trim();
-    if (resource) _formState.resource  = resource.value.trim();
+    const role          = document.getElementById('sim-role');
+    const roleAtrid     = document.getElementById('sim-role-atrid');
+    const subId         = document.getElementById('sim-subjectid');
+    const subIdAtrid    = document.getElementById('sim-subjectid-atrid');
+    const action        = document.getElementById('sim-action');
+    const actionAtrid   = document.getElementById('sim-action-atrid');
+    const resource      = document.getElementById('sim-resource');
+    const resourceAtrid = document.getElementById('sim-resource-atrid');
+    if (role)          _formState.role            = role.value.trim();
+    if (roleAtrid)     _formState.roleAttrId      = roleAtrid.value;
+    if (subId)         _formState.subjectId       = subId.value.trim();
+    if (subIdAtrid)    _formState.subjectIdAttrId = subIdAtrid.value;
+    if (action)        _formState.action          = action.value.trim();
+    if (actionAtrid)   _formState.actionAttrId    = actionAtrid.value;
+    if (resource)      _formState.resource        = resource.value.trim();
+    if (resourceAtrid) _formState.resourceAttrId  = resourceAtrid.value;
 
     const extraRows = document.querySelectorAll('#sim-extra-attrs .sim-extra-attr');
     const newExtras = [];
@@ -520,13 +538,15 @@ const PolicySimulator = (() => {
       </div>`;
   }
 
-  function _simAttrIdOpts(cat, currentAttrId) {
-    const opts  = SIM_ATTR_ID_OPTIONS[cat] || [];
-    const isCustom = currentAttrId && !opts.find(o => o.value === currentAttrId);
-    return opts.map(o =>
+  function _simAttrIdOpts(cat, currentAttrId, includeCustom = true) {
+    const opts     = SIM_ATTR_ID_OPTIONS[cat] || [];
+    const isCustom = includeCustom && currentAttrId && !opts.find(o => o.value === currentAttrId);
+    const optHtml  = opts.map(o =>
       `<option value="${_esc(o.value)}"${!isCustom && currentAttrId === o.value ? ' selected' : ''}>${_esc(I18n.t(o.labelKey))}</option>`
-    ).join('') +
-    `<option value="__custom__"${isCustom ? ' selected' : ''}>${_esc(_t('creator.target.attrId.custom'))}</option>`;
+    ).join('');
+    return includeCustom
+      ? optHtml + `<option value="__custom__"${isCustom ? ' selected' : ''}>${_esc(_t('creator.target.attrId.custom'))}</option>`
+      : optHtml;
   }
 
   function _renderSimpleFormHtml() {
@@ -559,27 +579,47 @@ const PolicySimulator = (() => {
       <div class="sim-simple-form">
         <div class="sim-field-row">
           <label class="sim-label">${_esc(_t('sim.field.role'))}</label>
-          <input id="sim-role" class="sim-input" type="text"
-                 placeholder="${_esc(_t('sim.field.role.ph'))}"
-                 value="${_esc(s.role||'')}">
+          <div class="sim-field-input-wrap">
+            <select id="sim-role-atrid" class="sim-select sim-field-atrid-sel">
+              ${_simAttrIdOpts('subject', s.roleAttrId || 'urn:oasis:names:tc:xacml:2.0:subject:role', false)}
+            </select>
+            <input id="sim-role" class="sim-input" type="text"
+                   placeholder="${_esc(_t('sim.field.role.ph'))}"
+                   value="${_esc(s.role||'')}">
+          </div>
         </div>
         <div class="sim-field-row">
           <label class="sim-label">${_esc(_t('sim.field.subjectId'))}</label>
-          <input id="sim-subjectid" class="sim-input" type="text"
-                 placeholder="${_esc(_t('sim.field.subjectId.ph'))}"
-                 value="${_esc(s.subjectId||'')}">
+          <div class="sim-field-input-wrap">
+            <select id="sim-subjectid-atrid" class="sim-select sim-field-atrid-sel">
+              ${_simAttrIdOpts('subject', s.subjectIdAttrId || 'urn:oasis:names:tc:xacml:1.0:subject:subject-id', false)}
+            </select>
+            <input id="sim-subjectid" class="sim-input" type="text"
+                   placeholder="${_esc(_t('sim.field.subjectId.ph'))}"
+                   value="${_esc(s.subjectId||'')}">
+          </div>
         </div>
         <div class="sim-field-row">
           <label class="sim-label">${_esc(_t('sim.field.action'))}</label>
-          <input id="sim-action" class="sim-input" type="text"
-                 placeholder="${_esc(_t('sim.field.action.ph'))}"
-                 value="${_esc(s.action||'')}">
+          <div class="sim-field-input-wrap">
+            <select id="sim-action-atrid" class="sim-select sim-field-atrid-sel">
+              ${_simAttrIdOpts('action', s.actionAttrId || 'urn:oasis:names:tc:xacml:1.0:action:action-id', false)}
+            </select>
+            <input id="sim-action" class="sim-input" type="text"
+                   placeholder="${_esc(_t('sim.field.action.ph'))}"
+                   value="${_esc(s.action||'')}">
+          </div>
         </div>
         <div class="sim-field-row">
           <label class="sim-label">${_esc(_t('sim.field.resource'))}</label>
-          <input id="sim-resource" class="sim-input" type="text"
-                 placeholder="${_esc(_t('sim.field.resource.ph'))}"
-                 value="${_esc(s.resource||'')}">
+          <div class="sim-field-input-wrap">
+            <select id="sim-resource-atrid" class="sim-select sim-field-atrid-sel">
+              ${_simAttrIdOpts('resource', s.resourceAttrId || 'urn:oasis:names:tc:xacml:1.0:resource:resource-id', false)}
+            </select>
+            <input id="sim-resource" class="sim-input" type="text"
+                   placeholder="${_esc(_t('sim.field.resource.ph'))}"
+                   value="${_esc(s.resource||'')}">
+          </div>
         </div>
         <div id="sim-extra-attrs" class="sim-extra-attrs">${extraRows}</div>
         <button class="sim-add-attr-btn" id="sim-add-attr">+ ${_esc(_t('sim.extra.add'))}</button>
