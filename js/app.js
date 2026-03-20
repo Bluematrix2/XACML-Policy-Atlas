@@ -1723,6 +1723,17 @@ window.TreeRenderer = TreeRenderer;
     // Leave the hash intact so NodeEditor.init() can restore state from it.
     try { sessionStorage.setItem('xacml-creator-tab', 'node'); } catch(_) {}
     App.switchTab('creator');
+  } else if (hash === 'creator' || hash === 'creator-form') {
+    try { sessionStorage.setItem('xacml-creator-tab', 'form'); } catch(_) {}
+    App.switchTab('creator');
+  } else if (hash === 'creator-node') {
+    try { sessionStorage.setItem('xacml-creator-tab', 'node'); } catch(_) {}
+    App.switchTab('creator');
+  } else if (hash === 'creator-sim') {
+    try { sessionStorage.setItem('xacml-creator-tab', 'sim'); } catch(_) {}
+    App.switchTab('creator');
+  } else if (hash === 'viewer') {
+    App.switchTab('viz');
   } else if (hash.startsWith('kb-')) {
     // KB section IDs all start with 'kb-'
     App.openKbSection(hash);

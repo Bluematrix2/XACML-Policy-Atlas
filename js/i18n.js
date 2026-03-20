@@ -14,7 +14,7 @@ const STORAGE_KEY = 'xacml-lang';
 const TRANSLATIONS = {
   de: {
     // ── Page ──
-    'page.title': 'XACML Policy Atlas – Viewer, Validator & Editor',
+    'page.title': 'XACML Policy Atlas – Build, Explore & Validate',
 
     // ── Header notices ──
     'hdr.notice.edu':     '⚠️ Nur für Bildungszwecke. Verwendung auf eigene Gefahr.',
@@ -641,7 +641,7 @@ const TRANSLATIONS = {
 
   en: {
     // ── Page ──
-    'page.title': 'XACML Policy Atlas – Viewer, Validator & Editor',
+    'page.title': 'XACML Policy Atlas – Build, Explore & Validate',
 
     // ── Header notices ──
     'hdr.notice.edu':     '⚠️ For educational purposes only. Use at your own risk.',
