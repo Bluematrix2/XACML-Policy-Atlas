@@ -222,6 +222,7 @@
 
 /* ── XML form ── */
 .sim-xml-form { display: flex; flex-direction: column; gap: var(--sp-2); }
+.sim-xml-form .sim-label { flex: 0 0 auto; text-align: left; }
 .sim-xml-input {
   width: 100%;
   min-height: 180px;
@@ -429,7 +430,12 @@
   padding-bottom: var(--sp-2);
   border-bottom: 1px solid var(--border);
 }
-.sim-clear-btn, .sim-run-all-btn {
+.sim-tests-actions {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.sim-clear-btn, .sim-run-all-btn, .sim-icon-btn {
   background: none;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -440,8 +446,9 @@
   padding: 0.25rem 0.6rem;
   transition: background 0.15s, color 0.15s;
 }
-.sim-clear-btn:hover   { background: var(--bg-secondary); color: var(--deny-color, #dc3545); border-color: var(--deny-color, #dc3545); }
-.sim-run-all-btn:hover { background: var(--bg-secondary); color: var(--accent); border-color: var(--accent); }
+.sim-clear-btn:hover    { background: var(--bg-secondary); color: var(--deny-color, #dc3545); border-color: var(--deny-color, #dc3545); }
+.sim-run-all-btn:hover  { background: var(--bg-secondary); color: var(--accent); border-color: var(--accent); }
+.sim-icon-btn:hover     { background: var(--bg-secondary); color: var(--accent); border-color: var(--accent); }
 
 .sim-history-list, .sim-tests-list {
   display: flex;

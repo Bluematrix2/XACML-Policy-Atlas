@@ -360,6 +360,43 @@ const PolicySimulator = (() => {
 
   // ── Test cases ────────────────────────────────────────────────────────
 
+  function _exportTests() {
+    if (_tests.length === 0) return;
+    const json = JSON.stringify(_tests, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'xacml-testcases.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function _importTests(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        if (!Array.isArray(imported)) throw new Error('Not an array');
+        // Merge: avoid duplicates by id
+        const existingIds = new Set(_tests.map(t => t.id));
+        let added = 0;
+        for (const t of imported) {
+          if (t && t.id && t.name) {
+            if (!existingIds.has(t.id)) { _tests.push(t); added++; }
+          }
+        }
+        _saveTests();
+        _panel = 'tests';
+        _render();
+      } catch {
+        alert(I18n.t('sim.tests.importError'));
+      }
+    };
+    reader.readAsText(file);
+  }
+
   function _runAllTests() {
     const policy = _getPolicy ? _getPolicy() : null;
     if (!policy) return;
@@ -792,7 +829,12 @@ const PolicySimulator = (() => {
       <div class="sim-tests-wrap">
         <div class="sim-section-header">
           <span>${_esc(_t('sim.tests.title'))}</span>
-          ${_tests.length > 0 ? `<button class="sim-run-all-btn" id="sim-tests-run-all">&#x25B6; ${_esc(_t('sim.tests.runAll'))}</button>` : ''}
+          <div class="sim-tests-actions">
+            ${_tests.length > 0 ? `<button class="sim-run-all-btn" id="sim-tests-run-all">&#x25B6; ${_esc(_t('sim.tests.runAll'))}</button>` : ''}
+            ${_tests.length > 0 ? `<button class="sim-icon-btn" id="sim-tests-export" title="${_esc(_t('sim.tests.export'))}">&#x2B07; ${_esc(_t('sim.tests.export'))}</button>` : ''}
+            <button class="sim-icon-btn" id="sim-tests-import" title="${_esc(_t('sim.tests.import'))}">&#x2B06; ${_esc(_t('sim.tests.import'))}</button>
+            <input type="file" id="sim-tests-import-file" accept=".json" style="display:none">
+          </div>
         </div>
         ${_tests.length === 0
           ? `<div class="sim-empty-state">${_esc(_t('sim.tests.empty'))}</div>`
@@ -907,6 +949,18 @@ const PolicySimulator = (() => {
       return;
     }
 
+    // Export tests
+    if (e.target.id === 'sim-tests-export' || e.target.closest('#sim-tests-export')) {
+      _exportTests();
+      return;
+    }
+
+    // Import tests — trigger hidden file input
+    if (e.target.id === 'sim-tests-import' || e.target.closest('#sim-tests-import')) {
+      document.getElementById('sim-tests-import-file')?.click();
+      return;
+    }
+
     // Delete test case
     const delBtn = e.target.closest('[data-testdel]');
     if (delBtn) {
@@ -921,6 +975,12 @@ const PolicySimulator = (() => {
   }
 
   function _handleChange(e) {
+    // Import file selected
+    if (e.target.id === 'sim-tests-import-file') {
+      _importTests(e.target.files?.[0]);
+      e.target.value = ''; // reset so same file can be re-imported
+      return;
+    }
     // Category changed → rebuild attrId dropdown with options for new category
     if (e.target.classList.contains('sim-extra-cat')) {
       const row   = e.target.closest('.sim-extra-attr');
