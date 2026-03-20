@@ -7,13 +7,14 @@
 
 import { I18n } from './i18n.js';
 
-const NODE_W      = 230; // node width in canvas pixels — must match .ne-node { width: 230px }
-const PORT_Y      = 26;  // port center Y = top:19px + half of 13px height
-const INIT_PX     = 30;  // initial panX — keeps nodes well inside viewport
-const INIT_PY     = 30;  // initial panY
-const NE_SESS_KEY = 'xacml-ne-state'; // sessionStorage key for node layout
+const NODE_W      = 230; // Knotenbreite in Canvas-Pixeln — muss mit .ne-node { width: 230px } übereinstimmen
+const PORT_Y      = 26;  // Port-Mittelpunkt Y = top:19px + halbe Port-Höhe (13px)
+const INIT_PX     = 30;  // Start-PanX — hält Knoten sicher im sichtbaren Bereich
+const INIT_PY     = 30;  // Start-PanY
+const NE_SESS_KEY = 'xacml-ne-state'; // sessionStorage-Schlüssel für Knoten-Layout
 
-// ── Allowed connection rules ────────────────────────────────────────────
+// ── Erlaubte Verbindungsregeln: Quelltyp → erlaubte Zieltypen ───────────
+// Definiert die gültige Graphstruktur: Policy → Rule → Subject/Action/Resource/Condition
 const ALLOWED_TARGETS = {
   policy:    ['rule'],
   rule:      ['subject', 'action', 'resource', 'condition'],
@@ -106,7 +107,8 @@ const NE_CONDITION_DATA_TYPES = [
 ];
 
 // ── Phase 2: Policy Templates ───────────────────────────────────────────
-// Defined outside IIFE so they can reference _uid() lazily via factory fns.
+// Außerhalb des IIFE definiert, da Template-Factories _uid() aus dem Modul-Scope
+// erst beim Aufruf (lazy) referenzieren — nicht zur Definition-Zeit.
 const NE_TEMPLATE_DEFS = [
   {
     id: 'admin-only',
@@ -165,15 +167,15 @@ const NodeEditor = (() => {
   let _selNode  = null;
   let _selEdge  = null;
 
-  // ── Drag state (nodes + canvas pan) ──
-  let _dragNode = null;   // { nodeId, startMX, startMY, origX, origY }
-  let _dragPan  = null;   // { startMX, startMY, origPX, origPY }
+  // ── Drag-Zustand (Knoten-Verschieben + Canvas-Panning) ──
+  let _dragNode = null;   // { nodeId, startMX, startMY, origX, origY } — aktiver Knoten-Drag
+  let _dragPan  = null;   // { startMX, startMY, origPX, origPY } — aktiver Canvas-Pan
 
-  // ── Connection drag state ──
-  let _dragConn = null;   // { fromId } — active while port is captured
+  // ── Verbindungs-Drag-Zustand ──
+  let _dragConn = null;   // { fromId } — aktiv solange Port per Maus gezogen wird
 
-  // ── Palette drag type ──
-  let _paletteType = null;
+  // ── Palette-Drag-Typ ──
+  let _paletteType = null; // Knotentyp, der gerade aus der Palette gezogen wird
 
   // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -240,8 +242,9 @@ const NodeEditor = (() => {
     };
   }
 
-  // ── Screen ↔ canvas conversion ──────────────────────────────────────────
-
+  // ── Screen ↔ Canvas-Koordinaten-Umrechnung ──────────────────────────────
+  // Rechnet Bildschirm-Koordinaten (z. B. Mouse-Event clientX/Y) in Canvas-Koordinaten um.
+  // Berücksichtigt Pan-Offset und Zoom-Faktor des Viewports.
   function _s2c(sx, sy) {
     const r = _viewport.getBoundingClientRect();
     return {
@@ -250,15 +253,17 @@ const NodeEditor = (() => {
     };
   }
 
-  // ── SVG bezier path ────────────────────────────────────────────────────
-
+  // ── SVG-Bezier-Pfad für Verbindungskanten ──────────────────────────────
+  // Erzeugt einen kubischen Bezier-Pfad (C-Kommando) zwischen zwei Ports.
+  // dx = min. 60px Kontrollpunkt-Abstand für sanfte Kurven auch bei kurzen Strecken.
   function _bezier(x1, y1, x2, y2) {
     const dx = Math.max(Math.abs(x2 - x1) * 0.5, 60);
     return `M ${x1} ${y1} C ${x1+dx} ${y1} ${x2-dx} ${y2} ${x2} ${y2}`;
   }
 
-  // ── Canvas transform ───────────────────────────────────────────────────
-
+  // ── Canvas-Transformation (Pan + Zoom) anwenden ────────────────────────
+  // Aktualisiert CSS-Transform des DOM-Canvas und SVG-Group synchron,
+  // damit HTML-Knoten und SVG-Kanten exakt übereinander liegen.
   function _applyTransform() {
     if (_canvas) {
       _canvas.style.transform = `translate(${_panX}px,${_panY}px) scale(${_zoom})`;
@@ -269,29 +274,32 @@ const NodeEditor = (() => {
     _updateMinimap();
   }
 
-  // ── History ────────────────────────────────────────────────────────────
+  // ── Undo/Redo-History ──────────────────────────────────────────────────
+  // Implementiert einen linearen Undo-Stack (max. 50 Einträge) als JSON-Snapshots.
+  // Beim Hinzufügen wird alles nach _histIdx abgeschnitten (invalidiert Redo-Zweig).
 
   function _pushHistory() {
     const snap = JSON.stringify({ nodes: _nodes, edges: _edges });
-    _history = _history.slice(0, _histIdx + 1);
+    _history = _history.slice(0, _histIdx + 1); // Redo-Zweig verwerfen
     _history.push(snap);
-    if (_history.length > 50) _history.shift();
+    if (_history.length > 50) _history.shift(); // Ältesten Eintrag löschen
     _histIdx = _history.length - 1;
     _syncToolbar();
   }
 
   function _undo() {
-    if (_histIdx <= 0) return;
+    if (_histIdx <= 0) return; // Bereits am ältesten Zustand
     _histIdx--;
     _restoreSnap(_history[_histIdx]);
   }
 
   function _redo() {
-    if (_histIdx >= _history.length - 1) return;
+    if (_histIdx >= _history.length - 1) return; // Bereits am neuesten Zustand
     _histIdx++;
     _restoreSnap(_history[_histIdx]);
   }
 
+  // Stellt einen gespeicherten Snapshot wieder her und löst ein Policy-Change-Event aus.
   function _restoreSnap(snap) {
     const s = JSON.parse(snap);
     _nodes = s.nodes;
@@ -340,8 +348,10 @@ const NodeEditor = (() => {
     }
   }
 
-  // ── Serialisation → policy model ────────────────────────────────────────
-
+  // ── Serialisierung: Canvas-Zustand → Policy-Datenmodell ─────────────────
+  // Wandelt die Knoten+Kanten des Node-Editors in das creator.js-kompatible
+  // Policy-Objekt um. Reihenfolge der Regeln ergibt sich aus der Y-Position
+  // der Knoten (oben → unten = erste → letzte Regel).
   function _toPolicyModel() {
     const pNode = _nodes.find(n => n.type === 'policy');
     if (!pNode) return null;

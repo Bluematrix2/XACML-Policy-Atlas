@@ -37,12 +37,13 @@ const PolicySimulator = (() => {
   // ── Module state ──────────────────────────────────────────────────────
 
   let _container       = null;
-  let _getPolicy       = null;   // fn() → current policy object
-  let _getNodeEditor   = null;   // fn() → NodeEditor module reference
-  let _mode            = 'simple'; // 'simple' | 'xml'
-  let _panel           = 'evaluate'; // 'evaluate' | 'history' | 'tests'
-  let _result          = null;
+  let _getPolicy       = null;   // fn() → aktuelles Policy-Objekt aus creator.js
+  let _getNodeEditor   = null;   // fn() → NodeEditor-Modul-Referenz für Trace-Highlighting
+  let _mode            = 'simple'; // Eingabemodus: 'simple' (Formular) | 'xml' (XACML Request XML)
+  let _panel           = 'evaluate'; // Aktives Tab: 'evaluate' | 'history' | 'tests'
+  let _result          = null;   // Letztes Evaluierungsergebnis { decision, ruleTraces, … }
   let _formState       = {
+    // Einfacher Modus: Standard-Felder für typische XACML-Anfragen
     roleAttrId:      'urn:oasis:names:tc:xacml:2.0:subject:role',
     role:            '',
     subjectIdAttrId: 'urn:oasis:names:tc:xacml:1.0:subject:subject-id',
@@ -51,14 +52,14 @@ const PolicySimulator = (() => {
     action:          '',
     resourceAttrId:  'urn:oasis:names:tc:xacml:1.0:resource:resource-id',
     resource:        '',
-    extraAttrs:      [],
-    conditionAttrs:  [], // { cat, attrId, value } – auto-populated from policy conditions
+    extraAttrs:      [],     // Benutzerdefinierte Zusatz-Attribute { cat, attrId, value }
+    conditionAttrs:  [],     // { cat, attrId, value } – automatisch aus Policy-Conditions befüllt
   };
-  let _editingTestIdx  = -1; // index of test case being edited, -1 = creating new
+  let _editingTestIdx  = -1; // Index des aktuell bearbeiteten Testfalls, -1 = neuer Testfall
   let _xmlInput        = '';
   let _history         = _loadHistory();
   let _tests           = _loadTests();
-  let _i18nRegistered  = false;  // prevent duplicate event listener
+  let _i18nRegistered  = false;  // Verhindert doppelte Event-Listener-Registrierung bei Sprachänderung
 
   // ── Storage helpers ───────────────────────────────────────────────────
 
@@ -96,6 +97,9 @@ const PolicySimulator = (() => {
     return 'subject';
   }
 
+  // Führt einen einzelnen Attribut-Vergleich durch.
+  // fnUri: vollständige XACML-Funktions-URI (letzter Abschnitt wird als Operator genutzt).
+  // actual: Wert aus dem Request, expected: Wert aus der Policy.
   function _matchFn(fnUri, actual, expected) {
     const fn = (fnUri || 'string-equal').split(':').pop();
     const a  = String(actual  ?? '').trim();
@@ -175,6 +179,9 @@ const PolicySimulator = (() => {
     return { match: overall, checks };
   }
 
+  // Wendet den XACML Combining Algorithm auf eine Liste von Regel-Entscheidungen an.
+  // Unterstützt: deny-overrides, permit-overrides, first-applicable, only-one-applicable.
+  // Fallback bei unbekannten Algorithmen: deny-overrides (sicherste Option).
   function _applyAlgorithm(algUri, decisions) {
     const alg = (algUri || '').split(':').pop();
     if (decisions.length === 0) return 'NotApplicable';
@@ -210,6 +217,10 @@ const PolicySimulator = (() => {
     }
   }
 
+  // Evaluiert die komplette Policy gegen einen Request.
+  // Geht jede Regel durch: zuerst Target-Match prüfen, dann Conditions.
+  // Sammelt ruleTraces für das Trace-Highlighting im Node-Canvas.
+  // Gibt { decision, policyId, combiningAlg, ruleTraces } zurück.
   function _evaluatePolicy(policy, request) {
     if (!policy) return { decision: 'Indeterminate', ruleTraces: [], error: 'No policy' };
     if (!policy.rules || policy.rules.length === 0) {
@@ -219,7 +230,7 @@ const PolicySimulator = (() => {
     const ruleTraces  = [];
     const decisions   = [];
     const algShort    = (policy.combiningAlg || '').split(':').pop();
-    let   firstApplied = false;
+    let   firstApplied = false; // Für first-applicable: nach erster passenden Regel stoppen
 
     for (const rule of policy.rules) {
       const rt = {
@@ -277,6 +288,9 @@ const PolicySimulator = (() => {
 
   // ── Request builders ──────────────────────────────────────────────────
 
+  // Erstellt das Request-Objekt aus dem Formular-State.
+  // Kombiniert Standard-Felder (Rolle, SubjectId, Aktion, Ressource),
+  // Zusatz-Attribute und automatisch erkannte Condition-Attribute.
   function _buildRequestFromForm() {
     const req = { subject: {}, resource: {}, action: {}, environment: {} };
     if (_formState.role)      req.subject[_formState.roleAttrId      || 'urn:oasis:names:tc:xacml:2.0:subject:role']              = _formState.role;
@@ -296,6 +310,9 @@ const PolicySimulator = (() => {
     return req;
   }
 
+  // Parst einen XACML Request XML-String in das interne Request-Objekt.
+  // Unterstützt XACML 3.0 (<Attributes Category="...">) und
+  // XACML 2.0 Fallback (<Subject/Resource/Action> mit direkten <Attribute>-Kindern).
   function _parseXmlRequest(xmlStr) {
     const req = { subject: {}, resource: {}, action: {}, environment: {} };
     if (!xmlStr || !xmlStr.trim()) return { ...req, error: 'Empty input' };

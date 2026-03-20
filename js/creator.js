@@ -59,7 +59,9 @@ const CONDITION_DATA_TYPES = [
   { label: 'CS (HL7) – Coded Simple Value',       value: 'urn:hl7-org:v3#CS' },
 ];
 
-// Maps dataType → matching "one-and-only" bag function (for Condition Arg1 wrapper Apply)
+// Zuordnung DataType → passende XACML „one-and-only"-Bag-Funktion.
+// Wird beim XML-Export als Wrapper-Apply für den ersten Argument-Designator einer Condition benötigt,
+// da XACML verlangt, dass Bag-Attribute auf einen Einzelwert reduziert werden.
 const ONE_AND_ONLY_FN = {
   'http://www.w3.org/2001/XMLSchema#string':   'urn:oasis:names:tc:xacml:1.0:function:string-one-and-only',
   'http://www.w3.org/2001/XMLSchema#integer':  'urn:oasis:names:tc:xacml:1.0:function:integer-one-and-only',
@@ -69,6 +71,7 @@ const ONE_AND_ONLY_FN = {
   'http://www.w3.org/2001/XMLSchema#dateTime': 'urn:oasis:names:tc:xacml:1.0:function:dateTime-one-and-only',
 };
 
+// XACML-Namespace-URIs für den XML-Export — Auswahl erfolgt über _state.policy.version
 const XACML_NS = {
   '2.0': 'urn:oasis:names:tc:xacml:2.0:policy:schema:os',
   '3.0': 'urn:oasis:names:tc:xacml:3.0:core:schema:wd-17',
@@ -113,18 +116,19 @@ const CREATOR_TAB_KEY = 'xacml-creator-tab';
 
 const PolicyCreator = (() => {
   let _initialized  = false;
-  let _previewTimer = null;
-  let _previewMode  = 'visual'; // 'visual' | 'xml'
-  let _xmlCm        = null;     // CodeMirror read-only instance for XML tab
+  let _previewTimer = null;       // Debounce-Timer für die XML/Visual-Vorschau
+  let _previewMode  = 'visual';   // Aktiver Vorschau-Tab: 'visual' | 'xml'
+  let _xmlCm        = null;       // CodeMirror-Instanz (read-only) für den XML-Vorschau-Tab
   let _creatorTab   = sessionStorage.getItem(CREATOR_TAB_KEY) || 'node'; // 'form' | 'node' | 'sim'
-  let _nodeEditorReady  = false; // NodeEditor.init() called yet?
-  let _simInitialized   = false; // PolicySimulator.init() called yet?
-  // Track accordion open/closed state across re-renders (by index, since IDs are random)
+  let _nodeEditorReady  = false;  // true nach dem ersten NodeEditor.init()-Aufruf
+  let _simInitialized   = false;  // true nach dem ersten PolicySimulator.init()-Aufruf
+  // Zustand der aufklappbaren Policy-Panels zwischen Re-Renders merken
+  // (nach Index, da Accordion-IDs bei jedem Render zufällig sind)
   const _accState = {
-    closedPolicies: new Set(), // policy-panel indices that are closed
-    openRules:      new Map(), // policyIdx → Set<ruleIdx> of opened rule bodies
+    closedPolicies: new Set(), // Indizes der geschlossenen Policy-Panels
+    openRules:      new Map(), // policyIdx → Set<ruleIdx> der geöffneten Regel-Bodies
   };
-  // Track which PS policy cards are collapsed (by index)
+  // Welche PolicySet-Karten sind eingeklappt (nach Index)
   const _psPolicyCollapsed = new Set();
 
   // ── Attribute ID options per target category (Standard mode) ──────────
@@ -146,8 +150,12 @@ const PolicyCreator = (() => {
     ],
   };
 
-  // ── State ──────────────────────────────────────────────────────────────
+  // ── State — Datenmodell des Policy Creators ────────────────────────────
+  // _state.policy.target.groups[] = AnyOf-Ebene (ODER)
+  // _state.policy.target.groups[i].matches[] = AllOf-Ebene (UND)
+  // _state.policy.rules[i].conditions[] = mehrere Conditions pro Regel (AND/OR)
 
+  // Erstellt eine leere Match-Zeile für eine Target-Kategorie (subject/resource/action).
   function _defaultMatchRow(cat) {
     return {
       cat:          cat || 'subject',
@@ -186,17 +194,19 @@ const PolicyCreator = (() => {
     };
   }
 
+  // Migriert ältere Target-Formate auf das aktuelle groups[]-Format.
+  // Format-Evolution: flat {subject/resource/action} → {matches[]} → {groups[{matches[]}]}
   function _migrateTarget(t) {
     if (!t) return _defaultTarget();
-    if (Array.isArray(t.groups)) return t; // already new format
+    if (Array.isArray(t.groups)) return t; // Bereits aktuelles Format
     if (Array.isArray(t.matches)) {
-      // Previous format: { combineOp, matches[] }
+      // Vorheriges Format: { combineOp, matches[] }
       if (t.combineOp === 'OR') {
         return { groups: t.matches.map(m => ({ matches: [m] })) };
       }
       return { groups: [{ matches: t.matches }] };
     }
-    // Original flat format: { subject: {}, resource: {}, action: {} }
+    // Ursprüngliches flaches Format: { subject: {}, resource: {}, action: {} }
     return {
       groups: [{
         matches: ['subject', 'resource', 'action'].map(cat => ({
@@ -208,6 +218,7 @@ const PolicyCreator = (() => {
     };
   }
 
+  // Migriert einzelne condition → conditions[] (Unterstützung mehrerer Conditions pro Regel)
   function _migrateRuleConditions(r) {
     if (!('conditions' in r)) {
       r.conditions = r.condition != null ? [r.condition] : [];

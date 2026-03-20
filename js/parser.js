@@ -4,6 +4,7 @@
 //  UTILS
 // ================================================================
 
+// Maskiert HTML-Sonderzeichen für sichere Ausgabe in innerHTML.
 function esc(str) {
   return String(str == null ? '' : str)
     .replace(/&/g, '&amp;')
@@ -12,6 +13,8 @@ function esc(str) {
     .replace(/"/g, '&quot;');
 }
 
+// Bestimmt anhand der WCAG-Luma-Formel, ob ein Hex-Farbwert als „hell" gilt.
+// Wird verwendet, um die Textfarbe auf Chips automatisch auf Schwarz oder Weiß zu setzen.
 function isLightColor(hex) {
   try {
     const r = parseInt(hex.slice(1,3), 16);
@@ -23,10 +26,13 @@ function isLightColor(hex) {
   }
 }
 
+// Gibt das letzte Segment einer URI oder eines Doppelpunkt-getrennten Strings zurück.
+// Beispiel: „urn:oasis:names:tc:xacml:1.0:function:string-equal" → „string-equal"
 function lastSegment(uri) {
   return (uri || '').split(/[:/]/).filter(Boolean).pop() || uri;
 }
 
+// Gibt alle direkten Kind-Elemente mit dem angegebenen localName zurück (namespace-ignorant).
 function childrenByName(el, localName) {
   const result = [];
   if (!el) return result;
@@ -36,6 +42,7 @@ function childrenByName(el, localName) {
   return result;
 }
 
+// Gibt das erste direkte Kind-Element mit dem angegebenen localName zurück.
 function childByName(el, localName) {
   if (!el) return null;
   for (const child of el.children) {
@@ -44,6 +51,8 @@ function childByName(el, localName) {
   return null;
 }
 
+// Durchsucht den gesamten Teilbaum nach dem ersten Element mit dem angegebenen localName
+// (Tiefensuche, gibt beim ersten Treffer zurück).
 function descendantByName(el, localName) {
   if (!el) return null;
   for (const child of el.children) {
@@ -60,10 +69,14 @@ function descendantByName(el, localName) {
 
 const XACMLParser = (() => {
 
+  // Liest den Wert eines <AttributeValue>-Elements aus.
+  // Unterstützt die HL7-Typen CV (CodedValue) und II (InstanceIdentifier)
+  // sowie Standard-XACML-Typen (string, anyURI).
   function parseAttributeValue(avEl) {
     if (!avEl) return { dataType: 'string', value: '' };
     const dataType = avEl.getAttribute('DataType') || '';
 
+    // HL7 Coded Value — enthält ein <CodedValue code="..." codeSystem="...">-Element
     if (dataType.includes('CV')) {
       const cv = descendantByName(avEl, 'CodedValue');
       if (cv) {
@@ -75,6 +88,7 @@ const XACMLParser = (() => {
       }
     }
 
+    // HL7 Instance Identifier — root='*' bedeutet Wildcard (trifft auf alle zu)
     if (dataType.includes('II')) {
       const ii = descendantByName(avEl, 'InstanceIdentifier');
       if (ii) {
@@ -177,6 +191,8 @@ const XACMLParser = (() => {
     return result;
   }
 
+  // Parst ein <Apply>-Element rekursiv. Apply-Elemente bilden den Ausdrucksbaum
+  // einer XACML-Condition (z. B. string-equal(subject-id, "admin")).
   function parseApply(applyEl) {
     const functionId = applyEl.getAttribute('FunctionId') || '';
     const args = [];
@@ -235,6 +251,9 @@ const XACMLParser = (() => {
     return { policyId, algorithm, description, target, rules };
   }
 
+  // Haupteinstiegspunkt: parst einen XACML-XML-String und gibt ein
+  // normalisiertes Policy-Objekt zurück. Unterstützt Policy und PolicySet
+  // in XACML 2.0 und 3.0. Wirft bei ungültigem XML einen Fehler.
   function parse(xmlText, filename) {
     let doc;
     try {

@@ -368,6 +368,8 @@ const App = (() => {
     };
   }
 
+  // Validierungsergebnisse werden je Policy gecacht, um wiederholte XML-Parses zu vermeiden.
+  // Cache-Key = policyId; wird beim Neu-Upload derselben Policy invalidiert.
   const validationCache = new Map(); // policyId → { valid, errors, namespace, version, timestamp }
 
   function getOrComputeValidation(policyId, xmlString) {
@@ -384,10 +386,12 @@ const App = (() => {
 
   function triggerCSV() { document.getElementById('csv-input').click(); }
 
-  // ── Mapping Persistence ──
+  // ── Mapping-Persistenz: CSV-Label-Mappings überleben Seitenreloads via localStorage ──
+  // Schlüssel-Präfix verhindert Kollisionen mit anderen localStorage-Einträgen.
 
   const STORAGE_PREFIX = 'atlas_mapping_';
 
+  // Bereinigt den Dateinamen für einen sicheren localStorage-Schlüssel.
   function storageKey(filename) {
     return STORAGE_PREFIX + filename.replace(/[^a-zA-Z0-9_\-.]/g, '_');
   }
@@ -436,13 +440,16 @@ const App = (() => {
     _showToast(I18n.t('toast.mapping.cleared'));
   }
 
+  // Setzt den visuellen Status-Indikator (Punkt neben CSV-Button).
+  // void dot.offsetWidth erzwingt einen Browser-Reflow, damit die CSS-Animation
+  // bei erneutem Laden zuverlässig neu startet.
   function setMappingStatus(state) {
     const dot = document.getElementById('mappingStatusDot');
     if (!dot) return;
     dot.dataset.state = state;
     if (state === 'loaded') {
       dot.classList.remove('pulse');
-      void dot.offsetWidth; // Reflow erzwingen
+      void dot.offsetWidth; // Reflow erzwingen → Animation-Reset
       dot.classList.add('pulse');
     }
   }

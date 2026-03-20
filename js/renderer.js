@@ -9,9 +9,9 @@ import { LabelMapper, EnforcementMapper } from './mappers.js';
 import { I18n } from './i18n.js';
 
 const TreeRenderer = (() => {
-  const FALLBACK_COLOR = '#607D8B';
+  const FALLBACK_COLOR = '#607D8B'; // Grau als Standardfarbe für unbekannte Werte
   const FHIR_VERSION   = 'R4';
-  // FHIR resource-type attributeId
+  // AttributeId, die FHIR-Ressourcentypen identifiziert (erhält Sonderbehandlung: Link + Enforcement-Info)
   const FHIR_ATTR_ID   = 'http://hl7.org/fhir/resource-types';
 
   // ── Logic chips ──
@@ -56,7 +56,9 @@ const TreeRenderer = (() => {
     return `<span class="chip fallback" tabindex="0">${esc(uri)}<span class="tooltip">${parts.join('<br>')}</span></span>`;
   }
 
-  // Returns chip HTML + optional FHIR link for a match value
+  // Gibt das fertige HTML-Chip für einen Match-Wert zurück.
+  // Priorisierung: CV → II → FHIR-Ressourcentyp (mit Link) → Label-Mapping → Fallback.
+  // attrHint wird als Tooltip-Zeile über den eigentlichen Wert gesetzt.
   function valueChip(matchValue, attributeId, attrHint) {
     const { dataType, value, code, codeSystem, root, isWildcard } = matchValue;
     const isFhir = attributeId === FHIR_ATTR_ID;
@@ -131,6 +133,8 @@ const TreeRenderer = (() => {
   }
 
   // ── Match group rendering (outer=ODER, inner=UND) ──
+  // Jede Gruppe = eine Zeile von Matches (UND-verknüpft).
+  // Mehrere Gruppen werden mit ODER verknüpft (AnyOf/AllOf in XACML).
 
   function renderMatchGroups(groups, groupLabel, showRawValue = false) {
     if (!groups || groups.length === 0) return '';
@@ -209,6 +213,9 @@ const TreeRenderer = (() => {
     }
   }
 
+  // Wandelt einen XACML Apply-Knoten in lesbares HTML um.
+  // Sonderfälle: :not → „NICHT(…)", any-of-any → „attr entspricht attr",
+  // alle anderen → functionName(arg1, arg2, …).
   function condApply(apply) {
     const fn = apply.functionId || '';
 
@@ -218,7 +225,7 @@ const TreeRenderer = (() => {
     }
 
     if (fn.includes('any-of-any')) {
-      // Render as readable: [left attr] matches [right attr]
+      // Lesbare Darstellung: [linkes Attribut] entspricht [rechtes Attribut]
       const attrArgs = apply.args.filter(a => a.nodeType !== 'Function');
       if (attrArgs.length === 2) {
         return `${condNode(attrArgs[0])} <em style="color:#9e9e9e">${esc(I18n.t('renderer.entspricht'))}</em> ${condNode(attrArgs[1])}`;
@@ -285,8 +292,11 @@ const TreeRenderer = (() => {
 
   // ── Summary box ──
 
+  // Erstellt die kompakte Zusammenfassungsbox oben in jedem Policy-Panel.
+  // Zeigt Typ (Policy/PolicySet), Regel-Anzahl, beteiligte Rollen,
+  // FHIR-Ressourcentypen mit Zugriffsmodus sowie Enforcement-Zähler.
   function renderSummaryBox(policy) {
-    // For PolicySet: aggregate rules from all child policies
+    // Bei PolicySet: Regeln aus allen Kind-Policies zusammenführen
     const allRules    = policy.policies ? policy.policies.flatMap(p => p.rules) : policy.rules;
     const permitCount = allRules.filter(r => r.effect !== 'Deny').length;
     const denyCount   = allRules.filter(r => r.effect === 'Deny').length;
@@ -577,7 +587,7 @@ const TreeRenderer = (() => {
   function collapseAll() {
     document.querySelectorAll('.rule-body').forEach(b => b.classList.remove('open'));
     document.querySelectorAll('.rule-toggle').forEach(t => t.classList.remove('open'));
-    // Keep accordion panels visible so controls are accessible
+    // Accordion-Panels selbst bleiben offen, damit Steuerelemente erreichbar bleiben
   }
 
   return { render, toggleAccordion, toggleRule, expandAll, collapseAll };
