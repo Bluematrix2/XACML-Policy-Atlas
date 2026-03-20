@@ -52,7 +52,9 @@ const PolicySimulator = (() => {
     resourceAttrId:  'urn:oasis:names:tc:xacml:1.0:resource:resource-id',
     resource:        '',
     extraAttrs:      [],
+    conditionAttrs:  [], // { cat, attrId, value } – auto-populated from policy conditions
   };
+  let _editingTestIdx  = -1; // index of test case being edited, -1 = creating new
   let _xmlInput        = '';
   let _history         = _loadHistory();
   let _tests           = _loadTests();
@@ -286,6 +288,11 @@ const PolicySimulator = (() => {
       const cat = attr.cat || 'subject';
       if (req[cat]) req[cat][attr.attrId] = attr.value;
     }
+    for (const attr of (_formState.conditionAttrs || [])) {
+      if (!attr.attrId || attr.value === '') continue;
+      const cat = attr.cat || 'subject';
+      if (req[cat]) req[cat][attr.attrId] = attr.value;
+    }
     return req;
   }
 
@@ -496,6 +503,17 @@ const PolicySimulator = (() => {
       });
     });
     _formState.extraAttrs = newExtras;
+
+    const condInputs = document.querySelectorAll('.sim-cond-val');
+    const condAttrs  = [];
+    condInputs.forEach(inp => {
+      condAttrs.push({
+        cat:    inp.dataset.condCat   || 'subject',
+        attrId: inp.dataset.condAtrid || '',
+        value:  inp.value,
+      });
+    });
+    _formState.conditionAttrs = condAttrs;
   }
 
   // ── HTML helpers ──────────────────────────────────────────────────────
@@ -552,10 +570,64 @@ const PolicySimulator = (() => {
     }
   }
 
+  function _renderConditionSectionHtml() {
+    const policy = _getPolicy ? _getPolicy() : null;
+    if (!policy) return '';
+
+    // Collect unique condition attributes from all rules
+    const seen = new Map(); // "cat::attrId" → { cat, attrId, functionId, arg2Value }
+    for (const rule of (policy.rules || [])) {
+      for (const c of (rule.conditions || [])) {
+        if (!c.arg1AttrId) continue;
+        const cat = _condCatToKey(c.arg1Cat);
+        const key = `${cat}::${c.arg1AttrId}`;
+        if (!seen.has(key)) {
+          seen.set(key, { cat, attrId: c.arg1AttrId, functionId: c.functionId, arg2Value: c.arg2Value });
+        }
+      }
+    }
+    if (seen.size === 0) return '';
+
+    const rows = [...seen.values()].map(c => {
+      const existing = (_formState.conditionAttrs || []).find(x => x.cat === c.cat && x.attrId === c.arg1AttrId || x.attrId === c.attrId);
+      const val      = existing?.value ?? '';
+      const fnLabel  = (c.functionId || '').split(':').pop();
+      return `
+        <div class="sim-cond-row">
+          <div class="sim-cond-hint">
+            <span class="sim-cond-atrid">${_esc(_formatAttrId(c.attrId))}</span>
+            <code class="sim-check-fn">${_esc(fnLabel)}</code>
+            <code class="sim-cond-expected">${_esc(c.arg2Value || '?')}</code>
+          </div>
+          <input class="sim-input sim-cond-val" type="text"
+                 data-cond-cat="${_esc(c.cat)}" data-cond-atrid="${_esc(c.attrId)}"
+                 placeholder="${_esc(_t('sim.cond.valuePh'))}"
+                 value="${_esc(val)}">
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="sim-cond-section">
+        <div class="sim-cond-header">
+          <span>${_esc(_t('sim.cond.title'))}</span>
+          <span class="sim-cond-hint-small">${_esc(_t('sim.cond.hint'))}</span>
+        </div>
+        <div class="sim-cond-rows">${rows}</div>
+      </div>`;
+  }
+
   function _renderEvaluateHtml() {
+    const editBanner = _editingTestIdx >= 0
+      ? `<div class="sim-editing-banner">
+           &#x270F; ${_esc(_t('sim.edit.banner', { name: _tests[_editingTestIdx]?.name || '' }))}
+           <button class="sim-edit-cancel-btn" id="sim-edit-cancel">${_esc(_t('sim.edit.cancel'))}</button>
+         </div>`
+      : '';
+    const saveLabel = _editingTestIdx >= 0 ? _t('sim.edit.save') : _t('sim.saveTest.btn');
     return `
       <div class="sim-evaluate-wrap">
         <div class="sim-input-section">
+          ${editBanner}
           <div class="sim-mode-toggle">
             <button class="sim-mode-btn${_mode==='simple'?' active':''}" data-simmode="simple">${_esc(_t('sim.mode.simple'))}</button>
             <button class="sim-mode-btn${_mode==='xml'   ?' active':''}" data-simmode="xml">${_esc(_t('sim.mode.xml'))}</button>
@@ -566,7 +638,7 @@ const PolicySimulator = (() => {
           </div>
           <div class="sim-actions-row">
             <button class="sim-run-btn" id="sim-run-btn">&#x25B6; ${_esc(_t('sim.run'))}</button>
-            <button class="sim-save-test-btn" id="sim-save-test-btn" title="${_esc(_t('sim.saveTest.title'))}">${_esc(_t('sim.saveTest.btn'))}</button>
+            <button class="sim-save-test-btn" id="sim-save-test-btn" title="${_esc(_t('sim.saveTest.title'))}">${_esc(saveLabel)}</button>
           </div>
         </div>
         <div class="sim-result-section" id="sim-result-section">
@@ -660,6 +732,7 @@ const PolicySimulator = (() => {
         </div>
         <div id="sim-extra-attrs" class="sim-extra-attrs">${extraRows}</div>
         <button class="sim-add-attr-btn" id="sim-add-attr">+ ${_esc(_t('sim.extra.add'))}</button>
+        ${_renderConditionSectionHtml()}
       </div>`;
   }
 
@@ -820,7 +893,10 @@ const PolicySimulator = (() => {
               <span class="sim-test-expected">&#x2192; ${_esc(_t(expKey))}</span>
               ${lr ? `<span class="sim-test-actual sim-test-actual--${lr.passed?'pass':'fail'}">got: <code>${_esc(lr.decision)}</code></span>` : ''}
             </div>
-            <button class="sim-test-del" data-testdel="${i}" title="${_esc(_t('sim.tests.delete'))}">&#x2715;</button>
+            <div class="sim-test-btns">
+              <button class="sim-test-edit" data-testedit="${i}" title="${_esc(_t('sim.tests.edit'))}">&#x270F;</button>
+              <button class="sim-test-del" data-testdel="${i}" title="${_esc(_t('sim.tests.delete'))}">&#x2715;</button>
+            </div>
           </div>
         </div>`;
     }).join('');
@@ -965,7 +1041,45 @@ const PolicySimulator = (() => {
     const delBtn = e.target.closest('[data-testdel]');
     if (delBtn) {
       const idx = parseInt(delBtn.dataset.testdel, 10);
-      if (!isNaN(idx)) { _tests.splice(idx, 1); _saveTests(); _render(); }
+      if (!isNaN(idx)) {
+        if (_editingTestIdx === idx) _editingTestIdx = -1;
+        _tests.splice(idx, 1);
+        _saveTests();
+        _render();
+      }
+      return;
+    }
+
+    // Edit test case
+    const editBtn = e.target.closest('[data-testedit]');
+    if (editBtn) {
+      const idx = parseInt(editBtn.dataset.testedit, 10);
+      if (!isNaN(idx) && _tests[idx]) {
+        const test = _tests[idx];
+        if (test.mode === 'simple' && test.formState) {
+          _mode      = 'simple';
+          _formState = {
+            ...test.formState,
+            extraAttrs:     [...(test.formState.extraAttrs     || [])],
+            conditionAttrs: [...(test.formState.conditionAttrs || [])],
+          };
+        } else if (test.mode === 'xml' && test.xmlInput) {
+          _mode     = 'xml';
+          _xmlInput = test.xmlInput;
+        }
+        _editingTestIdx = idx;
+        _panel  = 'evaluate';
+        _result = null;
+        _render();
+      }
+      return;
+    }
+
+    // Cancel editing
+    if (e.target.id === 'sim-edit-cancel' || e.target.closest('#sim-edit-cancel')) {
+      _editingTestIdx = -1;
+      _panel = 'tests';
+      _render();
       return;
     }
   }
@@ -1008,22 +1122,50 @@ const PolicySimulator = (() => {
     }
   }
 
+  function _captureFormState() {
+    return _mode === 'simple' ? {
+      ..._formState,
+      extraAttrs:     [...(_formState.extraAttrs     || [])],
+      conditionAttrs: [...(_formState.conditionAttrs || [])],
+    } : null;
+  }
+
   function _promptSaveTest() {
+    const validDecisions = ['Permit', 'Deny', 'NotApplicable', 'Indeterminate'];
+
+    if (_editingTestIdx >= 0) {
+      // Update existing test case
+      const existing = _tests[_editingTestIdx];
+      if (!existing) return;
+      const defaultExpected = _result?.decision || existing.expectedDecision || 'Permit';
+      const expectedRaw = window.prompt(_t('sim.saveTest.expectedPrompt'), defaultExpected);
+      if (expectedRaw === null) return;
+      const expected = validDecisions.includes(expectedRaw) ? expectedRaw : existing.expectedDecision;
+      existing.mode             = _mode;
+      existing.formState        = _captureFormState();
+      existing.xmlInput         = _mode === 'xml' ? _xmlInput : null;
+      existing.expectedDecision = expected;
+      existing.lastRun          = null; // reset last run since request changed
+      _saveTests();
+      _editingTestIdx = -1;
+      _panel = 'tests';
+      _render();
+      return;
+    }
+
+    // Create new test case
     const name = window.prompt(_t('sim.saveTest.namePrompt'), `Test ${_tests.length + 1}`);
     if (!name) return;
-
-    const validDecisions = ['Permit', 'Deny', 'NotApplicable', 'Indeterminate'];
     const defaultExpected = _result?.decision || 'Permit';
     const expectedRaw = window.prompt(_t('sim.saveTest.expectedPrompt'), defaultExpected);
     if (expectedRaw === null) return;
     const expected = validDecisions.includes(expectedRaw) ? expectedRaw : 'Permit';
-
     _tests.push({
       id:               Date.now().toString(36),
       name,
       mode:             _mode,
-      formState:        _mode === 'simple' ? { ..._formState, extraAttrs: [...(_formState.extraAttrs || [])] } : null,
-      xmlInput:         _mode === 'xml'    ? _xmlInput : null,
+      formState:        _captureFormState(),
+      xmlInput:         _mode === 'xml' ? _xmlInput : null,
       expectedDecision: expected,
       lastRun:          null,
     });
