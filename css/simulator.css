@@ -187,9 +187,9 @@
   align-items: flex-start;
 }
 .sim-extra-attr .sim-select        { flex: 0 0 110px; margin-top: 2px; }
-.sim-extra-attr .sim-atrid-wrap    { flex: 1.5; display: flex; flex-direction: row; gap: var(--sp-2); align-items: center; min-width: 0; }
-.sim-extra-attr .sim-extra-atrid-sel { flex: 0 0 140px; }
-.sim-extra-attr .sim-extra-atrid   { flex: 1; min-width: 0; box-sizing: border-box; font-size: 0.875rem; }
+.sim-extra-attr .sim-atrid-wrap    { flex: 0 0 160px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.sim-extra-attr .sim-extra-atrid-sel { width: 100%; }
+.sim-extra-attr .sim-extra-atrid   { width: 100%; box-sizing: border-box; font-size: 0.875rem; }
 .sim-extra-attr .sim-extra-val     { flex: 1; margin-top: 2px; }
 .sim-extra-attr .sim-extra-del     { margin-top: 4px; }
 .sim-extra-del {
