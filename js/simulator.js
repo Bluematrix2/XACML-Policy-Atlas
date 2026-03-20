@@ -583,15 +583,14 @@ const PolicySimulator = (() => {
       const fnLabel  = (c.functionId || '').split(':').pop();
       return `
         <div class="sim-cond-row">
-          <div class="sim-cond-hint">
-            <span class="sim-cond-atrid">${esc(_formatAttrId(c.attrId))}</span>
-            <code class="sim-check-fn">${esc(fnLabel)}</code>
-            <code class="sim-cond-expected">${esc(c.arg2Value || '?')}</code>
+          <label class="sim-cond-label">${esc(_formatAttrId(c.attrId))}</label>
+          <div class="sim-cond-input-wrap">
+            <input class="sim-input sim-cond-val" type="text"
+                   data-cond-cat="${esc(c.cat)}" data-cond-atrid="${esc(c.attrId)}"
+                   placeholder="${esc(I18n.t('sim.cond.valuePh'))}"
+                   value="${esc(val)}">
+            <span class="sim-cond-check-hint">${esc(fnLabel)} → <code>${esc(c.arg2Value || '?')}</code></span>
           </div>
-          <input class="sim-input sim-cond-val" type="text"
-                 data-cond-cat="${esc(c.cat)}" data-cond-atrid="${esc(c.attrId)}"
-                 placeholder="${esc(I18n.t('sim.cond.valuePh'))}"
-                 value="${esc(val)}">
         </div>`;
     }).join('');
 

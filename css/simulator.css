@@ -187,9 +187,9 @@
   align-items: flex-start;
 }
 .sim-extra-attr .sim-select        { flex: 0 0 110px; margin-top: 2px; }
-.sim-extra-attr .sim-atrid-wrap    { flex: 1.5; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.sim-extra-attr .sim-extra-atrid-sel { width: 100%; }
-.sim-extra-attr .sim-extra-atrid   { width: 100%; box-sizing: border-box; font-size: 0.8rem; margin-top: 0; }
+.sim-extra-attr .sim-atrid-wrap    { flex: 1.5; display: flex; flex-direction: row; gap: var(--sp-2); align-items: center; min-width: 0; }
+.sim-extra-attr .sim-extra-atrid-sel { flex: 0 0 140px; }
+.sim-extra-attr .sim-extra-atrid   { flex: 1; min-width: 0; box-sizing: border-box; font-size: 0.875rem; }
 .sim-extra-attr .sim-extra-val     { flex: 1; margin-top: 2px; }
 .sim-extra-attr .sim-extra-del     { margin-top: 4px; }
 .sim-extra-del {
@@ -557,49 +557,41 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
-  padding-left: 155px;
 }
 .sim-cond-row {
   display: flex;
-  align-items: center;
-  gap: var(--sp-2);
+  align-items: flex-start;
+  gap: var(--sp-3);
 }
-.sim-cond-hint {
+.sim-cond-label {
+  flex: 0 0 140px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: right;
+  padding-top: 0.4rem;
+}
+.sim-cond-input-wrap {
+  flex: 1;
   display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  flex-direction: column;
+  gap: 3px;
   min-width: 0;
-  max-width: 160px;
-  overflow: hidden;
-}
-.sim-cond-atrid {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.7rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 1px 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 120px;
-}
-.sim-cond-expected {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.7rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 1px 4px;
-  color: var(--text-muted);
-  white-space: nowrap;
 }
 .sim-cond-val {
-  flex: 1;
-  min-width: 0;
+  /* inherits .sim-input */
+}
+.sim-cond-check-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.sim-cond-check-hint code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 3px;
+  font-size: 0.7rem;
 }
 
 /* ── Editing banner ── */
