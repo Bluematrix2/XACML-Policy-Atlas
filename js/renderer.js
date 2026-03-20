@@ -576,17 +576,19 @@ const TreeRenderer = (() => {
     if (toggle) toggle.classList.toggle('open', open);
   }
 
+  // Ein einziger querySelectorAll-Durchlauf statt 5 separater Abfragen.
+  // Die CSS-Klasse 'is-open' gilt nur für .acc-hdr, daher gesondert behandelt.
   function expandAll() {
-    document.querySelectorAll('.rule-body').forEach(b => b.classList.add('open'));
-    document.querySelectorAll('.rule-toggle').forEach(t => t.classList.add('open'));
-    document.querySelectorAll('.acc-body').forEach(b => b.classList.add('open'));
-    document.querySelectorAll('.acc-chevron').forEach(c => c.classList.add('open'));
+    document.querySelectorAll('.rule-body, .rule-toggle, .acc-body, .acc-chevron').forEach(el => {
+      el.classList.add('open');
+    });
     document.querySelectorAll('.acc-hdr').forEach(h => h.classList.add('is-open'));
   }
 
   function collapseAll() {
-    document.querySelectorAll('.rule-body').forEach(b => b.classList.remove('open'));
-    document.querySelectorAll('.rule-toggle').forEach(t => t.classList.remove('open'));
+    document.querySelectorAll('.rule-body, .rule-toggle').forEach(el => {
+      el.classList.remove('open');
+    });
     // Accordion-Panels selbst bleiben offen, damit Steuerelemente erreichbar bleiben
   }
 

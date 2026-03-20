@@ -6,6 +6,14 @@
 // ================================================================
 
 import { I18n } from './i18n.js';
+import { esc } from './parser.js';
+import {
+  CONDITION_FUNCTIONS    as NE_COND_FUNCTIONS,
+  CONDITION_CATEGORIES   as NE_COND_CATEGORIES,
+  CONDITION_DATA_TYPES   as NE_CONDITION_DATA_TYPES,
+  MATCH_ID_OPTIONS       as NE_MATCH_ID_OPTIONS,
+  MATCH_DATATYPE_OPTIONS as NE_MATCH_DATATYPE_OPTIONS,
+} from './constants.js';
 
 const NODE_W      = 230; // Knotenbreite in Canvas-Pixeln — muss mit .ne-node { width: 230px } übereinstimmen
 const PORT_Y      = 26;  // Port-Mittelpunkt Y = top:19px + halbe Port-Höhe (13px)
@@ -47,64 +55,8 @@ const ACTION_ATTR_IDS = [
   { key: 'implied-action', value: 'urn:oasis:names:tc:xacml:1.0:action:implied-action', labelKey: 'ne.action.attrId.impliedAction' },
 ];
 
-const NE_COND_FUNCTIONS = [
-  { label: 'string-equal',                  value: 'urn:oasis:names:tc:xacml:1.0:function:string-equal' },
-  { label: 'string-equal-ignore-case',      value: 'urn:oasis:names:tc:xacml:1.0:function:string-equal-ignore-case' },
-  { label: 'integer-equal',                 value: 'urn:oasis:names:tc:xacml:1.0:function:integer-equal' },
-  { label: 'boolean-equal',                 value: 'urn:oasis:names:tc:xacml:1.0:function:boolean-equal' },
-  { label: 'anyURI-equal',                  value: 'urn:oasis:names:tc:xacml:1.0:function:anyURI-equal' },
-  { label: 'date-equal',                    value: 'urn:oasis:names:tc:xacml:1.0:function:date-equal' },
-  { label: 'dateTime-equal',                value: 'urn:oasis:names:tc:xacml:1.0:function:dateTime-equal' },
-  { label: 'string-at-least-one-member-of', value: 'urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of' },
-  { label: 'string-is-in',                  value: 'urn:oasis:names:tc:xacml:1.0:function:string-is-in' },
-];
-
-const NE_COND_CATEGORIES = [
-  { labelKey: 'ne.cond.cat.subject',     value: 'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject' },
-  { labelKey: 'ne.cond.cat.resource',    value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:resource' },
-  { labelKey: 'ne.cond.cat.action',      value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:action' },
-  { labelKey: 'ne.cond.cat.environment', value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:environment' },
-];
-
-// ── Advanced match fields — same options as Form Editor ─────────────────
-const NE_MATCH_ID_OPTIONS = [
-  { label: 'string-equal',              value: 'urn:oasis:names:tc:xacml:1.0:function:string-equal' },
-  { label: 'anyURI-equal',              value: 'urn:oasis:names:tc:xacml:1.0:function:anyURI-equal' },
-  { label: 'integer-equal',             value: 'urn:oasis:names:tc:xacml:1.0:function:integer-equal' },
-  { label: 'date-equal',                value: 'urn:oasis:names:tc:xacml:1.0:function:date-equal' },
-  { label: 'CV-equal (HL7) – Coded Value',          value: 'urn:hl7-org:v3:function:CV-equal' },
-  { label: 'II-equal (HL7) – Instance Identifier',  value: 'urn:hl7-org:v3:function:II-equal' },
-];
-
-const NE_MATCH_DATATYPE_OPTIONS = [
-  { label: 'string',                              value: 'http://www.w3.org/2001/XMLSchema#string' },
-  { label: 'anyURI',                              value: 'http://www.w3.org/2001/XMLSchema#anyURI' },
-  { label: 'integer',                             value: 'http://www.w3.org/2001/XMLSchema#integer' },
-  { label: 'date',                                value: 'http://www.w3.org/2001/XMLSchema#date' },
-  { label: 'CV (HL7) – Coded Value',              value: 'urn:hl7-org:v3#CV' },
-  { label: 'II (HL7) – Instance Identifier',      value: 'urn:hl7-org:v3#II' },
-  { label: 'ST (HL7) – Simple Text',              value: 'urn:hl7-org:v3#ST' },
-  { label: 'BL (HL7) – Boolean',                  value: 'urn:hl7-org:v3#BL' },
-  { label: 'INT (HL7) – Integer',                 value: 'urn:hl7-org:v3#INT' },
-  { label: 'TS (HL7) – Timestamp',                value: 'urn:hl7-org:v3#TS' },
-  { label: 'CE (HL7) – Coded with Equivalents',   value: 'urn:hl7-org:v3#CE' },
-  { label: 'CS (HL7) – Coded Simple Value',       value: 'urn:hl7-org:v3#CS' },
-];
-
-const NE_CONDITION_DATA_TYPES = [
-  { label: 'string',   value: 'http://www.w3.org/2001/XMLSchema#string' },
-  { label: 'integer',  value: 'http://www.w3.org/2001/XMLSchema#integer' },
-  { label: 'boolean',  value: 'http://www.w3.org/2001/XMLSchema#boolean' },
-  { label: 'anyURI',   value: 'http://www.w3.org/2001/XMLSchema#anyURI' },
-  { label: 'date',     value: 'http://www.w3.org/2001/XMLSchema#date' },
-  { label: 'dateTime', value: 'http://www.w3.org/2001/XMLSchema#dateTime' },
-  { label: 'ST (HL7) – Simple Text',              value: 'urn:hl7-org:v3#ST' },
-  { label: 'BL (HL7) – Boolean',                  value: 'urn:hl7-org:v3#BL' },
-  { label: 'INT (HL7) – Integer',                 value: 'urn:hl7-org:v3#INT' },
-  { label: 'TS (HL7) – Timestamp',                value: 'urn:hl7-org:v3#TS' },
-  { label: 'CE (HL7) – Coded with Equivalents',   value: 'urn:hl7-org:v3#CE' },
-  { label: 'CS (HL7) – Coded Simple Value',       value: 'urn:hl7-org:v3#CS' },
-];
+// NE_COND_FUNCTIONS, NE_COND_CATEGORIES, NE_MATCH_ID_OPTIONS,
+// NE_MATCH_DATATYPE_OPTIONS, NE_CONDITION_DATA_TYPES → importiert aus constants.js
 
 // ── Phase 2: Policy Templates ───────────────────────────────────────────
 // Außerhalb des IIFE definiert, da Template-Factories _uid() aus dem Modul-Scope
@@ -183,17 +135,7 @@ const NodeEditor = (() => {
     return Math.random().toString(36).slice(2, 9);
   }
 
-  function _esc(s) {
-    return String(s ?? '')
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;');
-  }
-
-  function _t(key, vars = {}) {
-    return I18n.t(key, vars);
-  }
+  // _esc → esc (importiert aus parser.js), _t → I18n.t (direkt)
 
   // ── Default node data ──────────────────────────────────────────────────
 
@@ -338,13 +280,13 @@ const NodeEditor = (() => {
     const { valid, warnings } = _validate();
     if (!valid) {
       dot.className    = 'ne-validation-dot invalid';
-      text.textContent = _t('ne.validation.invalid');
+      text.textContent = I18n.t('ne.validation.invalid');
     } else if (warnings.length > 0) {
       dot.className    = 'ne-validation-dot warning';
-      text.textContent = _t('ne.validation.warnings', { n: warnings.length });
+      text.textContent = I18n.t('ne.validation.warnings', { n: warnings.length });
     } else {
       dot.className    = 'ne-validation-dot valid';
-      text.textContent = _t('ne.validation.valid');
+      text.textContent = I18n.t('ne.validation.valid');
     }
   }
 
@@ -502,7 +444,7 @@ const NodeEditor = (() => {
         fo.setAttribute('height', 20);
         fo.style.pointerEvents = 'all';
         fo.innerHTML = `<button class="ne-edge-del" data-del-edge="${e.id}"
-          title="${_esc(_t('ne.edge.delete'))}">&#x2715;</button>`;
+          title="${esc(I18n.t('ne.edge.delete'))}">&#x2715;</button>`;
         _edgesGroup.appendChild(fo);
       }
     });
@@ -541,11 +483,11 @@ const NodeEditor = (() => {
     hdr.dataset.drag = node.id;
     hdr.innerHTML = `
       <span class="ne-node-icon">${meta.icon}</span>
-      <span class="ne-node-label">${_esc(_t(meta.labelKey))}</span>
-      <button class="ne-node-color" data-color-btn="${_esc(node.id)}" data-color="${_esc(color)}"
-        title="${_esc(_t('ne.node.color'))}">&#x25CF;</button>
+      <span class="ne-node-label">${esc(I18n.t(meta.labelKey))}</span>
+      <button class="ne-node-color" data-color-btn="${esc(node.id)}" data-color="${esc(color)}"
+        title="${esc(I18n.t('ne.node.color'))}">&#x25CF;</button>
       ${!isPolicy ? `<button class="ne-node-del" data-del="${node.id}"
-        title="${_esc(_t('ne.node.delete'))}" aria-label="${_esc(_t('ne.node.delete'))}">&#x2715;</button>` : ''}
+        title="${esc(I18n.t('ne.node.delete'))}" aria-label="${esc(I18n.t('ne.node.delete'))}">&#x2715;</button>` : ''}
     `;
     el.appendChild(hdr);
 
@@ -587,103 +529,103 @@ const NodeEditor = (() => {
     switch (node.type) {
       case 'policy': return `
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.policy.id'))}</span>
-          <input type="text" data-node="${id}" data-field="name" value="${_esc(d.name)}">
+          <span class="ne-field-label">${esc(I18n.t('ne.field.policy.id'))}</span>
+          <input type="text" data-node="${id}" data-field="name" value="${esc(d.name)}">
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.policy.desc'))}</span>
-          <input type="text" data-node="${id}" data-field="description" value="${_esc(d.description)}">
+          <span class="ne-field-label">${esc(I18n.t('ne.field.policy.desc'))}</span>
+          <input type="text" data-node="${id}" data-field="description" value="${esc(d.description)}">
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.policy.version'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.policy.version'))}</span>
           <select data-node="${id}" data-field="version">
             <option value="2.0" ${(d.version||'2.0')==='2.0'?'selected':''}>XACML 2.0</option>
             <option value="3.0" ${(d.version||'2.0')==='3.0'?'selected':''}>XACML 3.0</option>
           </select>
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.policy.alg'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.policy.alg'))}</span>
           <select data-node="${id}" data-field="combiningAlg">${_algOpts(d.combiningAlg)}</select>
         </div>`;
 
       case 'rule': return `
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.rule.id'))}</span>
-          <input type="text" data-node="${id}" data-field="name" value="${_esc(d.name)}">
+          <span class="ne-field-label">${esc(I18n.t('ne.field.rule.id'))}</span>
+          <input type="text" data-node="${id}" data-field="name" value="${esc(d.name)}">
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.rule.desc'))}</span>
-          <input type="text" data-node="${id}" data-field="description" value="${_esc(d.description||'')}">
+          <span class="ne-field-label">${esc(I18n.t('ne.field.rule.desc'))}</span>
+          <input type="text" data-node="${id}" data-field="description" value="${esc(d.description||'')}">
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.rule.effect'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.rule.effect'))}</span>
           <div class="ne-effect-toggle">
             <button class="ne-effect-btn${d.effect==='Permit'?' active-permit':''}"
-              data-node="${id}" data-effect="Permit">&#x2705; ${_esc(_t('ne.effect.permit'))}</button>
+              data-node="${id}" data-effect="Permit">&#x2705; ${esc(I18n.t('ne.effect.permit'))}</button>
             <button class="ne-effect-btn${d.effect==='Deny'?' active-deny':''}"
-              data-node="${id}" data-effect="Deny">&#x274C; ${_esc(_t('ne.effect.deny'))}</button>
+              data-node="${id}" data-effect="Deny">&#x274C; ${esc(I18n.t('ne.effect.deny'))}</button>
           </div>
         </div>`;
 
       case 'subject': return `
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.subject.type'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.subject.type'))}</span>
           <select data-node="${id}" data-field="attrType">
-            <option value="role" ${d.attrType==='role'?'selected':''}>${_esc(_t('ne.subject.role'))}</option>
-            <option value="id"   ${d.attrType==='id'  ?'selected':''}>${_esc(_t('ne.subject.id'))}</option>
-            <option value="ip"   ${d.attrType==='ip'  ?'selected':''}>${_esc(_t('ne.subject.ip'))}</option>
-            <option value="dns"  ${d.attrType==='dns' ?'selected':''}>${_esc(_t('ne.subject.dns'))}</option>
+            <option value="role" ${d.attrType==='role'?'selected':''}>${esc(I18n.t('ne.subject.role'))}</option>
+            <option value="id"   ${d.attrType==='id'  ?'selected':''}>${esc(I18n.t('ne.subject.id'))}</option>
+            <option value="ip"   ${d.attrType==='ip'  ?'selected':''}>${esc(I18n.t('ne.subject.ip'))}</option>
+            <option value="dns"  ${d.attrType==='dns' ?'selected':''}>${esc(I18n.t('ne.subject.dns'))}</option>
           </select>
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.value'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.value'))}</span>
           ${_matchValueInput(id, d, 'value')}
         </div>
         ${_advMatchSection(id, d, true)}`;
 
       case 'action': return `
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.action.attrId'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.action.attrId'))}</span>
           <select data-node="${id}" data-field="attributeId">
             ${ACTION_ATTR_IDS.map(a =>
-              `<option value="${_esc(a.value)}" ${d.attributeId===a.value?'selected':''}>${_esc(_t(a.labelKey))}</option>`
+              `<option value="${esc(a.value)}" ${d.attributeId===a.value?'selected':''}>${esc(I18n.t(a.labelKey))}</option>`
             ).join('')}
           </select>
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.action'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.action'))}</span>
           <select data-node="${id}" data-field="action">
-            <option value="read"    ${d.action==='read'   ?'selected':''}>${_esc(_t('ne.action.read'))}</option>
-            <option value="write"   ${d.action==='write'  ?'selected':''}>${_esc(_t('ne.action.write'))}</option>
-            <option value="delete"  ${d.action==='delete' ?'selected':''}>${_esc(_t('ne.action.delete'))}</option>
-            <option value="execute" ${d.action==='execute'?'selected':''}>${_esc(_t('ne.action.execute'))}</option>
-            <option value="*"       ${d.action==='*'      ?'selected':''}>${_esc(_t('ne.action.all'))}</option>
-            <option value="custom"  ${d.action==='custom' ?'selected':''}>${_esc(_t('ne.action.custom'))}</option>
+            <option value="read"    ${d.action==='read'   ?'selected':''}>${esc(I18n.t('ne.action.read'))}</option>
+            <option value="write"   ${d.action==='write'  ?'selected':''}>${esc(I18n.t('ne.action.write'))}</option>
+            <option value="delete"  ${d.action==='delete' ?'selected':''}>${esc(I18n.t('ne.action.delete'))}</option>
+            <option value="execute" ${d.action==='execute'?'selected':''}>${esc(I18n.t('ne.action.execute'))}</option>
+            <option value="*"       ${d.action==='*'      ?'selected':''}>${esc(I18n.t('ne.action.all'))}</option>
+            <option value="custom"  ${d.action==='custom' ?'selected':''}>${esc(I18n.t('ne.action.custom'))}</option>
           </select>
         </div>
         ${d.action === 'custom' ? `
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.action.custom'))}</span>
-          <input type="text" data-node="${id}" data-field="customAction" value="${_esc(d.customAction)}">
+          <span class="ne-field-label">${esc(I18n.t('ne.field.action.custom'))}</span>
+          <input type="text" data-node="${id}" data-field="customAction" value="${esc(d.customAction)}">
         </div>` : ''}
         ${_advMatchSection(id, d, false)}`;
 
       case 'resource': return `
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.resource.attrId'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.resource.attrId'))}</span>
           <select data-node="${id}" data-field="attributeId">
             ${RESOURCE_ATTR_IDS.map(r =>
-              `<option value="${_esc(r.value)}" ${d.attributeId===r.value?'selected':''}>${_esc(_t(r.labelKey))}</option>`
+              `<option value="${esc(r.value)}" ${d.attributeId===r.value?'selected':''}>${esc(I18n.t(r.labelKey))}</option>`
             ).join('')}
           </select>
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.resource.id'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.resource.id'))}</span>
           ${_matchValueInput(id, d, 'identifier')}
         </div>
         <div class="ne-field ne-field-row">
           <input type="checkbox" id="ne-wc-${id}" data-node="${id}" data-field="wildcard" ${d.wildcard?'checked':''}>
-          <label for="ne-wc-${id}" class="ne-field-label" style="margin:0;cursor:pointer">${_esc(_t('ne.field.resource.wildcard'))}</label>
+          <label for="ne-wc-${id}" class="ne-field-label" style="margin:0;cursor:pointer">${esc(I18n.t('ne.field.resource.wildcard'))}</label>
         </div>
         ${_advMatchSection(id, d, true)}`;
 
@@ -691,47 +633,47 @@ const NodeEditor = (() => {
         const isCustomFn = d.functionId === '__custom__' || (d.functionId && !NE_COND_FUNCTIONS.find(f => f.value === d.functionId));
         return `
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.condition.cat'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.condition.cat'))}</span>
           <select data-node="${id}" data-field="category">
             ${NE_COND_CATEGORIES.map(c =>
-              `<option value="${_esc(c.value)}" ${d.category===c.value?'selected':''}>${_esc(_t(c.labelKey))}</option>`
+              `<option value="${esc(c.value)}" ${d.category===c.value?'selected':''}>${esc(I18n.t(c.labelKey))}</option>`
             ).join('')}
           </select>
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.condition.attr'))}</span>
-          <input type="text" data-node="${id}" data-field="attribute" value="${_esc(d.attribute)}"
-            placeholder="${_esc(_t('ne.placeholder.condition'))}">
+          <span class="ne-field-label">${esc(I18n.t('ne.field.condition.attr'))}</span>
+          <input type="text" data-node="${id}" data-field="attribute" value="${esc(d.attribute)}"
+            placeholder="${esc(I18n.t('ne.placeholder.condition'))}">
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('creator.condition.arg1.dt'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('creator.condition.arg1.dt'))}</span>
           <select data-node="${id}" data-field="arg1DataType">${_condDtOpts(d.arg1DataType||'http://www.w3.org/2001/XMLSchema#string')}</select>
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.condition.fn'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.condition.fn'))}</span>
           <select data-node="${id}" data-field="functionId">
             ${NE_COND_FUNCTIONS.map(f =>
-              `<option value="${_esc(f.value)}" ${!isCustomFn && d.functionId===f.value?'selected':''}>${_esc(f.label)}</option>`
+              `<option value="${esc(f.value)}" ${!isCustomFn && d.functionId===f.value?'selected':''}>${esc(f.label)}</option>`
             ).join('')}
-            <option value="__custom__" ${isCustomFn?'selected':''}>${_esc(_t('creator.condition.fn.custom'))}</option>
+            <option value="__custom__" ${isCustomFn?'selected':''}>${esc(I18n.t('creator.condition.fn.custom'))}</option>
           </select>
         </div>
         ${isCustomFn ? `
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('creator.condition.fn'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('creator.condition.fn'))}</span>
           <input type="text" data-node="${id}" data-field="functionCustom" class="ne-custom-input"
-            placeholder="${_esc(_t('creator.condition.fn.ph'))}" value="${_esc(d.functionCustom||'')}">
+            placeholder="${esc(I18n.t('creator.condition.fn.ph'))}" value="${esc(d.functionCustom||'')}">
         </div>` : ''}
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.value'))}</span>
-          <input type="text" data-node="${id}" data-field="value" value="${_esc(d.value)}">
+          <span class="ne-field-label">${esc(I18n.t('ne.field.value'))}</span>
+          <input type="text" data-node="${id}" data-field="value" value="${esc(d.value)}">
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('creator.condition.arg2.dt'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('creator.condition.arg2.dt'))}</span>
           <select data-node="${id}" data-field="arg2DataType">${_condDtOpts(d.arg2DataType||'http://www.w3.org/2001/XMLSchema#string')}</select>
         </div>
         <div class="ne-field">
-          <span class="ne-field-label">${_esc(_t('ne.field.condition.logic'))}</span>
+          <span class="ne-field-label">${esc(I18n.t('ne.field.condition.logic'))}</span>
           <select data-node="${id}" data-field="logic">
             <option value="AND" ${d.logic==='AND'?'selected':''}>AND</option>
             <option value="OR"  ${d.logic==='OR' ?'selected':''}>OR</option>
@@ -741,7 +683,7 @@ const NodeEditor = (() => {
 
       case 'note': return `
         <textarea class="ne-note-text" data-node="${id}" data-field="text"
-          rows="4" placeholder="${_esc(_t('ne.placeholder.note'))}">${_esc(d.text || '')}</textarea>`;
+          rows="4" placeholder="${esc(I18n.t('ne.placeholder.note'))}">${esc(d.text || '')}</textarea>`;
 
       default: return '';
     }
@@ -751,25 +693,25 @@ const NodeEditor = (() => {
 
   function _matchIdOpts(current) {
     const isCustom = current && current !== '__custom__' && !NE_MATCH_ID_OPTIONS.find(o => o.value === current);
-    return `<option value=""${!current ? ' selected' : ''}>${_esc(_t('creator.target.matchId.default'))}</option>` +
+    return `<option value=""${!current ? ' selected' : ''}>${esc(I18n.t('creator.target.matchId.default'))}</option>` +
       NE_MATCH_ID_OPTIONS.map(o =>
-        `<option value="${_esc(o.value)}"${!isCustom && current === o.value ? ' selected' : ''}>${_esc(o.label)}</option>`
+        `<option value="${esc(o.value)}"${!isCustom && current === o.value ? ' selected' : ''}>${esc(o.label)}</option>`
       ).join('') +
-      `<option value="__custom__"${isCustom ? ' selected' : ''}>${_esc(_t('creator.target.attrId.custom'))}</option>`;
+      `<option value="__custom__"${isCustom ? ' selected' : ''}>${esc(I18n.t('creator.target.attrId.custom'))}</option>`;
   }
 
   function _matchDtOpts(current) {
     const isCustom = current && current !== '__custom__' && !NE_MATCH_DATATYPE_OPTIONS.find(o => o.value === current);
-    return `<option value=""${!current ? ' selected' : ''}>${_esc(_t('creator.target.dataType.default'))}</option>` +
+    return `<option value=""${!current ? ' selected' : ''}>${esc(I18n.t('creator.target.dataType.default'))}</option>` +
       NE_MATCH_DATATYPE_OPTIONS.map(o =>
-        `<option value="${_esc(o.value)}"${!isCustom && current === o.value ? ' selected' : ''}>${_esc(o.label)}</option>`
+        `<option value="${esc(o.value)}"${!isCustom && current === o.value ? ' selected' : ''}>${esc(o.label)}</option>`
       ).join('') +
-      `<option value="__custom__"${isCustom ? ' selected' : ''}>${_esc(_t('creator.target.attrId.custom'))}</option>`;
+      `<option value="__custom__"${isCustom ? ' selected' : ''}>${esc(I18n.t('creator.target.attrId.custom'))}</option>`;
   }
 
   function _condDtOpts(current) {
     return NE_CONDITION_DATA_TYPES.map(o =>
-      `<option value="${_esc(o.value)}"${current === o.value ? ' selected' : ''}>${_esc(o.label)}</option>`
+      `<option value="${esc(o.value)}"${current === o.value ? ' selected' : ''}>${esc(o.label)}</option>`
     ).join('');
   }
 
@@ -780,16 +722,16 @@ const NodeEditor = (() => {
       return `
         <div class="ne-cv-fields">
           <input type="text" data-node="${id}" data-field="cvCode"
-            placeholder="${_esc(_t('creator.target.cv.code.ph'))}" value="${_esc(d.cvCode||'')}">
+            placeholder="${esc(I18n.t('creator.target.cv.code.ph'))}" value="${esc(d.cvCode||'')}">
           <input type="text" data-node="${id}" data-field="cvCodeSystem"
-            placeholder="${_esc(_t('creator.target.cv.sys.ph'))}" value="${_esc(d.cvCodeSystem||'')}">
+            placeholder="${esc(I18n.t('creator.target.cv.sys.ph'))}" value="${esc(d.cvCodeSystem||'')}">
         </div>`;
     } else if (vt === 'ii') {
       return `<input type="text" data-node="${id}" data-field="iiRoot"
-        placeholder="${_esc(_t('creator.target.ii.root.ph'))}" value="${_esc(d.iiRoot||'')}">`;
+        placeholder="${esc(I18n.t('creator.target.ii.root.ph'))}" value="${esc(d.iiRoot||'')}">`;
     } else {
-      return `<input type="text" data-node="${id}" data-field="${fieldName||'value'}" value="${_esc(d[fieldName||'value']||'')}"
-        placeholder="${_esc(_t('ne.placeholder.' + (fieldName === 'identifier' ? 'resource' : 'subject')))}">`;
+      return `<input type="text" data-node="${id}" data-field="${fieldName||'value'}" value="${esc(d[fieldName||'value']||'')}"
+        placeholder="${esc(I18n.t('ne.placeholder.' + (fieldName === 'identifier' ? 'resource' : 'subject')))}">`;
     }
   }
 
@@ -803,26 +745,26 @@ const NodeEditor = (() => {
       <div class="ne-adv-wrap">
         <button class="ne-adv-toggle${hasContent ? ' ne-adv-active' : ''}" type="button"
           data-node="${id}" data-field="_advOpen" data-adv-toggle="1">
-          ${open ? '&#x25BE;' : '&#x25B8;'} ${_esc(_t('ne.adv.section'))}${hasContent ? ' ●' : ''}
+          ${open ? '&#x25BE;' : '&#x25B8;'} ${esc(I18n.t('ne.adv.section'))}${hasContent ? ' ●' : ''}
         </button>
         <div class="ne-adv-body" style="${open ? '' : 'display:none'}">
           <div class="ne-field">
-            <span class="ne-field-label">${_esc(_t('creator.target.matchId.label'))}</span>
+            <span class="ne-field-label">${esc(I18n.t('creator.target.matchId.label'))}</span>
             <select data-node="${id}" data-field="matchId">${_matchIdOpts(d.matchId)}</select>
             ${isCustomMatchId ? `<input type="text" data-node="${id}" data-field="matchId-custom"
-              class="ne-custom-input" placeholder="${_esc(_t('creator.target.matchId.custom.ph'))}"
-              value="${_esc(d.matchId)}">` : ''}
+              class="ne-custom-input" placeholder="${esc(I18n.t('creator.target.matchId.custom.ph'))}"
+              value="${esc(d.matchId)}">` : ''}
           </div>
           <div class="ne-field">
-            <span class="ne-field-label">${_esc(_t('creator.target.dataType.label'))}</span>
+            <span class="ne-field-label">${esc(I18n.t('creator.target.dataType.label'))}</span>
             <select data-node="${id}" data-field="dataType">${_matchDtOpts(d.dataType)}</select>
             ${isCustomDataType ? `<input type="text" data-node="${id}" data-field="dataType-custom"
-              class="ne-custom-input" placeholder="${_esc(_t('creator.target.dataType.custom.ph'))}"
-              value="${_esc(d.dataType)}">` : ''}
+              class="ne-custom-input" placeholder="${esc(I18n.t('creator.target.dataType.custom.ph'))}"
+              value="${esc(d.dataType)}">` : ''}
           </div>
           ${showValueType ? `
           <div class="ne-field">
-            <span class="ne-field-label">${_esc(_t('ne.adv.valueType'))}</span>
+            <span class="ne-field-label">${esc(I18n.t('ne.adv.valueType'))}</span>
             <select data-node="${id}" data-field="valueType">
               <option value="simple"${(d.valueType||'simple')==='simple'?' selected':''}>Simple</option>
               <option value="cv"${d.valueType==='cv'?' selected':''}>CV (HL7 Coded Value)</option>
@@ -839,7 +781,7 @@ const NodeEditor = (() => {
       ['urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:permit-overrides', 'creator.alg.permit'],
       ['urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:first-applicable', 'creator.alg.first' ],
     ].map(([v, k]) =>
-      `<option value="${_esc(v)}" ${current===v?'selected':''}>${_esc(_t(k))}</option>`
+      `<option value="${esc(v)}" ${current===v?'selected':''}>${esc(I18n.t(k))}</option>`
     ).join('');
   }
 
@@ -1313,7 +1255,7 @@ const NodeEditor = (() => {
   }
 
   function _clearCanvas() {
-    if (!confirm(_t('ne.toolbar.clear.confirm'))) return;
+    if (!confirm(I18n.t('ne.toolbar.clear.confirm'))) return;
     _pushHistory();
     _nodes = [{ id: _uid(), type: 'policy', x: 20, y: 50, data: _defaultData('policy') }];
     _edges = [];
@@ -1489,7 +1431,7 @@ const NodeEditor = (() => {
   function _applyTemplate(tplId) {
     const result = _buildTemplateNodes(tplId);
     if (!result) return;
-    if (!confirm(_t('ne.tpl.confirm'))) return;
+    if (!confirm(I18n.t('ne.tpl.confirm'))) return;
     _nodes = result.nodes;
     _edges = result.edges;
     _history = [];
@@ -1765,9 +1707,9 @@ const NodeEditor = (() => {
     const textEl = dlg.querySelector('.ne-del-confirm-text');
     const yesBtn = dlg.querySelector('#ne-del-yes');
     const noBtn  = dlg.querySelector('#ne-del-no');
-    if (textEl) textEl.textContent = _t('ne.node.delete.confirm.text');
-    if (yesBtn) yesBtn.textContent = _t('ne.node.delete.confirm.yes');
-    if (noBtn)  noBtn.textContent  = _t('ne.node.delete.confirm.no');
+    if (textEl) textEl.textContent = I18n.t('ne.node.delete.confirm.text');
+    if (yesBtn) yesBtn.textContent = I18n.t('ne.node.delete.confirm.yes');
+    if (noBtn)  noBtn.textContent  = I18n.t('ne.node.delete.confirm.no');
     dlg.style.display = '';
     const close = () => { dlg.style.display = 'none'; yesBtn.onclick = null; noBtn.onclick = null; };
     yesBtn.onclick = () => { close(); _deleteNode(nodeId); };
@@ -1793,27 +1735,27 @@ const NodeEditor = (() => {
     const tplCards = NE_TEMPLATE_DEFS.map(t => `
       <div class="ne-tpl-card">
         <div class="ne-tpl-icon">${t.icon}</div>
-        <div class="ne-tpl-title">${_esc(_t(t.titleKey))}</div>
-        <div class="ne-tpl-desc">${_esc(_t(t.descKey))}</div>
-        <button class="ne-tpl-load-btn" data-tpl="${t.id}">${_esc(_t('ne.tpl.load'))}</button>
+        <div class="ne-tpl-title">${esc(I18n.t(t.titleKey))}</div>
+        <div class="ne-tpl-desc">${esc(I18n.t(t.descKey))}</div>
+        <button class="ne-tpl-load-btn" data-tpl="${t.id}">${esc(I18n.t('ne.tpl.load'))}</button>
       </div>`).join('');
 
     return `
       <div class="ne-wrap">
         <div class="ne-palette">
-          <div class="ne-palette-title">${_esc(_t('ne.palette.title'))}</div>
+          <div class="ne-palette-title">${esc(I18n.t('ne.palette.title'))}</div>
           ${palette.map(p => `
             <div class="ne-palette-item" draggable="true" data-node-type="${p.type}"
-                 title="${_esc(_t('ne.palette.drag'))}">
+                 title="${esc(I18n.t('ne.palette.drag'))}">
               <span class="ne-palette-item-icon">${p.icon}</span>
-              <span>${_esc(_t(p.key))}</span>
+              <span>${esc(I18n.t(p.key))}</span>
             </div>`).join('')}
           <div class="ne-palette-sep"></div>
           <button class="ne-palette-tpl-btn" id="ne-tpl-btn"
-            title="${_esc(_t('ne.tpl.btn.title'))}">
-            📋 ${_esc(_t('ne.tpl.btn'))}
+            title="${esc(I18n.t('ne.tpl.btn.title'))}">
+            📋 ${esc(I18n.t('ne.tpl.btn'))}
           </button>
-          <div class="ne-palette-hint">${_esc(_t('ne.palette.hint'))}</div>
+          <div class="ne-palette-hint">${esc(I18n.t('ne.palette.hint'))}</div>
         </div>
         <div class="ne-viewport" id="ne-viewport">
           <div class="ne-canvas" id="ne-canvas"></div>
@@ -1825,40 +1767,40 @@ const NodeEditor = (() => {
           </svg>
           <div class="ne-toolbar">
             <button class="ne-toolbar-btn" id="ne-undo-btn"
-              title="${_esc(_t('ne.toolbar.undo'))}" disabled>&#x21A9;</button>
+              title="${esc(I18n.t('ne.toolbar.undo'))}" disabled>&#x21A9;</button>
             <button class="ne-toolbar-btn" id="ne-redo-btn"
-              title="${_esc(_t('ne.toolbar.redo'))}" disabled>&#x21AA;</button>
+              title="${esc(I18n.t('ne.toolbar.redo'))}" disabled>&#x21AA;</button>
             <div class="ne-toolbar-sep"></div>
             <button class="ne-toolbar-btn" id="ne-fit-btn"
-              title="${_esc(_t('ne.toolbar.fit'))}">&#x229E;</button>
+              title="${esc(I18n.t('ne.toolbar.fit'))}">&#x229E;</button>
             <button class="ne-toolbar-btn" id="ne-zoom-reset-btn"
-              title="${_esc(_t('ne.toolbar.reset'))}"
+              title="${esc(I18n.t('ne.toolbar.reset'))}"
               style="font-size:0.65rem;width:36px">100%</button>
             <div class="ne-toolbar-sep"></div>
             <input class="ne-toolbar-search" id="ne-search" type="text"
-              placeholder="${_esc(_t('ne.search.placeholder'))}"
-              title="${_esc(_t('ne.search.title'))}"
-              aria-label="${_esc(_t('ne.search.title'))}">
+              placeholder="${esc(I18n.t('ne.search.placeholder'))}"
+              title="${esc(I18n.t('ne.search.title'))}"
+              aria-label="${esc(I18n.t('ne.search.title'))}">
             <div class="ne-toolbar-sep"></div>
             <button class="ne-toolbar-btn" id="ne-tidy-btn"
-              title="${_esc(_t('ne.toolbar.tidy'))}" style="font-size:1.1rem;font-weight:700">&#x22A3;</button>
+              title="${esc(I18n.t('ne.toolbar.tidy'))}" style="font-size:1.1rem;font-weight:700">&#x22A3;</button>
             <button class="ne-toolbar-btn" id="ne-share-btn"
-              title="${_esc(_t('ne.share.title'))}">&#x1F517;</button>
+              title="${esc(I18n.t('ne.share.title'))}">&#x1F517;</button>
             <button class="ne-toolbar-btn" id="ne-download-btn"
-              title="${_esc(_t('ne.toolbar.download'))}">&#x2B07;</button>
+              title="${esc(I18n.t('ne.toolbar.download'))}">&#x2B07;</button>
             <div class="ne-toolbar-sep"></div>
             <button class="ne-toolbar-btn ne-toolbar-btn--danger" id="ne-clear-btn"
-              title="${_esc(_t('ne.toolbar.clear'))}">&#x1F5D1;</button>
+              title="${esc(I18n.t('ne.toolbar.clear'))}">&#x1F5D1;</button>
           </div>
           <canvas id="ne-minimap" class="ne-minimap" width="160" height="90"
-            title="${_esc(_t('ne.minimap.title'))}"></canvas>
+            title="${esc(I18n.t('ne.minimap.title'))}"></canvas>
           <div id="ne-validation" class="ne-validation">
             <span class="ne-validation-dot invalid"></span>
-            <span class="ne-validation-text">${_esc(_t('ne.validation.invalid'))}</span>
+            <span class="ne-validation-text">${esc(I18n.t('ne.validation.invalid'))}</span>
           </div>
           <div class="ne-empty-hint" style="display:none">
             <div class="ne-empty-hint-icon">🎨</div>
-            <p>${_esc(_t('ne.hint.drag'))}</p>
+            <p>${esc(I18n.t('ne.hint.drag'))}</p>
           </div>
           <div id="ne-del-confirm" class="ne-del-confirm" style="display:none">
             <div class="ne-del-confirm-inner">
@@ -1870,8 +1812,8 @@ const NodeEditor = (() => {
           <div id="ne-tpl-modal" class="ne-tpl-modal" style="display:none">
             <div class="ne-tpl-modal-inner">
               <div class="ne-tpl-modal-hdr">
-                <span class="ne-tpl-modal-title">${_esc(_t('ne.tpl.modal.title'))}</span>
-                <button class="ne-tpl-close-btn" id="ne-tpl-close" title="${_esc(_t('ne.tpl.modal.close'))}">&#x2715;</button>
+                <span class="ne-tpl-modal-title">${esc(I18n.t('ne.tpl.modal.title'))}</span>
+                <button class="ne-tpl-close-btn" id="ne-tpl-close" title="${esc(I18n.t('ne.tpl.modal.close'))}">&#x2715;</button>
               </div>
               <div class="ne-tpl-grid">${tplCards}</div>
             </div>

@@ -7,30 +7,17 @@
 // ================================================================
 
 import { I18n } from './i18n.js';
+import { esc } from './parser.js';
+import {
+  ATTR_ID_OPTIONS as SIM_ATTR_ID_OPTIONS,
+  condCatToKey    as _condCatToKey,
+} from './constants.js';
 
 const SIM_HIST_KEY  = 'xacml-sim-history';
 const SIM_TESTS_KEY = 'xacml-sim-tests';
 const MAX_HISTORY   = 10;
 
-// ── Attribute ID options per category — same as Form Editor ─────────────
-const SIM_ATTR_ID_OPTIONS = {
-  subject: [
-    { value: 'urn:oasis:names:tc:xacml:1.0:subject:subject-id',                labelKey: 'creator.target.attrId.subject.id' },
-    { value: 'urn:oasis:names:tc:xacml:2.0:subject:role',                      labelKey: 'creator.target.attrId.subject.role' },
-    { value: 'urn:oasis:names:tc:xacml:1.0:subject:authn-locality:ip-address', labelKey: 'creator.target.attrId.subject.ip' },
-    { value: 'urn:oasis:names:tc:xacml:1.0:subject:authn-locality:dns-name',   labelKey: 'creator.target.attrId.subject.dns' },
-  ],
-  resource: [
-    { value: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',              labelKey: 'creator.target.attrId.resource.id' },
-    { value: 'http://hl7.org/fhir/resource-types',                             labelKey: 'creator.target.attrId.resource.fhir' },
-    { value: 'urn:oasis:names:tc:xacml:2.0:resource:target-namespace',         labelKey: 'creator.target.attrId.resource.ns' },
-  ],
-  action: [
-    { value: 'urn:oasis:names:tc:xacml:1.0:action:action-id',                  labelKey: 'creator.target.attrId.action.id' },
-    { value: 'urn:oasis:names:tc:xacml:1.0:action:implied-action',             labelKey: 'creator.target.attrId.action.implied' },
-  ],
-  environment: [],
-};
+// SIM_ATTR_ID_OPTIONS und _condCatToKey → importiert aus constants.js
 
 const PolicySimulator = (() => {
 
@@ -78,24 +65,13 @@ const PolicySimulator = (() => {
 
   // ── Evaluation Engine ─────────────────────────────────────────────────
 
+  // cat-Schlüssel ('subject'|'resource'|'action'|'environment') entspricht direkt
+  // dem Request-Objekt-Schlüssel — kein Switch nötig.
   function _getRequestAttrs(request, cat) {
-    switch (cat) {
-      case 'subject':     return request.subject     || {};
-      case 'resource':    return request.resource    || {};
-      case 'action':      return request.action      || {};
-      case 'environment': return request.environment || {};
-      default:            return request.subject     || {};
-    }
+    return request[cat] || request.subject || {};
   }
 
-  function _condCatToKey(catUri) {
-    if (!catUri) return 'subject';
-    if (catUri.includes('access-subject') || catUri.includes(':subject:')) return 'subject';
-    if (catUri.includes(':resource'))    return 'resource';
-    if (catUri.includes(':action'))      return 'action';
-    if (catUri.includes(':environment')) return 'environment';
-    return 'subject';
-  }
+  // _condCatToKey → importiert aus constants.js
 
   // Führt einen einzelnen Attribut-Vergleich durch.
   // fnUri: vollständige XACML-Funktions-URI (letzter Abschnitt wird als Operator genutzt).
@@ -534,11 +510,7 @@ const PolicySimulator = (() => {
   }
 
   // ── HTML helpers ──────────────────────────────────────────────────────
-
-  function _esc(s) {
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-  function _t(key, vars) { return I18n.t(key, vars); }
+  // _esc → esc (importiert aus parser.js), _t → I18n.t (direkt)
 
   function _formatAttrId(attrId) {
     if (!attrId) return '?';
@@ -567,9 +539,9 @@ const PolicySimulator = (() => {
     _container.innerHTML = `
       <div class="sim-wrap">
         <div class="sim-panel-tabs">
-          <button class="sim-panel-tab${_panel==='evaluate'?' active':''}" data-simpanel="evaluate">&#x25B6; ${_esc(_t('sim.tab.evaluate'))}</button>
-          <button class="sim-panel-tab${_panel==='history' ?' active':''}" data-simpanel="history">&#x1F553; ${_esc(_t('sim.tab.history'))}</button>
-          <button class="sim-panel-tab${_panel==='tests'   ?' active':''}" data-simpanel="tests">&#x1F9EA; ${_esc(_t('sim.tab.tests'))}</button>
+          <button class="sim-panel-tab${_panel==='evaluate'?' active':''}" data-simpanel="evaluate">&#x25B6; ${esc(I18n.t('sim.tab.evaluate'))}</button>
+          <button class="sim-panel-tab${_panel==='history' ?' active':''}" data-simpanel="history">&#x1F553; ${esc(I18n.t('sim.tab.history'))}</button>
+          <button class="sim-panel-tab${_panel==='tests'   ?' active':''}" data-simpanel="tests">&#x1F9EA; ${esc(I18n.t('sim.tab.tests'))}</button>
         </div>
         <div class="sim-content" id="sim-content">
           ${_renderPanelContent()}
@@ -612,22 +584,22 @@ const PolicySimulator = (() => {
       return `
         <div class="sim-cond-row">
           <div class="sim-cond-hint">
-            <span class="sim-cond-atrid">${_esc(_formatAttrId(c.attrId))}</span>
-            <code class="sim-check-fn">${_esc(fnLabel)}</code>
-            <code class="sim-cond-expected">${_esc(c.arg2Value || '?')}</code>
+            <span class="sim-cond-atrid">${esc(_formatAttrId(c.attrId))}</span>
+            <code class="sim-check-fn">${esc(fnLabel)}</code>
+            <code class="sim-cond-expected">${esc(c.arg2Value || '?')}</code>
           </div>
           <input class="sim-input sim-cond-val" type="text"
-                 data-cond-cat="${_esc(c.cat)}" data-cond-atrid="${_esc(c.attrId)}"
-                 placeholder="${_esc(_t('sim.cond.valuePh'))}"
-                 value="${_esc(val)}">
+                 data-cond-cat="${esc(c.cat)}" data-cond-atrid="${esc(c.attrId)}"
+                 placeholder="${esc(I18n.t('sim.cond.valuePh'))}"
+                 value="${esc(val)}">
         </div>`;
     }).join('');
 
     return `
       <div class="sim-cond-section">
         <div class="sim-cond-header">
-          <span>${_esc(_t('sim.cond.title'))}</span>
-          <span class="sim-cond-hint-small">${_esc(_t('sim.cond.hint'))}</span>
+          <span>${esc(I18n.t('sim.cond.title'))}</span>
+          <span class="sim-cond-hint-small">${esc(I18n.t('sim.cond.hint'))}</span>
         </div>
         <div class="sim-cond-rows">${rows}</div>
       </div>`;
@@ -636,30 +608,30 @@ const PolicySimulator = (() => {
   function _renderEvaluateHtml() {
     const editBanner = _editingTestIdx >= 0
       ? `<div class="sim-editing-banner">
-           &#x270F; ${_esc(_t('sim.edit.banner', { name: _tests[_editingTestIdx]?.name || '' }))}
-           <button class="sim-edit-cancel-btn" id="sim-edit-cancel">${_esc(_t('sim.edit.cancel'))}</button>
+           &#x270F; ${esc(I18n.t('sim.edit.banner', { name: _tests[_editingTestIdx]?.name || '' }))}
+           <button class="sim-edit-cancel-btn" id="sim-edit-cancel">${esc(I18n.t('sim.edit.cancel'))}</button>
          </div>`
       : '';
-    const saveLabel = _editingTestIdx >= 0 ? _t('sim.edit.save') : _t('sim.saveTest.btn');
+    const saveLabel = _editingTestIdx >= 0 ? I18n.t('sim.edit.save') : I18n.t('sim.saveTest.btn');
     return `
       <div class="sim-evaluate-wrap">
         <div class="sim-input-section">
           ${editBanner}
           <div class="sim-mode-toggle">
-            <button class="sim-mode-btn${_mode==='simple'?' active':''}" data-simmode="simple">${_esc(_t('sim.mode.simple'))}</button>
-            <button class="sim-mode-btn${_mode==='xml'   ?' active':''}" data-simmode="xml">${_esc(_t('sim.mode.xml'))}</button>
+            <button class="sim-mode-btn${_mode==='simple'?' active':''}" data-simmode="simple">${esc(I18n.t('sim.mode.simple'))}</button>
+            <button class="sim-mode-btn${_mode==='xml'   ?' active':''}" data-simmode="xml">${esc(I18n.t('sim.mode.xml'))}</button>
           </div>
           <div class="sim-error" id="sim-error" style="display:none"></div>
           <div id="sim-input-area">
             ${_mode === 'simple' ? _renderSimpleFormHtml() : _renderXmlFormHtml()}
           </div>
           <div class="sim-actions-row">
-            <button class="sim-run-btn" id="sim-run-btn">&#x25B6; ${_esc(_t('sim.run'))}</button>
-            <button class="sim-save-test-btn" id="sim-save-test-btn" title="${_esc(_t('sim.saveTest.title'))}">${_esc(saveLabel)}</button>
+            <button class="sim-run-btn" id="sim-run-btn">&#x25B6; ${esc(I18n.t('sim.run'))}</button>
+            <button class="sim-save-test-btn" id="sim-save-test-btn" title="${esc(I18n.t('sim.saveTest.title'))}">${esc(saveLabel)}</button>
           </div>
         </div>
         <div class="sim-result-section" id="sim-result-section">
-          ${_result ? _renderResultHtml(_result) : `<div class="sim-result-placeholder">${_esc(_t('sim.result.placeholder'))}</div>`}
+          ${_result ? _renderResultHtml(_result) : `<div class="sim-result-placeholder">${esc(I18n.t('sim.result.placeholder'))}</div>`}
         </div>
       </div>`;
   }
@@ -668,10 +640,10 @@ const PolicySimulator = (() => {
     const opts     = SIM_ATTR_ID_OPTIONS[cat] || [];
     const isCustom = includeCustom && currentAttrId && !opts.find(o => o.value === currentAttrId);
     const optHtml  = opts.map(o =>
-      `<option value="${_esc(o.value)}"${!isCustom && currentAttrId === o.value ? ' selected' : ''}>${_esc(I18n.t(o.labelKey))}</option>`
+      `<option value="${esc(o.value)}"${!isCustom && currentAttrId === o.value ? ' selected' : ''}>${esc(I18n.t(o.labelKey))}</option>`
     ).join('');
     return includeCustom
-      ? optHtml + `<option value="__custom__"${isCustom ? ' selected' : ''}>${_esc(_t('creator.target.attrId.custom'))}</option>`
+      ? optHtml + `<option value="__custom__"${isCustom ? ' selected' : ''}>${esc(I18n.t('creator.target.attrId.custom'))}</option>`
       : optHtml;
   }
 
@@ -691,64 +663,64 @@ const PolicySimulator = (() => {
         <div class="sim-atrid-wrap">
           <select class="sim-select sim-extra-atrid-sel">${_simAttrIdOpts(cat, attr.attrId)}</select>
           <input class="sim-input sim-extra-atrid" type="text"
-                 placeholder="${_esc(_t('creator.target.attrId.custom.ph'))}"
-                 value="${_esc(isCustom ? attr.attrId : '')}"
+                 placeholder="${esc(I18n.t('creator.target.attrId.custom.ph'))}"
+                 value="${esc(isCustom ? attr.attrId : '')}"
                  style="${isCustom ? '' : 'display:none'}">
         </div>
-        <input class="sim-input sim-extra-val" type="text" placeholder="${_esc(_t('sim.field.value'))}"
-               value="${_esc(attr.value||'')}">
-        <button class="sim-extra-del" data-extrarem="${i}" title="${_esc(_t('sim.extra.remove'))}">&#x2715;</button>
+        <input class="sim-input sim-extra-val" type="text" placeholder="${esc(I18n.t('sim.field.value'))}"
+               value="${esc(attr.value||'')}">
+        <button class="sim-extra-del" data-extrarem="${i}" title="${esc(I18n.t('sim.extra.remove'))}">&#x2715;</button>
       </div>`;
     }).join('');
 
     return `
       <div class="sim-simple-form">
         <div class="sim-field-row">
-          <label class="sim-label">${_esc(_t('sim.field.role'))}</label>
+          <label class="sim-label">${esc(I18n.t('sim.field.role'))}</label>
           <div class="sim-field-input-wrap">
             <select id="sim-role-atrid" class="sim-select sim-field-atrid-sel">
               ${_simAttrIdOpts('subject', s.roleAttrId || 'urn:oasis:names:tc:xacml:2.0:subject:role', false)}
             </select>
             <input id="sim-role" class="sim-input" type="text"
-                   placeholder="${_esc(_t('sim.field.role.ph'))}"
-                   value="${_esc(s.role||'')}">
+                   placeholder="${esc(I18n.t('sim.field.role.ph'))}"
+                   value="${esc(s.role||'')}">
           </div>
         </div>
         <div class="sim-field-row">
-          <label class="sim-label">${_esc(_t('sim.field.subjectId'))}</label>
+          <label class="sim-label">${esc(I18n.t('sim.field.subjectId'))}</label>
           <div class="sim-field-input-wrap">
             <select id="sim-subjectid-atrid" class="sim-select sim-field-atrid-sel">
               ${_simAttrIdOpts('subject', s.subjectIdAttrId || 'urn:oasis:names:tc:xacml:1.0:subject:subject-id', false)}
             </select>
             <input id="sim-subjectid" class="sim-input" type="text"
-                   placeholder="${_esc(_t('sim.field.subjectId.ph'))}"
-                   value="${_esc(s.subjectId||'')}">
+                   placeholder="${esc(I18n.t('sim.field.subjectId.ph'))}"
+                   value="${esc(s.subjectId||'')}">
           </div>
         </div>
         <div class="sim-field-row">
-          <label class="sim-label">${_esc(_t('sim.field.action'))}</label>
+          <label class="sim-label">${esc(I18n.t('sim.field.action'))}</label>
           <div class="sim-field-input-wrap">
             <select id="sim-action-atrid" class="sim-select sim-field-atrid-sel">
               ${_simAttrIdOpts('action', s.actionAttrId || 'urn:oasis:names:tc:xacml:1.0:action:action-id', false)}
             </select>
             <input id="sim-action" class="sim-input" type="text"
-                   placeholder="${_esc(_t('sim.field.action.ph'))}"
-                   value="${_esc(s.action||'')}">
+                   placeholder="${esc(I18n.t('sim.field.action.ph'))}"
+                   value="${esc(s.action||'')}">
           </div>
         </div>
         <div class="sim-field-row">
-          <label class="sim-label">${_esc(_t('sim.field.resource'))}</label>
+          <label class="sim-label">${esc(I18n.t('sim.field.resource'))}</label>
           <div class="sim-field-input-wrap">
             <select id="sim-resource-atrid" class="sim-select sim-field-atrid-sel">
               ${_simAttrIdOpts('resource', s.resourceAttrId || 'urn:oasis:names:tc:xacml:1.0:resource:resource-id', false)}
             </select>
             <input id="sim-resource" class="sim-input" type="text"
-                   placeholder="${_esc(_t('sim.field.resource.ph'))}"
-                   value="${_esc(s.resource||'')}">
+                   placeholder="${esc(I18n.t('sim.field.resource.ph'))}"
+                   value="${esc(s.resource||'')}">
           </div>
         </div>
         <div id="sim-extra-attrs" class="sim-extra-attrs">${extraRows}</div>
-        <button class="sim-add-attr-btn" id="sim-add-attr">+ ${_esc(_t('sim.extra.add'))}</button>
+        <button class="sim-add-attr-btn" id="sim-add-attr">+ ${esc(I18n.t('sim.extra.add'))}</button>
         ${_renderConditionSectionHtml()}
       </div>`;
   }
@@ -756,10 +728,10 @@ const PolicySimulator = (() => {
   function _renderXmlFormHtml() {
     return `
       <div class="sim-xml-form">
-        <label class="sim-label">${_esc(_t('sim.xml.label'))}</label>
+        <label class="sim-label">${esc(I18n.t('sim.xml.label'))}</label>
         <textarea id="sim-xml-input" class="sim-xml-input"
-                  placeholder="${_esc(_t('sim.xml.ph'))}"
-                  spellcheck="false">${_esc(_xmlInput)}</textarea>
+                  placeholder="${esc(I18n.t('sim.xml.ph'))}"
+                  spellcheck="false">${esc(_xmlInput)}</textarea>
       </div>`;
   }
 
@@ -773,17 +745,17 @@ const PolicySimulator = (() => {
 
     return `
       <div class="sim-result-wrap">
-        <div class="sim-result-banner sim-result-banner--${_esc(cls)}">
+        <div class="sim-result-banner sim-result-banner--${esc(cls)}">
           <span class="sim-result-icon">${icon}</span>
-          <span class="sim-result-label">${_esc(_t(decisionKey))}</span>
+          <span class="sim-result-label">${esc(I18n.t(decisionKey))}</span>
         </div>
         <div class="sim-trace">
           <div class="sim-trace-header">
-            <span class="sim-trace-title">${_esc(_t('sim.trace.title'))}</span>
-            <span class="sim-trace-alg">${_esc(_t('sim.trace.alg'))}: <code class="sim-alg-code">${_esc(algShort)}</code></span>
+            <span class="sim-trace-title">${esc(I18n.t('sim.trace.title'))}</span>
+            <span class="sim-trace-alg">${esc(I18n.t('sim.trace.alg'))}: <code class="sim-alg-code">${esc(algShort)}</code></span>
           </div>
           <div class="sim-trace-rules">
-            ${traceRows || `<div class="sim-trace-empty">${_esc(_t('sim.trace.norules'))}</div>`}
+            ${traceRows || `<div class="sim-trace-empty">${esc(I18n.t('sim.trace.norules'))}</div>`}
           </div>
         </div>
       </div>`;
@@ -799,34 +771,34 @@ const PolicySimulator = (() => {
         <div class="sim-rule-trace sim-rule-trace--skip">
           <div class="sim-rule-hdr">
             <span class="sim-rule-skip-icon">&#x23ED;</span>
-            <span class="sim-rule-name">${_esc(rt.ruleName)}</span>
-            <span class="sim-rule-id">${rt.ruleId ? '#'+_esc(rt.ruleId) : ''}</span>
-            <span class="sim-rule-decision sim-rule-decision--skip">${_esc(_t('sim.trace.skipped'))}</span>
+            <span class="sim-rule-name">${esc(rt.ruleName)}</span>
+            <span class="sim-rule-id">${rt.ruleId ? '#'+esc(rt.ruleId) : ''}</span>
+            <span class="sim-rule-decision sim-rule-decision--skip">${esc(I18n.t('sim.trace.skipped'))}</span>
           </div>
         </div>`;
     }
 
     const targetLabel = rt.targetChecks.length === 0 && rt.targetMatch
-      ? `<span class="sim-match-all">${_esc(_t('sim.trace.targetAll'))}</span>`
+      ? `<span class="sim-match-all">${esc(I18n.t('sim.trace.targetAll'))}</span>`
       : rt.targetMatch
-        ? `<span class="sim-match-yes">${_esc(_t('sim.trace.targetMatch'))}</span>`
-        : `<span class="sim-match-no">${_esc(_t('sim.trace.targetMiss'))}</span>`;
+        ? `<span class="sim-match-yes">${esc(I18n.t('sim.trace.targetMatch'))}</span>`
+        : `<span class="sim-match-no">${esc(I18n.t('sim.trace.targetMiss'))}</span>`;
 
     const targetChecksHtml = (rt.targetChecks || []).map(c => {
       const icon  = c.match ? '&#x2705;' : '&#x274C;';
       const label = _formatAttrId(c.attrId);
       return `
         <div class="sim-check sim-check--${c.match ? 'match' : 'miss'}">
-          ${icon} <span class="sim-check-label">${_esc(label)}</span>:
-          <code class="sim-check-val">${_esc(c.expected)}</code>
-          ${c.actual ? `&#8596; <code class="sim-check-actual">${_esc(c.actual)}</code>` : `<span class="sim-check-missing">(${_esc(_t('sim.check.noValue'))})</span>`}
+          ${icon} <span class="sim-check-label">${esc(label)}</span>:
+          <code class="sim-check-val">${esc(c.expected)}</code>
+          ${c.actual ? `&#8596; <code class="sim-check-actual">${esc(c.actual)}</code>` : `<span class="sim-check-missing">(${esc(I18n.t('sim.check.noValue'))})</span>`}
         </div>`;
     }).join('');
 
     const condLabel = rt.conditionMatch === true
-      ? `<span class="sim-match-yes">${_esc(_t('sim.trace.condMatch'))}</span>`
+      ? `<span class="sim-match-yes">${esc(I18n.t('sim.trace.condMatch'))}</span>`
       : rt.conditionMatch === false
-        ? `<span class="sim-match-no">${_esc(_t('sim.trace.condMiss'))}</span>`
+        ? `<span class="sim-match-no">${esc(I18n.t('sim.trace.condMiss'))}</span>`
         : '';
 
     const condChecksHtml = (rt.conditionChecks || []).map(c => {
@@ -835,31 +807,31 @@ const PolicySimulator = (() => {
       const fn    = (c.functionId || '').split(':').pop();
       return `
         <div class="sim-check sim-check--${c.match ? 'match' : 'miss'}">
-          ${icon} <span class="sim-check-label">${_esc(label)}</span>
-          <code class="sim-check-fn">${_esc(fn)}</code>
-          <code class="sim-check-val">${_esc(c.expected)}</code>
-          ${c.actual ? `&#8596; <code class="sim-check-actual">${_esc(c.actual)}</code>` : `<span class="sim-check-missing">(${_esc(_t('sim.check.noValue'))})</span>`}
+          ${icon} <span class="sim-check-label">${esc(label)}</span>
+          <code class="sim-check-fn">${esc(fn)}</code>
+          <code class="sim-check-val">${esc(c.expected)}</code>
+          ${c.actual ? `&#8596; <code class="sim-check-actual">${esc(c.actual)}</code>` : `<span class="sim-check-missing">(${esc(I18n.t('sim.check.noValue'))})</span>`}
         </div>`;
     }).join('');
 
     const hasConditions = rt.conditionChecks && rt.conditionChecks.length > 0;
 
     return `
-      <div class="sim-rule-trace sim-rule-trace--${_esc(decisionCls)}">
+      <div class="sim-rule-trace sim-rule-trace--${esc(decisionCls)}">
         <div class="sim-rule-hdr">
           <span class="sim-rule-effect-icon">${effectIcon}</span>
-          <span class="sim-rule-name">${_esc(rt.ruleName)}</span>
-          ${rt.ruleId ? `<span class="sim-rule-id">#${_esc(rt.ruleId)}</span>` : ''}
-          <span class="sim-rule-decision sim-rule-decision--${_esc(decisionCls)}">${decisionIcon} ${_esc(_t(`sim.decision.${rt.decision.toLowerCase()}`))}</span>
+          <span class="sim-rule-name">${esc(rt.ruleName)}</span>
+          ${rt.ruleId ? `<span class="sim-rule-id">#${esc(rt.ruleId)}</span>` : ''}
+          <span class="sim-rule-decision sim-rule-decision--${esc(decisionCls)}">${decisionIcon} ${esc(I18n.t(`sim.decision.${rt.decision.toLowerCase()}`))}</span>
         </div>
         <div class="sim-rule-body">
           <div class="sim-check-section">
-            <div class="sim-check-section-hdr">${_esc(_t('sim.trace.target'))}: ${targetLabel}</div>
+            <div class="sim-check-section-hdr">${esc(I18n.t('sim.trace.target'))}: ${targetLabel}</div>
             ${targetChecksHtml}
           </div>
           ${hasConditions ? `
           <div class="sim-check-section">
-            <div class="sim-check-section-hdr">${_esc(_t('sim.trace.conditions'))}: ${condLabel}</div>
+            <div class="sim-check-section-hdr">${esc(I18n.t('sim.trace.conditions'))}: ${condLabel}</div>
             ${condChecksHtml}
           </div>` : ''}
         </div>
@@ -868,7 +840,7 @@ const PolicySimulator = (() => {
 
   function _renderHistoryHtml() {
     if (_history.length === 0) {
-      return `<div class="sim-empty-state">${_esc(_t('sim.history.empty'))}</div>`;
+      return `<div class="sim-empty-state">${esc(I18n.t('sim.history.empty'))}</div>`;
     }
     const rows = _history.map((item, i) => {
       const cls  = item.decision === 'Permit' ? 'permit' : item.decision === 'Deny' ? 'deny' : item.decision === 'NotApplicable' ? 'na' : 'indet';
@@ -878,18 +850,18 @@ const PolicySimulator = (() => {
         <div class="sim-history-item">
           <span class="sim-hist-icon">${icon}</span>
           <div class="sim-hist-body">
-            <div class="sim-hist-summary">${_esc(_histItemSummary(item))}</div>
-            <div class="sim-hist-meta">${_esc(ts)} · <code>${_esc(item.decision)}</code></div>
+            <div class="sim-hist-summary">${esc(_histItemSummary(item))}</div>
+            <div class="sim-hist-meta">${esc(ts)} · <code>${esc(item.decision)}</code></div>
           </div>
-          <button class="sim-hist-replay" data-histidx="${i}" title="${_esc(_t('sim.history.replay'))}">&#x25B6;</button>
+          <button class="sim-hist-replay" data-histidx="${i}" title="${esc(I18n.t('sim.history.replay'))}">&#x25B6;</button>
         </div>`;
     }).join('');
 
     return `
       <div class="sim-history-wrap">
         <div class="sim-section-header">
-          <span>${_esc(_t('sim.history.title'))}</span>
-          <button class="sim-clear-btn" id="sim-history-clear">${_esc(_t('sim.history.clear'))}</button>
+          <span>${esc(I18n.t('sim.history.title'))}</span>
+          <button class="sim-clear-btn" id="sim-history-clear">${esc(I18n.t('sim.history.clear'))}</button>
         </div>
         <div class="sim-history-list">${rows}</div>
       </div>`;
@@ -904,15 +876,15 @@ const PolicySimulator = (() => {
       return `
         <div class="sim-test-item">
           <div class="sim-test-row">
-            <span class="sim-test-status sim-test-status--${_esc(statusCls)}">${passIcon}</span>
+            <span class="sim-test-status sim-test-status--${esc(statusCls)}">${passIcon}</span>
             <div class="sim-test-info">
-              <span class="sim-test-name">${_esc(test.name)}</span>
-              <span class="sim-test-expected">&#x2192; ${_esc(_t(expKey))}</span>
-              ${lr ? `<span class="sim-test-actual sim-test-actual--${lr.passed?'pass':'fail'}">got: <code>${_esc(lr.decision)}</code></span>` : ''}
+              <span class="sim-test-name">${esc(test.name)}</span>
+              <span class="sim-test-expected">&#x2192; ${esc(I18n.t(expKey))}</span>
+              ${lr ? `<span class="sim-test-actual sim-test-actual--${lr.passed?'pass':'fail'}">got: <code>${esc(lr.decision)}</code></span>` : ''}
             </div>
             <div class="sim-test-btns">
-              <button class="sim-test-edit" data-testedit="${i}" title="${_esc(_t('sim.tests.edit'))}">&#x270F;</button>
-              <button class="sim-test-del" data-testdel="${i}" title="${_esc(_t('sim.tests.delete'))}">&#x2715;</button>
+              <button class="sim-test-edit" data-testedit="${i}" title="${esc(I18n.t('sim.tests.edit'))}">&#x270F;</button>
+              <button class="sim-test-del" data-testdel="${i}" title="${esc(I18n.t('sim.tests.delete'))}">&#x2715;</button>
             </div>
           </div>
         </div>`;
@@ -921,16 +893,16 @@ const PolicySimulator = (() => {
     return `
       <div class="sim-tests-wrap">
         <div class="sim-section-header">
-          <span>${_esc(_t('sim.tests.title'))}</span>
+          <span>${esc(I18n.t('sim.tests.title'))}</span>
           <div class="sim-tests-actions">
-            ${_tests.length > 0 ? `<button class="sim-run-all-btn" id="sim-tests-run-all">&#x25B6; ${_esc(_t('sim.tests.runAll'))}</button>` : ''}
-            ${_tests.length > 0 ? `<button class="sim-icon-btn" id="sim-tests-export" title="${_esc(_t('sim.tests.export'))}">&#x2B07; ${_esc(_t('sim.tests.export'))}</button>` : ''}
-            <button class="sim-icon-btn" id="sim-tests-import" title="${_esc(_t('sim.tests.import'))}">&#x2B06; ${_esc(_t('sim.tests.import'))}</button>
+            ${_tests.length > 0 ? `<button class="sim-run-all-btn" id="sim-tests-run-all">&#x25B6; ${esc(I18n.t('sim.tests.runAll'))}</button>` : ''}
+            ${_tests.length > 0 ? `<button class="sim-icon-btn" id="sim-tests-export" title="${esc(I18n.t('sim.tests.export'))}">&#x2B07; ${esc(I18n.t('sim.tests.export'))}</button>` : ''}
+            <button class="sim-icon-btn" id="sim-tests-import" title="${esc(I18n.t('sim.tests.import'))}">&#x2B06; ${esc(I18n.t('sim.tests.import'))}</button>
             <input type="file" id="sim-tests-import-file" accept=".json" style="display:none">
           </div>
         </div>
         ${_tests.length === 0
-          ? `<div class="sim-empty-state">${_esc(_t('sim.tests.empty'))}</div>`
+          ? `<div class="sim-empty-state">${esc(I18n.t('sim.tests.empty'))}</div>`
           : `<div class="sim-tests-list">${rows}</div>`}
       </div>`;
   }
@@ -940,7 +912,7 @@ const PolicySimulator = (() => {
     if (!el) return;
     el.innerHTML = _result
       ? _renderResultHtml(_result)
-      : `<div class="sim-result-placeholder">${_esc(_t('sim.result.placeholder'))}</div>`;
+      : `<div class="sim-result-placeholder">${esc(I18n.t('sim.result.placeholder'))}</div>`;
   }
 
   function _refreshInputArea() {
@@ -1155,7 +1127,7 @@ const PolicySimulator = (() => {
       const existing = _tests[_editingTestIdx];
       if (!existing) return;
       const defaultExpected = _result?.decision || existing.expectedDecision || 'Permit';
-      const expectedRaw = window.prompt(_t('sim.saveTest.expectedPrompt'), defaultExpected);
+      const expectedRaw = window.prompt(I18n.t('sim.saveTest.expectedPrompt'), defaultExpected);
       if (expectedRaw === null) return;
       const expected = validDecisions.includes(expectedRaw) ? expectedRaw : existing.expectedDecision;
       existing.mode             = _mode;
@@ -1171,10 +1143,10 @@ const PolicySimulator = (() => {
     }
 
     // Create new test case
-    const name = window.prompt(_t('sim.saveTest.namePrompt'), `Test ${_tests.length + 1}`);
+    const name = window.prompt(I18n.t('sim.saveTest.namePrompt'), `Test ${_tests.length + 1}`);
     if (!name) return;
     const defaultExpected = _result?.decision || 'Permit';
-    const expectedRaw = window.prompt(_t('sim.saveTest.expectedPrompt'), defaultExpected);
+    const expectedRaw = window.prompt(I18n.t('sim.saveTest.expectedPrompt'), defaultExpected);
     if (expectedRaw === null) return;
     const expected = validDecisions.includes(expectedRaw) ? expectedRaw : 'Permit';
     _tests.push({

@@ -10,54 +10,17 @@ import { esc, XACMLParser } from './parser.js';
 import { I18n } from './i18n.js';
 import { NodeEditor } from './node-editor.js';
 import { PolicySimulator } from './simulator.js';
+import {
+  RULE_COMBINING_ALGS   as COMBINING_ALGS,
+  POLICY_COMBINING_ALGS as PS_COMBINING_ALGS,
+  CONDITION_FUNCTIONS,
+  CONDITION_CATEGORIES,
+  CONDITION_DATA_TYPES,
+  MATCH_ID_OPTIONS,
+  MATCH_DATATYPE_OPTIONS,
+  ATTR_ID_OPTIONS,
+} from './constants.js';
 
-const COMBINING_ALGS = [
-  { labelKey: 'creator.alg.deny',   value: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides' },
-  { labelKey: 'creator.alg.permit', value: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:permit-overrides' },
-  { labelKey: 'creator.alg.first',  value: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:first-applicable' },
-  { labelKey: 'creator.alg.only',   value: 'urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:only-one-applicable' },
-];
-
-const PS_COMBINING_ALGS = [
-  { labelKey: 'creator.alg.deny',   value: 'urn:oasis:names:tc:xacml:1.0:policy-combining-algorithm:deny-overrides' },
-  { labelKey: 'creator.alg.permit', value: 'urn:oasis:names:tc:xacml:1.0:policy-combining-algorithm:permit-overrides' },
-  { labelKey: 'creator.alg.first',  value: 'urn:oasis:names:tc:xacml:1.0:policy-combining-algorithm:first-applicable' },
-  { labelKey: 'creator.alg.only',   value: 'urn:oasis:names:tc:xacml:1.0:policy-combining-algorithm:only-one-applicable' },
-];
-
-const CONDITION_FUNCTIONS = [
-  { label: 'string-equal',                  value: 'urn:oasis:names:tc:xacml:1.0:function:string-equal' },
-  { label: 'string-equal-ignore-case',      value: 'urn:oasis:names:tc:xacml:1.0:function:string-equal-ignore-case' },
-  { label: 'integer-equal',                 value: 'urn:oasis:names:tc:xacml:1.0:function:integer-equal' },
-  { label: 'boolean-equal',                 value: 'urn:oasis:names:tc:xacml:1.0:function:boolean-equal' },
-  { label: 'anyURI-equal',                  value: 'urn:oasis:names:tc:xacml:1.0:function:anyURI-equal' },
-  { label: 'date-equal',                    value: 'urn:oasis:names:tc:xacml:1.0:function:date-equal' },
-  { label: 'dateTime-equal',                value: 'urn:oasis:names:tc:xacml:1.0:function:dateTime-equal' },
-  { label: 'string-at-least-one-member-of', value: 'urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of' },
-  { label: 'string-is-in',                  value: 'urn:oasis:names:tc:xacml:1.0:function:string-is-in' },
-];
-
-const CONDITION_CATEGORIES = [
-  { label: 'Subject (Access)', value: 'urn:oasis:names:tc:xacml:1.0:subject-category:access-subject' },
-  { label: 'Resource',         value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:resource' },
-  { label: 'Action',           value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:action' },
-  { label: 'Environment',      value: 'urn:oasis:names:tc:xacml:3.0:attribute-category:environment' },
-];
-
-const CONDITION_DATA_TYPES = [
-  { label: 'string',   value: 'http://www.w3.org/2001/XMLSchema#string' },
-  { label: 'integer',  value: 'http://www.w3.org/2001/XMLSchema#integer' },
-  { label: 'boolean',  value: 'http://www.w3.org/2001/XMLSchema#boolean' },
-  { label: 'anyURI',   value: 'http://www.w3.org/2001/XMLSchema#anyURI' },
-  { label: 'date',     value: 'http://www.w3.org/2001/XMLSchema#date' },
-  { label: 'dateTime', value: 'http://www.w3.org/2001/XMLSchema#dateTime' },
-  { label: 'ST (HL7) – Simple Text',              value: 'urn:hl7-org:v3#ST' },
-  { label: 'BL (HL7) – Boolean',                  value: 'urn:hl7-org:v3#BL' },
-  { label: 'INT (HL7) – Integer',                 value: 'urn:hl7-org:v3#INT' },
-  { label: 'TS (HL7) – Timestamp',                value: 'urn:hl7-org:v3#TS' },
-  { label: 'CE (HL7) – Coded with Equivalents',   value: 'urn:hl7-org:v3#CE' },
-  { label: 'CS (HL7) – Coded Simple Value',       value: 'urn:hl7-org:v3#CS' },
-];
 
 // Zuordnung DataType → passende XACML „one-and-only"-Bag-Funktion.
 // Wird beim XML-Export als Wrapper-Apply für den ersten Argument-Designator einer Condition benötigt,
@@ -85,29 +48,6 @@ const DEFAULT_ATTR_IDS = {
   action:   'urn:oasis:names:tc:xacml:1.0:action:action-id',
 };
 
-const MATCH_ID_OPTIONS = [
-  { label: 'string-equal',    value: 'urn:oasis:names:tc:xacml:1.0:function:string-equal' },
-  { label: 'anyURI-equal',    value: 'urn:oasis:names:tc:xacml:1.0:function:anyURI-equal' },
-  { label: 'integer-equal',   value: 'urn:oasis:names:tc:xacml:1.0:function:integer-equal' },
-  { label: 'date-equal',      value: 'urn:oasis:names:tc:xacml:1.0:function:date-equal' },
-  { label: 'CV-equal (HL7) – Coded Value',         value: 'urn:hl7-org:v3:function:CV-equal' },
-  { label: 'II-equal (HL7) – Instance Identifier', value: 'urn:hl7-org:v3:function:II-equal' },
-];
-
-const MATCH_DATATYPE_OPTIONS = [
-  { label: 'string',    value: 'http://www.w3.org/2001/XMLSchema#string' },
-  { label: 'anyURI',    value: 'http://www.w3.org/2001/XMLSchema#anyURI' },
-  { label: 'integer',   value: 'http://www.w3.org/2001/XMLSchema#integer' },
-  { label: 'date',      value: 'http://www.w3.org/2001/XMLSchema#date' },
-  { label: 'CV (HL7) – Coded Value',               value: 'urn:hl7-org:v3#CV' },
-  { label: 'II (HL7) – Instance Identifier',       value: 'urn:hl7-org:v3#II' },
-  { label: 'ST (HL7) – Simple Text',               value: 'urn:hl7-org:v3#ST' },
-  { label: 'BL (HL7) – Boolean',                   value: 'urn:hl7-org:v3#BL' },
-  { label: 'INT (HL7) – Integer',                  value: 'urn:hl7-org:v3#INT' },
-  { label: 'TS (HL7) – Timestamp',                 value: 'urn:hl7-org:v3#TS' },
-  { label: 'CE (HL7) – Coded with Equivalents',    value: 'urn:hl7-org:v3#CE' },
-  { label: 'CS (HL7) – Coded Simple Value',        value: 'urn:hl7-org:v3#CS' },
-];
 
 const SESSION_KEY       = 'xacml-creator-state';
 const SESSION_MAX_BYTES = 524288; // 512 KB
@@ -131,24 +71,7 @@ const PolicyCreator = (() => {
   // Welche PolicySet-Karten sind eingeklappt (nach Index)
   const _psPolicyCollapsed = new Set();
 
-  // ── Attribute ID options per target category (Standard mode) ──────────
-  const ATTR_ID_OPTIONS = {
-    subject: [
-      { value: 'urn:oasis:names:tc:xacml:1.0:subject:subject-id',                labelKey: 'creator.target.attrId.subject.id' },
-      { value: 'urn:oasis:names:tc:xacml:2.0:subject:role',                      labelKey: 'creator.target.attrId.subject.role' },
-      { value: 'urn:oasis:names:tc:xacml:1.0:subject:authn-locality:ip-address', labelKey: 'creator.target.attrId.subject.ip' },
-      { value: 'urn:oasis:names:tc:xacml:1.0:subject:authn-locality:dns-name',   labelKey: 'creator.target.attrId.subject.dns' },
-    ],
-    resource: [
-      { value: 'urn:oasis:names:tc:xacml:1.0:resource:resource-id',              labelKey: 'creator.target.attrId.resource.id' },
-      { value: 'http://hl7.org/fhir/resource-types',                             labelKey: 'creator.target.attrId.resource.fhir' },
-      { value: 'urn:oasis:names:tc:xacml:2.0:resource:target-namespace',         labelKey: 'creator.target.attrId.resource.ns' },
-    ],
-    action: [
-      { value: 'urn:oasis:names:tc:xacml:1.0:action:action-id',                  labelKey: 'creator.target.attrId.action.id' },
-      { value: 'urn:oasis:names:tc:xacml:1.0:action:implied-action',             labelKey: 'creator.target.attrId.action.implied' },
-    ],
-  };
+  // ATTR_ID_OPTIONS wird von constants.js importiert (Modul-Scope)
 
   // ── State — Datenmodell des Policy Creators ────────────────────────────
   // _state.policy.target.groups[] = AnyOf-Ebene (ODER)
