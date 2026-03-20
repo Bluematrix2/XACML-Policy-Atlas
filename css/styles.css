@@ -147,7 +147,7 @@ header h1 {
 .lang-btn.active { background: rgba(255,255,255,.22); color: #fff; }
 
 /* ── Layout ── */
-.layout { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+.layout { display: flex; flex: 1; overflow: hidden; min-height: 0; background: var(--bg-primary); }
 
 /* ── Sidebar ── */
 .sidebar {
