@@ -3,21 +3,24 @@ name: Build & Deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pages: write
-      id-token: write
 
     environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      name: production
+      url: https://policyatlas.puschmann.io
 
     steps:
       - name: Checkout
@@ -31,11 +34,52 @@ jobs:
           echo "Deploying version: $FULL_VERSION"
           sed -i "s/__APP_VERSION__/${FULL_VERSION}/g" js/init.js
 
-      - name: Upload to GitHub Pages
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: '.'
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.gitignore' \
+            --exclude '_site' \
+            --exclude 'CNAME' \
+            ./ _site/
+          find _site -type f | sort
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Upload via FTP
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+          FTP_PROTOCOL: ${{ secrets.FTP_PROTOCOL }}
+          FTP_REMOTE_DIR: ${{ secrets.FTP_REMOTE_DIR }}
+        run: |
+          set -euo pipefail
+          : "${FTP_HOST:?Secret FTP_HOST fehlt}"
+          : "${FTP_USERNAME:?Secret FTP_USERNAME fehlt}"
+          : "${LFTP_PASSWORD:?Secret FTP_PASSWORD fehlt}"
+          PROTOCOL="${FTP_PROTOCOL:-ftp}"          # ftp (mit TLS) | ftps | sftp
+          REMOTE_DIR="${FTP_REMOTE_DIR:-/}"
+          PORT_ARG=""
+          [ -n "${FTP_PORT:-}" ] && PORT_ARG="-p ${FTP_PORT}"
+
+          lftp -c "
+            set net:max-retries 3;
+            set net:timeout 30;
+            set ftp:ssl-allow true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate true;
+            set sftp:auto-confirm yes;
+            open ${PORT_ARG} -u \"${FTP_USERNAME}\" --env-password ${PROTOCOL}://${FTP_HOST};
+            mkdir -p -f \"${REMOTE_DIR}\";
+            mirror --reverse --delete --verbose --parallel=4 \
+              --exclude-glob .htaccess \
+              --exclude-glob .well-known/ \
+              _site/ \"${REMOTE_DIR}\";
+            bye
+          "
